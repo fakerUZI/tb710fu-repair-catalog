@@ -324,6 +324,33 @@
           "sha256": "9c064de1ee13140d539a284153a484d803a79ac14bba38b05858f3fcd00e483a"
         }
       ]
+    },
+    {
+      "id": "droidloom-speaker-audio",
+      "title": "安卓容器扬声器破音缓解（WirePlumber）",
+      "description": "适用于 TB710FU、Ubuntu 26.04 系列（原实测 26.04.1）、ARM64、7.2.6-tb710fu-snap1 和 WirePlumber 0.5，以当前图形桌面普通用户运行，不要 sudo。安装与检查要求指定的扬声器、内置麦克风节点及用户音频会话可用。需要 Python 3、systemctl、pactl 和 wireplumber。\n\n规则调整指定节点的图时钟优先级，为扬声器请求 256 帧周期与 256 帧 headroom；实机实际协商曾为 480 帧周期、3840 帧缓冲。核心参数与原投稿逐字节一致。命令行默认 check 只读；TB710FU_FIX_ACTION=apply 安装，rollback 恢复首次安装前配置。修复助手当前默认显式传入 apply，点击运行前应核对风险。\n\n原实机证据：用户确认原播放及重启安卓容器后播放正常，单次观察期间流错误计数不再增长；最新参数尚未验证整机重启、同时录音或长期稳定性。四个实体扬声器曾逐个有声，但其他静音故障根因未确定，不声称解决它。本轮新安装器在 macOS 和 ARM64 Linux 上通过 28 项隔离测试，未在平板执行 apply/rollback。",
+      "device": "TB710FU",
+      "status": "community-review",
+      "risk": "· 用户级规则改变音频时钟及扬声器缓冲；重连会中断播放，可能影响其他音频设备、延迟或同时录音。重连时音量仍可能短暂变化，须检查媒体音量。\n· 安装前保存首个同名配置与权限，重连前临时静音，随后恢复各通道绝对音量及原静音。原音量无法读取时，安装会中止。文件被用户修改时拒绝覆盖。重复安装同一版本不重复重启。\n· 回退恢复首次安装前状态：原来没有本文件时删除它，原有同名同内容规则则恢复并保留；没有本包记录时不猜测删除手工规则。其他规则不变。回退不要求麦克风节点或旧平台仍存在；会话停止时只恢复配置，不擅自启动服务或猜测音量。\n· 可捕获的配置、重启、等待或音量恢复错误会尝试恢复本次操作前状态；恢复失败保留记录，需人工处理。断电、强制终止、存储故障不保证恢复。\n· 私有状态在 ${XDG_STATE_HOME:-~/.local/state}/tb710fu-android-audio，目录 700、记录 600，仅留本机，不上传。配置遵循 XDG_CONFIG_HOME；不写系统目录、boot、GPT 或内核。新安装包装仍未在平板实机应用。",
+      "script": {
+        "path": "contributions/droidloom-speaker-audio/script.sh",
+        "sha256": "a865754407060e4951b69026c678245c7e55fffc886316ae83621a4dc1004eaa",
+        "requires_admin": false
+      },
+      "attachments": [
+        {
+          "path": "contributions/droidloom-speaker-audio/attachments/repair.py",
+          "sha256": "2394daf4e89807a51c1a1f3b6290681763deb0f184061f580af915f41fb0db93"
+        },
+        {
+          "path": "contributions/droidloom-speaker-audio/attachments/test-repair.py",
+          "sha256": "70f3e473b82e0b89a0840ed6da88649fb03f6b550a89f51c83bb808548121a30"
+        },
+        {
+          "path": "contributions/droidloom-speaker-audio/attachments/README.md",
+          "sha256": "11da1642d1c67d5d5ef82f4e814378e32ea79d38cb2c6e89288dcb261c0ce6a0"
+        }
+      ]
     }
   ]
 }
