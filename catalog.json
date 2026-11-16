@@ -209,25 +209,6 @@
       ]
     },
     {
-      "id": "gnome-ibus-pinyin",
-      "title": "GNOME 中文输入法：让 fcitx5 交出 org.freedesktop.IBus",
-      "description": "问题：fcitx5 明明在运行，GNOME 下的应用（原生 Wayland 客户端尤其明显）却打不出中文；顶栏的「中/EN」按钮点下去没有任何反应。\n\n原因：fcitx5 的 ibusfrontend 模块会占用 org.freedesktop.IBus 这个 D-Bus 名字，真正的 ibus-daemon 因此无法启动。而 GNOME 的 text-input-v3 协议只对接 ibus，所以拿不到任何中文引擎——只能得到 xkb 的英文布局。\n\n做法：\n  1) 用用户级 unit 让 fcitx5 以 --disable ibusfrontend 启动。GTK/Qt 应用走 fcitx5 自己的前端，中文输入不受影响；IBus 名字则交还出去。\n  2) 启动 org.freedesktop.IBus.session.GNOME.service，让 ibus-daemon 接管该名字。\n  3) 在 GNOME 输入源里追加 ('ibus','libpinyin')，保留原有条目。\n\n脚本会打印当前 org.freedesktop.IBus 的持有者 PID 与 fcitx5 的 PID，用于判断名字是否真的易主。\n\n关键：改完必须注销重登一次。正在运行的 gnome-shell 是在旧状态（名字被 fcitx5 占着）下初始化的，不会中途重连；不重登会表现为\"脚本跑了但一点效果也没有\"。\n\n用法：TB710FU_FIX_ACTION=check 只检查不改动，默认 apply 应用，rollback 移除用户级覆盖并还原安装前的输入源快照。",
-      "device": "TB710FU",
-      "status": "community-review",
-      "risk": "· 仅用户级改动：~/.config/systemd/user/tb-fcitx5.service 与 GNOME 的输入源 gsettings；不动 /etc、不用 root。\n· 依赖 ibus-libpinyin。若未安装，脚本会在改动前中止并提示 sudo apt install ibus-libpinyin。\n· 副作用：fcitx5 的 ibusfrontend 关闭后，依赖 IBus 协议接入 fcitx5 的应用（少数 GTK4 老版本组合）可能改用 ibus 输入法，行为会变。\n· 必须注销重登才生效，这是设计上的必然后果，不是脚本缺陷。\n· 回滚：disable 并删除 ~/.config/systemd/user/tb-fcitx5.service 后 daemon-reload、重启 fcitx5；再用 gsettings 把 sources 里的 ibus libpinyin 去掉。\n· 与 community-review 中的 ime-preedit-backspace（fcitx5 + WowType + Kimpanel 方案）互斥：\n  本包会关闭 fcitx5 的 ibusfrontend 并把 GNOME 输入源切到 ibus-libpinyin，那个方案依赖 fcitx5 自己接管 IBus 与共享候选区。\n  两个包不要同时安装；需要安卓屏幕键盘候选区时，先 TB710FU_FIX_ACTION=rollback 再装那一个。\n· 安装前快照放在 ${XDG_STATE_HOME:-~/.local/state}/tb710fu-gnome-ibus-pinyin（权限 700，仅本机，不上传）。\n· 已在 TB710FU（Ubuntu 26.04 ARM64 / GNOME 50 Wayland / fcitx5）实测：check 只读通过，apply 后注销重登中文可用，rollback 可回到原状。",
-      "script": {
-        "path": "contributions/gnome-ibus-pinyin/script.sh",
-        "sha256": "30d7205e40747b89d4435e2effdc7d56142a01dedede81f88be4cf2e8f3ab117",
-        "requires_admin": false
-      },
-      "attachments": [
-        {
-          "path": "contributions/gnome-ibus-pinyin/attachments/tb-fcitx5.service",
-          "sha256": "26589801d4d1e2febbe49c5f4ad2b0f96ebb327ad21b083922fd57c8191f2884"
-        }
-      ]
-    },
-    {
       "id": "microphone-snap1",
       "title": "snap1 内置麦克风修复（SoundWire 采集接口）",
       "description": "修复 Ubuntu ARM64 / 7.2.6-tb710fu-snap1 上内置麦克风持续全零的问题：从精确匹配的原 snap1 启动镜像重建采集链路，使用 TX SoundWire 采集 DAI 1，保存双 AMIC 开机路由及 WirePlumber 麦克风名称。仅支持附件中匹配的引导固件、GPT 布局和原始 WCD 模块；其他版本拒绝。默认只读 check；设置 TB710FU_FIX_ACTION=apply 明确应用后自行重启，在声音设置选择“TB710FU 内置麦克风”；rollback 恢复本包最近备份。2026-11-16 核心修复已在 Ubuntu 单系统 TB710FU 上通过双麦克风声学 880 Hz 响应、PipeWire 录音和重启验证。差异补丁重建的完整启动镜像与实机版本 SHA256 一致。新安装包装完整 apply/rollback 尚未重新部署，状态待审核；依赖、使用和验证边界见附件 README.md。",
