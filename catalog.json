@@ -156,10 +156,10 @@
       "description": "问题：合上保护套熄屏、或自动熄屏之后，第一次按电源键没有任何反应，必须按第二次才亮屏。\n\n原因：系统自带的 /usr/local/bin/tb-gnome-power-button.py 用 Mutter.DisplayConfig.PowerSaveMode 判断\"屏幕是否已经关掉\"。但本机的熄屏是由 gsd-power 直接关闭 DRM 输出、并通过背光控制脚本写 bl_power=4 完成的，这个 D-Bus 属性始终停在 0。于是脚本每次熄屏后的第一次按键都走\"关屏\"分支（屏幕本来就是黑的，看不出变化），第二次才走\"开屏\"分支。\n\n做法：不改只读的系统文件，而是用用户级同名 unit 覆盖 /etc/systemd/user 里的版本（systemd 用户级优先读 ~/.config/systemd/user，无需 root）。新脚本改用真实判据：/sys/class/drm/*-DSI-1/dpms 是否为 On，以及 /sys/class/backlight/sy7758-backlight/bl_power 是否为 0。短按仍是亮/熄屏切换，长按 1 秒仍是关机请求，两条路径共用同一判据，已验证都正确。\n\n安装后立即生效，不需要重启，也不影响 logind 与 GNOME 原有的抑制锁逻辑。",
       "device": "TB710FU",
       "status": "community-review",
-      "risk": "· 已去除 /run/user/1000 等硬编码，改用 $XDG_RUNTIME_DIR / $(id -u)。\n· 仅改动用户级文件：~/.local/bin/tb-power-key.py、~/.local/bin/tb-power-key-off、~/.config/systemd/user/tb-gnome-power-button.service（含 graphical-session.target.wants 软链）。不动 /usr、/etc，不用 root。\n· 背光设备优先使用 sy7758-backlight；若本机不是该名称，自动退到 /sys/class/backlight 下的第一个设备，都没有时只看 dpms（亮屏仍正常，熄屏判据变弱）；脚本在安装前会打印检测结果。\n· 回滚：运行 tb-power-key-off，会移除用户级覆盖并重启服务，回到系统自带脚本，行为恢复为\"按两次\"。\n· 已验证：FragmentPath 指向用户文件、服务 active、日志出现 ready (dpms judge, ver 2)。",
+      "risk": "· 仅修改当前用户的电源键脚本、回退入口、安装辅助程序和 systemd 用户 unit，不写系统目录、boot 或 GPT。\n· TB710FU_FIX_ACTION=check 只读；缺少 DSI dpms 节点、附件或用户 systemd 会话时中止。apply 安装并显式重启、校验服务。\n· 首次 apply 在 ${XDG_STATE_HOME:-~/.local/state}/tb710fu-power-key 保存全部同名原文件、权限和服务启用/运行状态，重复安装或升级不会重写原始备份。文件被用户修改时拒绝覆盖。\n· rollback 与 tb-power-key-off 使用同一实现，校验安装文件和原备份后完整恢复安装前状态；若原先已有用户脚本或旧版修复，会恢复它们，而不是删除后强制回到 ROM。未知旧 .bak 记录不会被自动猜测。\n· 安装/回退中断时快照保留；可核对记录后重试回退。核心电源键逻辑未改；本次包装通过隔离安装、重复安装、升级中断、修改保护与回退测试，未在平板应用。",
       "script": {
         "path": "contributions/power-key-single-press/script.sh",
-        "sha256": "11b27b19e8b72a035cece1afa8b9df094e7eafd422fd5e172d7e545b69121344",
+        "sha256": "bdb9743eb8c689932a901cc79bb0eb1ea8a00316421898493fa92a8e35f42410",
         "requires_admin": false
       },
       "attachments": [
@@ -169,11 +169,15 @@
         },
         {
           "path": "contributions/power-key-single-press/attachments/tb-power-key-off",
-          "sha256": "92256e5cf01fa9901b9306f7b105e6d1c1b648f58cb40687e6cb3ea0a9cae1ad"
+          "sha256": "8d164edae75fd2f3da65a612bc0af62d9cc3723932162b5006b101cdec2df6f3"
         },
         {
           "path": "contributions/power-key-single-press/attachments/tb-gnome-power-button.service",
           "sha256": "23633ede944d1f35c1c015bf548e4e12414d77ea3640b06a39b29417c04232af"
+        },
+        {
+          "path": "contributions/power-key-single-press/attachments/install-power-key.py",
+          "sha256": "2fb1fa995c2819c3d57b0a847afc97b6e15a55f9b73cc539f4d48ed02230dfe8"
         }
       ]
     },
