@@ -14,3 +14,7 @@ Snap 社区条目分为已具备内核支持时的用户态修复，以及旧 Ub
 
 - `ime-preedit-backspace`：[中文拼音候选区与退格修复](contributions/ime-preedit-backspace/attachments/README.md)。适用于已有 TB710FU 候选区的 Ubuntu 26.04 / GNOME 50；核心来自历史实机修复，新安装包装尚待实机复核。
 - [完整源码包](packages/ime-preedit-backspace-20261116.zip)及[包校验值](packages/SHA256SUMS)可供下载审查。仓库内的真实修复仍须逐项审查依赖、风险、哈希和适用版本，不能自动执行。
+
+## 2026-11-16 代码审核
+
+[PR #8–#11 的修正、测试和回退边界](docs/REVIEW-20261116.md)。

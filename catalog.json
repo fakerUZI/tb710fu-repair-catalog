@@ -211,6 +211,41 @@
           "sha256": "d65a49de9b2a94a3d5818d677c5ad75b7eaa3e536aa43fbea00f054799cd6380"
         }
       ]
+    },
+    {
+      "id": "droidloom-on-demand-launch",
+      "title": "安卓应用点击时自动启动 Droidloom",
+      "description": "适用于 TB710FU Ubuntu 26.04 ARM64 / GNOME 50 Wayland、已安装 Droidloom 且普通用户使用 systemd 桌面会话的环境。现象：开机后 Droidloom 容器未运行，直接点击已导出的安卓应用提示容器未运行。执行本项后，安卓应用入口先按需启动 Droidloom，待系统就绪后启动应用；应用目录更新监听器负责修正重新生成的入口。容器不因此开机自动启动，也不会在关闭应用后自动停止。需要 python3、systemd 用户服务、flock、zenity 和已安装的 Droidloom；不需要管理员权限。本方案只修改当前用户文件，不写启动分区或分区表。\n\n用法：修复助手下载全部附件并以当前用户执行；TB710FU_FIX_ACTION=check 为只读预检，rollback 为回退。备份目录为 ${XDG_STATE_HOME:-~/.local/state}/tb710fu-droidloom-on-demand，保存在本机。\n\n验证：TB710FU 的 Ubuntu 26.04 ARM64、内核 7.2.6-tb710fu-snap1、GNOME 50 Wayland 上，手动部署同一组按需启动脚本后，曾将容器停止，触发启动入口，Android 成功就绪并打开设置；重建应用目录后入口仍能恢复。重启后容器未自动启动且监听器已运行。新投稿安装/回退包装在隔离模拟环境测试了新装、覆盖前备份、重复执行、用户改动拒绝回退及回退；该包装尚未作为修复助手条目进行实机端到端测试。",
+      "device": "TB710FU",
+      "status": "community-review",
+      "risk": "风险：该脚本修改当前用户的 Droidloom 应用桌面入口、~/.local/bin 中三个启动辅助文件和一个 systemd 用户服务；Droidloom 更新后入口格式变化可能导致失效。监听器在用户会话期间运行，但不会自动启动容器。首次点击需等待 Android 启动；容器运行时后台任务与通知持续占用资源。手动启动设置的 Droidloom 开机自动启动不会被脚本改变。若部署中断，可能需要根据本机备份手动恢复；Droidloom 本身与安卓数据不被删除。\n回退：将 TB710FU_FIX_ACTION=rollback 传给修复助手后重新运行本条目。脚本保留并恢复先前同名文件及服务状态；若被安装文件后来由用户修改，回退会拒绝覆盖，需要先核对并手动处理。本机备份位于 ${XDG_STATE_HOME:-~/.local/state}/tb710fu-droidloom-on-demand，不应上传。\n代码审核修正：重复安装/升级先校验已部署文件并保留首次快照，拒绝覆盖用户后来的改动；恢复前校验原文件备份与权限，恢复原服务状态。安装会显式重启监听器以加载新代码。旧版未知备份格式会停止，不猜测覆盖。桌面入口回退只替换本包受管入口的启动前缀，保留其他字段；中断时快照保留。新增保护通过隔离回归测试，尚未在平板应用。",
+      "script": {
+        "path": "contributions/droidloom-on-demand-launch/script.sh",
+        "sha256": "aea167f918cef56ba0eaec396d55f3fd813b6ce0435f0043d63686d0cb531f4f",
+        "requires_admin": false
+      },
+      "attachments": [
+        {
+          "path": "contributions/droidloom-on-demand-launch/attachments/install-on-demand.py",
+          "sha256": "a3bdadbe9b81aa98c1c262ce4a365f6af9c33b298ba66592fefeaa6b6be6ced9"
+        },
+        {
+          "path": "contributions/droidloom-on-demand-launch/attachments/launch",
+          "sha256": "236f813a630bc1cbe0d2b2e3ad8d5dbd0a78cda3f70e8daa23a1d25732582255"
+        },
+        {
+          "path": "contributions/droidloom-on-demand-launch/attachments/fix-launchers.py",
+          "sha256": "3d72a74055887bcd12c4ded84e0ad645555065e5b809a44d7b29b243e06713ee"
+        },
+        {
+          "path": "contributions/droidloom-on-demand-launch/attachments/watch-launchers.py",
+          "sha256": "6004acbe1e730951ca5ae74e8d105f503e0221d166a12a05b173657132263065"
+        },
+        {
+          "path": "contributions/droidloom-on-demand-launch/attachments/droidloom-watch-launchers.service",
+          "sha256": "403e6488dbdf987a922ab3ee38556556528ba9a3759a29dc6421e1353e5dddce"
+        }
+      ]
     }
   ]
 }

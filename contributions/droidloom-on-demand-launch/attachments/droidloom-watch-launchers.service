@@ -1,0 +1,8 @@
+[Unit]
+Description=Keep Android application launchers on-demand
+[Service]
+ExecStart=%h/.local/bin/droidloom-watch-launchers
+Restart=on-failure
+RestartSec=2
+[Install]
+WantedBy=default.target
