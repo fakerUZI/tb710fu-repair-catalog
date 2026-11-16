@@ -120,6 +120,33 @@
           "sha256": "a20dfbbccc73ca1942e76616f03fc41111702775e5f0846542f3886a1704ea90"
         }
       ]
+    },
+    {
+      "id": "power-key-single-press",
+      "title": "电源键按一次即亮屏（熄屏判据修正）",
+      "description": "问题：合上保护套熄屏、或自动熄屏之后，第一次按电源键没有任何反应，必须按第二次才亮屏。\n\n原因：系统自带的 /usr/local/bin/tb-gnome-power-button.py 用 Mutter.DisplayConfig.PowerSaveMode 判断\"屏幕是否已经关掉\"。但本机的熄屏是由 gsd-power 直接关闭 DRM 输出、并通过背光控制脚本写 bl_power=4 完成的，这个 D-Bus 属性始终停在 0。于是脚本每次熄屏后的第一次按键都走\"关屏\"分支（屏幕本来就是黑的，看不出变化），第二次才走\"开屏\"分支。\n\n做法：不改只读的系统文件，而是用用户级同名 unit 覆盖 /etc/systemd/user 里的版本（systemd 用户级优先读 ~/.config/systemd/user，无需 root）。新脚本改用真实判据：/sys/class/drm/*-DSI-1/dpms 是否为 On，以及 /sys/class/backlight/sy7758-backlight/bl_power 是否为 0。短按仍是亮/熄屏切换，长按 1 秒仍是关机请求，两条路径共用同一判据，已验证都正确。\n\n安装后立即生效，不需要重启，也不影响 logind 与 GNOME 原有的抑制锁逻辑。",
+      "device": "TB710FU",
+      "status": "community-review",
+      "risk": "· 仅改动用户级文件：~/.local/bin/tb-power-key.py、~/.local/bin/tb-power-key-off、~/.config/systemd/user/tb-gnome-power-button.service（含 graphical-session.target.wants 软链）。不动 /usr、/etc，不用 root。\n· 若本机背光设备不叫 sy7758-backlight，脚本会退化为只看 dpms，亮屏仍应正常，但熄屏判据变弱；脚本在安装前会打印检测结果。\n· 回滚：运行 tb-power-key-off，会移除用户级覆盖并重启服务，回到系统自带脚本，行为恢复为\"按两次\"。\n· 已验证：FragmentPath 指向用户文件、服务 active、日志出现 ready (dpms judge, ver 2)。",
+      "script": {
+        "path": "contributions/power-key-single-press/script.sh",
+        "sha256": "818b2b168af36a10a2a8e7cba40235112d838d2ed145e16703beeeefeaca2087",
+        "requires_admin": false
+      },
+      "attachments": [
+        {
+          "path": "contributions/power-key-single-press/attachments/tb-power-key.py",
+          "sha256": "e0358b0cc355bec60679b4cb56559df9adaab2a2ba4217ad07e92b8df42f52ab"
+        },
+        {
+          "path": "contributions/power-key-single-press/attachments/tb-power-key-off",
+          "sha256": "b9484162efe210cfec1d9b31f5312a47d3d417856997afe4e92d8f9b1f2928e0"
+        },
+        {
+          "path": "contributions/power-key-single-press/attachments/tb-gnome-power-button.service",
+          "sha256": "23633ede944d1f35c1c015bf548e4e12414d77ea3640b06a39b29417c04232af"
+        }
+      ]
     }
   ]
 }

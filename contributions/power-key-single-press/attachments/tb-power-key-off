@@ -1,0 +1,31 @@
+#!/bin/bash
+# 撤销电源键修正，回到系统自带的 /usr/local/bin/tb-gnome-power-button.py
+set -u
+export DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS:-unix:path=/run/user/1000/bus}"
+M=org.freedesktop.systemd1
+O=/org/freedesktop/systemd1
+U=tb-gnome-power-button.service
+OBJ=/org/freedesktop/systemd1/unit/tb_2dgnome_2dpower_2dbutton_2eservice
+
+UNIT_DIR="${HOME}/.config/systemd/user"
+WANTS="${UNIT_DIR}/graphical-session.target.wants"
+
+echo "== 移除用户级覆盖 =="
+for f in "${UNIT_DIR}/tb-gnome-power-button.service" "${WANTS}/tb-gnome-power-button.service"; do
+    if [ -e "$f" ] || [ -L "$f" ]; then
+        mv -f "$f" "${f}.disabled" && echo "  已停用 $(basename "$f")"
+    fi
+done
+
+gdbus call --session --dest "$M" --object-path "$O" --method "$M.Manager.Reload" >/dev/null 2>&1
+
+echo "== 重启服务（恢复系统版脚本）=="
+gdbus call --session --dest "$M" --object-path "$O" --method "$M.Manager.RestartUnit" "$U" "replace" >/dev/null 2>&1
+sleep 2
+
+echo -n "当前加载的单元文件: "
+gdbus call --session --dest "$M" --object-path "$OBJ" \
+    --method org.freedesktop.DBus.Properties.Get org.freedesktop.systemd1.Unit FragmentPath 2>/dev/null
+echo -n "运行状态: "
+gdbus call --session --dest "$M" --object-path "$OBJ" \
+    --method org.freedesktop.DBus.Properties.Get org.freedesktop.systemd1.Unit ActiveState 2>/dev/null

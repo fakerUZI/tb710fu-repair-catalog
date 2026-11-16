@@ -1,0 +1,13 @@
+[Unit]
+Description=TB710FU GNOME power button (user override: dpms judge)
+After=graphical-session-pre.target
+PartOf=graphical-session.target
+StartLimitIntervalSec=0
+
+[Service]
+ExecStart=%h/.local/bin/tb-power-key.py
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=graphical-session.target
