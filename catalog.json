@@ -324,6 +324,20 @@
           "sha256": "9c064de1ee13140d539a284153a484d803a79ac14bba38b05858f3fcd00e483a"
         }
       ]
+    },
+    {
+      "id": "droidloom-speaker-audio",
+      "title": "安卓容器扬声器破音缓解（WirePlumber）",
+      "description": "适用于 Lenovo TB710FU、Ubuntu 26.04.1、7.2.6-tb710fu-snap1、PipeWire/WirePlumber 和已存在指定扬声器、内置麦克风节点的环境，针对 DroidLoom 安卓播放出现破音及音频流错误的情况。以当前图形桌面普通用户运行；默认 check 只读检查，TB710FU_FIX_ACTION=apply 安装用户级规则，TB710FU_FIX_ACTION=rollback 撤销本条规则。需要 systemctl --user、pactl、wpctl 和正在运行的 WirePlumber。规则优先使用扬声器时钟，请求 256 帧周期及 headroom；实机实际协商为 480 帧、缓冲 3840 帧。原参数重启后破音复现；修改后用户确认原播放及重新启动安卓容器后的播放正常，单次播放观察期间错误计数不再增长。脚本包装尚未实机 apply/rollback；最新参数尚未验证整机重启或同时录音。四个实体扬声器曾逐一确认有声，但原先两个不响的根因未确定，此脚本不保证修复该故障。",
+      "device": "TB710FU",
+      "status": "community-review",
+      "risk": "用户级 WirePlumber 规则会影响音频时钟及扬声器缓冲，音频服务重连时播放短暂中断，可能影响其他音频设备、延迟或同时录音；重启时音量状态可能变化。脚本尝试恢复音量与静音状态，仍需检查。仅适用于所列节点与配置，其他规则可能覆盖或冲突。用 TB710FU_FIX_ACTION=rollback 撤销本脚本专属配置并重启 WirePlumber；它不会删除其他已有规则，故已有相同规则须由其来源单独回退。不同内容、长时间、同时采集及最新规则重启后效果未验证。",
+      "script": {
+        "path": "contributions/droidloom-speaker-audio/script.sh",
+        "sha256": "563af2a3b452a267362a581bfc7ee727457988e68c5d9a5d8577e7d103b32021",
+        "requires_admin": false
+      },
+      "attachments": []
     }
   ]
 }
