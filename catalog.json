@@ -226,6 +226,25 @@
           "sha256": "26589801d4d1e2febbe49c5f4ad2b0f96ebb327ad21b083922fd57c8191f2884"
         }
       ]
+    },
+    {
+      "id": "ath12k-stats-timeout-recovery",
+      "title": "Wi-Fi 固件统计超时恢复（运行态重置）",
+      "description": "适用于 TB710FU Ubuntu ARM64、7.2.6-tb710fu 系列内核，使用 ath12k/ath12k_wifi7、已连接 Wi-Fi 且保留 tb_poll_off=1 和 tb_hw_dedup=1 的设备。处理内核反复出现“time out while waiting for fw stats done”、NetworkManager 的 Wi-Fi 信号统计查询阻塞的情况。需要管理员权限、systemd journal、NetworkManager、iproute2、iw、kmod、util-linux 和 Bash。修复助手获用户确认后运行默认 repair；设置 TB710FU_WIFI_ACTION=check 只检查。先核对设备、内核、模块及参数，最近 90 秒少于两次对应超时则直接退出；检测到重复超时才重新加载 Wi-Fi 模块并检查参数、重连及统计查询。任何触发重置的执行均要求 USB 救援网络已连接；如果通过 SSH 执行，请先从 USB 救援地址登录。桌面远程连接期间运行会短暂中断。\n\n实机证据：Ubuntu 26.04.1、7.2.6-tb710fu 上曾手动卸载并重新加载相同的 Wi-Fi 模块，Wi-Fi 自动重连、参数保持、信号查询从约 3 秒降至 2～6 毫秒，HTTPS 测试成功；约两分半钟没有再次出现同类超时。此新封装脚本的 check 分支在本机连续两次通过，未在本机触发实际卸载分支。隔离模拟覆盖正常重复执行、检查、异常恢复、重复修复及不安全条件拒绝。本条目是临时恢复，不能保证不再复发；相关永久驱动补丁未经该设备验证，不包含在此条目。",
+      "device": "TB710FU",
+      "status": "community-review",
+      "risk": "风险：检测到连续超时才会卸载并重新加载 ath12k_wifi7 和 ath12k，Wi-Fi、远程桌面和网络任务可能中断；驱动重新加载或自动重连可能失败。执行必须有可用 USB NCM 救援网络，SSH 操作请先通过 USB 连接；sudo 可能清除 SSH 环境信息，因此脚本不能在所有情况下识别 SSH 所经接口。图形桌面中的远程执行也可能掉线；请先保存工作并准备现场操作。不能保证处理根因或所有无线故障，不修改 boot、GPT、固件或 Wi-Fi 配置。\n回退：脚本在可捕获的错误或终止时会尝试重新加载原有 ath12k_wifi7 模块；脚本不更换模块文件，也不改变持久配置。如果未恢复，在平板本机终端或 USB 救援会话检查日志并运行 sudo modprobe ath12k_wifi7，必要时手动重新连接或重启。/run 下的本次开机标记只用于避免重复重置，重启后自动消失。",
+      "script": {
+        "path": "contributions/ath12k-stats-timeout-recovery/script.sh",
+        "sha256": "a23896adbc35ebb1d816ff98b4cf52b40baa95fdd2823891cc50e41343bb67c4",
+        "requires_admin": true
+      },
+      "attachments": [
+        {
+          "path": "contributions/ath12k-stats-timeout-recovery/attachments/test-script.py",
+          "sha256": "57891e6654c08e60caf5dccda7bb6d6bceaef5c9eda1ce683056ce5c85db4489"
+        }
+      ]
     }
   ]
 }
