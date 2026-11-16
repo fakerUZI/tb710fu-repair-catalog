@@ -18,3 +18,11 @@ Snap 社区条目分为已具备内核支持时的用户态修复，以及旧 Ub
 ## 2026-11-16 代码审核
 
 [PR #8–#11 的修正、测试和回退边界](docs/REVIEW-20261116.md)。
+
+## Wi-Fi 与麦克风补充审核
+
+[PR #12、#14 的代码修正、测试及恢复边界](docs/REVIEW-20261116-network-microphone.md)。
+
+## snap1 内置麦克风修复
+
+`microphone-snap1`：[说明与回退](contributions/microphone-snap1/attachments/README.md)。仅允许匹配的内核、固件、GPT 与启动镜像。命令行不设动作时为只读 check；修复助手会显式传入动作，当前默认 apply，会写 boot_a，运行前须确认风险。核心实机声学验证已完成，本轮修改的完整 apply/rollback 仍未在真实块设备上重跑，详见[验证记录](contributions/microphone-snap1/attachments/VALIDATION.md)。

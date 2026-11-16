@@ -1,0 +1,48 @@
+--- a/tb710fu-snap1.dts
++++ b/tb710fu-microphone.dts
+@@ -3829,6 +3829,7 @@
+ 		};
+ 
+ 		soundwire@6d30000 {
++			phandle = <0x15d>;
+ 			compatible = "qcom,soundwire-v2.0.0";
+ 			reg = <0x00 0x6d30000 0x00 0x10000>;
+ 			interrupts = <0x00 0x1f0 0x04 0x00 0x00 0x208 0x04 0x00>;
+@@ -8241,6 +8242,7 @@
+ 	};
+ 
+ 	audio-codec {
++		phandle = <0x15c>;
+ 		compatible = "qcom,wcd9395-codec", "qcom,wcd9390-codec";
+ 		pinctrl-0 = <0x146>;
+ 		pinctrl-names = "default";
+@@ -8350,12 +8352,29 @@
+ 	};
+ 
+ 	sound {
++		audio-routing = "AMIC1", "MIC BIAS1", "AMIC2", "MIC BIAS2", "AMIC3", "MIC BIAS3", "AMIC4", "MIC BIAS3", "AMIC5", "MIC BIAS4", "TX SWR_INPUT0", "ADC1_OUTPUT", "TX SWR_INPUT1", "ADC2_OUTPUT", "TX SWR_INPUT2", "ADC3_OUTPUT", "TX SWR_INPUT3", "ADC4_OUTPUT";
+ 		compatible = "qcom,sm8650-sndcard", "qcom,sm8450-sndcard";
+ 		model = "Lenovo-TB710FU";
+ 		pinctrl-names = "default", "sleep";
+ 		pinctrl-0 = <0x14e 0x14f 0x150 0x151>;
+ 		pinctrl-1 = <0x152 0x153 0x154 0x155>;
+ 
++		wcd-capture-dai-link {
++			link-name = "WCD Capture";
++
++			platform {
++				sound-dai = <0x15b>;
++			};
++
++			codec {
++				sound-dai = <0x15c 0x01 0x15d 0x01 0xcd 0x00>;
++			};
++
++			cpu {
++				sound-dai = <0x156 0x78>;
++			};
++		};
++
+ 		aw-spk-dai-link {
+ 			link-name = "AW882xx Playback";
+ 
