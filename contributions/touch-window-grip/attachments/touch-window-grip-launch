@@ -1,17 +1,56 @@
 #!/bin/sh
-# touch-window-grip 启动器：等 mutter 的 Xwayland auth 文件就绪，再带 XAUTHORITY 启动。
-# 单独成文件的原因：systemd 会在 ExecStart 里做 $VAR 展开，把 shell 变量
-# 和 $(( )) 算术吃掉，逻辑放在脚本里才不会被打断。
-set -u
+# Keep shell expansion out of systemd's ExecStart; preserve paths as arguments.
+exec /usr/bin/python3 - "$@" <<'PY'
+import os
+from pathlib import Path
+import subprocess
+import sys
+import time
 
-i=0
-A=""
-while [ "$i" -lt 30 ]; do
-    A=$(ls "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"/.mutter-Xwaylandauth.* 2>/dev/null | head -1)
-    [ -n "$A" ] && break
-    i=$((i + 1))
-    sleep 2
-done
+PROBE = '''import ctypes,sys
+try:
+ lib=ctypes.CDLL("libX11.so.6")
+except OSError:
+ sys.exit(2)
+lib.XOpenDisplay.argtypes=[ctypes.c_char_p]
+lib.XOpenDisplay.restype=ctypes.c_void_p
+lib.XCloseDisplay.argtypes=[ctypes.c_void_p]
+p=lib.XOpenDisplay(None)
+if not p: sys.exit(1)
+lib.XCloseDisplay(p)
+'''
 
-[ -n "$A" ] && export XAUTHORITY="$A"
-exec /usr/bin/python3 "${HOME}/.local/bin/touch-window-grip"
+def candidates(runtime, inherited):
+    try:
+        recent=sorted(((p.stat().st_mtime_ns,p) for p in Path(runtime).glob('.mutter-Xwaylandauth.*') if p.is_file() and os.access(p,os.R_OK)),reverse=True)
+    except OSError:
+        recent=[]
+    paths=([Path(inherited)] if inherited and Path(inherited).is_file() and os.access(inherited,os.R_OK) else [])+[p for _,p in recent]
+    return list(dict.fromkeys(str(p) for p in paths))
+
+def choose(runtime, inherited, display, clock=time.monotonic, wait=time.sleep, run=subprocess.run):
+    paths=candidates(runtime,inherited)
+    if not display: return paths[0] if paths else None
+    deadline=clock()+60
+    while clock()<deadline:
+        for path in candidates(runtime,inherited):
+            remaining=deadline-clock()
+            if remaining<=0: break
+            try:
+                result=run([sys.executable,'-c',PROBE],env=dict(os.environ,XAUTHORITY=path,DISPLAY=display),timeout=min(2,remaining),stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=False)
+            except (OSError,subprocess.TimeoutExpired):
+                continue
+            if result.returncode in (0,2): return path
+        remaining=deadline-clock()
+        if remaining>0: wait(min(2,remaining))
+    paths=candidates(runtime,inherited)
+    return paths[0] if paths else None
+
+def main():
+    runtime=os.environ.get('XDG_RUNTIME_DIR',f'/run/user/{os.getuid()}')
+    path=choose(runtime,os.environ.get('XAUTHORITY'),os.environ.get('DISPLAY'))
+    if path: os.environ['XAUTHORITY']=path
+    os.execv(sys.executable,[sys.executable,str(Path.home()/'.local/bin/touch-window-grip'),*sys.argv[1:]])
+
+if __name__=='__main__': main()
+PY

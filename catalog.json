@@ -183,7 +183,7 @@
       "description": "问题：平板上无法用一根手指拖动画布/窗口，也无法从边角缩放。WorkBuddy、微信这类 Electron / 无边框应用尤其明显。\n\n原因：无边框窗口的拖动靠 -webkit-app-region: drag，缩放靠 Chromium 的 resize 热区，二者都只识别鼠标事件；触摸会被当成普通点击交给页面。平板上没有物理鼠标，于是这条路径整体失效。\n\n做法：touch-window-grip 用 XInput2 被动触摸抓取（XIGrabTouchBegin），在触摸按下那一刻先做一次分流，再决定是否接管：\n  1) 距角落 54px 内 → 双轴缩放\n  2) 距边缘 18px 内 → 单轴缩放\n  3) 顶部 80px 条 → 移动窗口\n  4) 其余 → 立即 XIRejectTouch，原样交还给应用，保证点击、长按、滚动不被抢\n\n窗口尺寸受 WM_NORMAL_HINTS 的 min/max 夹取；每次按下都重新读取窗口几何，避免窗口被别的途径移动后错位。配置在 ~/.config/touch-window-grip/targets.json，按 WM_CLASS / 标题关键字匹配要接管的应用，可用 --add / --remove / --list 管理。自带 --selftest，会验证分类、移动、右/下/右下角缩放并复原。\n\n只对 XWayland / X11 窗口有效；原生 Wayland 客户端抓不到。\n\n用法：TB710FU_FIX_ACTION=check 只检查不改动，默认 apply 安装，rollback 停用服务并移除本包文件（你的 targets.json 会保留为 .bak 目录）。",
       "device": "TB710FU",
       "status": "community-review",
-      "risk": "· 仅用户级改动：~/.local/bin/touch-window-grip、~/.local/bin/touch-window-grip-launch、~/.config/touch-window-grip/targets.json（若已存在会先备份，不覆盖）、~/.config/systemd/user/touch-window-grip.service。\n· 需要 X11/XWayland 环境（DISPLAY 可用）。服务里用 %t 取 Xwayland 的 auth 文件，不写死用户号。\n· 登录初期 Xwayland 可能尚未就绪。unit 已改为 After=PartOf=graphical-session.target，启动器会等 mutter 的 Xwayland auth 文件出现（最多 60 秒），RestartSec=8 且 StartLimitIntervalSec=0 不放弃重试，因此不再出现 activating/auto-restart 循环刷日志。若仍未起来，用 journalctl --user -u touch-window-grip 查看原因。\n· 默认只接管 targets.json 里匹配的窗口，未匹配的窗口完全不受影响，因此不会干扰正常触摸操作。\n· 回滚：TB710FU_FIX_ACTION=rollback（停用并禁用服务、删 unit 与两个可执行文件、把 ~/.config/touch-window-grip 移到 .bak 目录）。\n· 启动逻辑放在独立启动器里，而不是塞进 ExecStart，因为 systemd 会在 ExecStart 中展开 $VAR，会吃掉 shell 变量与 $(( )) 算术。",
+      "risk": "· 只对 X11 / XWayland 窗口生效，不适用于原生 Wayland 窗口。修改当前用户程序、配置和服务；现有 targets.json 保留。\n· 启动器优先探测继承的 XAUTHORITY，再按修改时间选择可读取的 .mutter-Xwaylandauth.*；路径作为独立参数传递，支持含空格的认证文件名。每次 XOpenDisplay 探测上限 2 秒，总等待上限 60 秒，并关闭成功打开的连接。\n· 没有 DISPLAY 时不探测，直接尝试已有/最新认证文件；libX11 缺失时交给主程序报告依赖错误。systemd 保留 RestartSec=8 与 StartLimitIntervalSec=0，登录未就绪时退避重试。\n· TB710FU_FIX_ACTION=check 只读，apply 安装，rollback 停用服务、移除本包程序并把 targets 配置目录保留为 .bak。\n· 原窗口抓取功能有实机验证；本次启动器修改通过候选选择、超时和连接释放隔离测试，尚未实机重登验证。",
       "script": {
         "path": "contributions/touch-window-grip/script.sh",
         "sha256": "81c3ada04c099d9be38fe110544fd9f23ba338d859737899bdfaf80933f9c244",
@@ -196,7 +196,7 @@
         },
         {
           "path": "contributions/touch-window-grip/attachments/touch-window-grip-launch",
-          "sha256": "4b51fcc4cb088ae357cdf2432320f20a44c172c49289541bec95557e820ff884"
+          "sha256": "cbb8f69e1641b943f8fa2ac57b0527b301d8e81afb685fa3e30af7f780cdee8b"
         },
         {
           "path": "contributions/touch-window-grip/attachments/targets.json",
