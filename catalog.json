@@ -120,6 +120,33 @@
           "sha256": "a20dfbbccc73ca1942e76616f03fc41111702775e5f0846542f3886a1704ea90"
         }
       ]
+    },
+    {
+      "id": "touch-window-grip",
+      "title": "手指拖动 / 缩放宽边框为无边框的 X11 窗口（Electron 等）",
+      "description": "问题：平板上无法用一根手指拖动画布/窗口，也无法从边角缩放。WorkBuddy、微信这类 Electron / 无边框应用尤其明显。\n\n原因：无边框窗口的拖动靠 -webkit-app-region: drag，缩放靠 Chromium 的 resize 热区，二者都只识别鼠标事件；触摸会被当成普通点击交给页面。平板上没有物理鼠标，于是这条路径整体失效。\n\n做法：touch-window-grip 用 XInput2 被动触摸抓取（XIGrabTouchBegin），在触摸按下那一刻先做一次分流，再决定是否接管：\n  1) 距角落 54px 内 → 双轴缩放\n  2) 距边缘 18px 内 → 单轴缩放\n  3) 顶部 80px 条 → 移动窗口\n  4) 其余 → 立即 XIRejectTouch，原样交还给应用，保证点击、长按、滚动不被抢\n\n窗口尺寸受 WM_NORMAL_HINTS 的 min/max 夹取；每次按下都重新读取窗口几何，避免窗口被别的途径移动后错位。配置在 ~/.config/touch-window-grip/targets.json，按 WM_CLASS / 标题关键字匹配要接管的应用，可用 --add / --remove / --list 管理。自带 --selftest，会验证分类、移动、右/下/右下角缩放并复原。\n\n只对 XWayland / X11 窗口有效；原生 Wayland 客户端抓不到。",
+      "device": "TB710FU",
+      "status": "community-review",
+      "risk": "· 仅用户级改动：~/.local/bin/touch-window-grip、~/.config/touch-window-grip/targets.json（若已存在会先备份，不覆盖）、~/.config/systemd/user/touch-window-grip.service。\n· 需要 X11/XWayland 环境（DISPLAY 可用）。服务里用 %t 取 Xwayland 的 auth 文件，不写死用户号。\n· 已知不稳场景：注销重登后该服务曾出现 activating/auto-restart 循环（X 连接尚未就绪）。若遇到，手动 systemctl --user restart touch-window-grip.service 即可。\n· 默认只接管 targets.json 里匹配的窗口，未匹配的窗口完全不受影响，因此不会干扰正常触摸操作。\n· 回滚：systemctl --user disable --now touch-window-grip.service，删掉 ~/.local/bin/touch-window-grip 与 ~/.config/touch-window-grip 即可。",
+      "script": {
+        "path": "contributions/touch-window-grip/script.sh",
+        "sha256": "09f0482217d6273c831ff2dbf0712c5567875ebe02beabdffd4312f2df021b3c",
+        "requires_admin": false
+      },
+      "attachments": [
+        {
+          "path": "contributions/touch-window-grip/attachments/touch-window-grip",
+          "sha256": "921ee7370339e7f8a1b207f31dfb37777ad38e3484f2874126e14b77b33abd34"
+        },
+        {
+          "path": "contributions/touch-window-grip/attachments/targets.json",
+          "sha256": "8a8cdb966832e54f4dd695b3795eddb1f8dae0e2c0dc06f1f7d218c6cd4bb69d"
+        },
+        {
+          "path": "contributions/touch-window-grip/attachments/touch-window-grip.service",
+          "sha256": "005f3f02d1b74627cd3c6449ca029b89f3478d14a6b368f34b224b97a1cd078a"
+        }
+      ]
     }
   ]
 }

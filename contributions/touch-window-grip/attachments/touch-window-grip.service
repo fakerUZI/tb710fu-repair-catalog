@@ -1,0 +1,17 @@
+[Unit]
+Description=Touch window grip — 手指拖动/缩放无边框 X11 窗口（Electron 等）
+Documentation=file:%h/.local/bin/touch-window-grip
+After=graphical-session.target
+
+[Service]
+Type=simple
+Environment=DISPLAY=:0
+# 旧实现（如各自带抓取的守护）会持有同一窗口的触摸抓取，不先退场新的抓不到。
+# 方括号写法避免 pkill 匹配到自己。
+ExecStartPre=-/usr/bin/pkill -f '[t]ouch-window-grip'
+ExecStart=/bin/sh -c 'A=$(ls %t/.mutter-Xwaylandauth.* 2>/dev/null | head -1); [ -n "$A" ] && export XAUTHORITY="$A"; exec /usr/bin/python3 %h/.local/bin/touch-window-grip'
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

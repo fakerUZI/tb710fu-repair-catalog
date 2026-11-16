@@ -1,0 +1,1122 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""touch-window-grip —— 用一根手指拖动 / 缩放「无边框」X11 窗口。
+
+适用范围（这就是同类问题的通用解法）
+------------------------------------
+任何 **X11 / XWayland** 客户端里、自己没处理触摸的无边框窗口都能用：
+Electron（BrowserWindow { frame: false }）、Chromium 的 app 窗口、
+以及各种自绘标题栏的程序。
+
+不适用：原生 Wayland 客户端（拿不到 X 窗口，无法被动抓取触摸）。
+        需要先让目标程序跑在 XWayland 上（Electron 用 --ozone-platform=x11，
+        Qt 用 QT_QPA_PLATFORM=xcb）。
+
+原理
+----
+1. 在目标窗口上做 XInput2 被动触摸抓取（只影响这个窗口，别的程序不受影响）。
+2. 按手指落点把触摸分流：
+
+       角落（左上/右上/左下/右下） -> 双向缩放，等价于鼠标拖窗口角
+       边缘（上下左右细带）        -> 单向缩放
+       顶部标题栏条               -> 拖动窗口
+       其它任何地方               -> 立刻 XIRejectTouch 还给应用
+
+3. 位移超过阈值（slop）才真正动作；几乎没动就抬起 -> 也 reject，
+   让应用自己合成点击，所以标题栏上的按钮、角落里的控件照常可点。
+4. 缩放遵守 WM_NORMAL_HINTS 的 min/max，并由 mutter 再按屏幕边界二次约束。
+
+为什么不用 XTEST 合成鼠标事件
+----------------------------
+Xwayland 带 -enable-ei-portal 时，任何 XTEST 注入都会让 Xwayland 去
+org.freedesktop.portal.RemoteDesktop 申请授权，弹出「远程桌面 / 允许远程
+交互」对话框，抢焦点、把屏幕键盘顶掉。所以这里只在 X 层直接
+XMoveWindow / XMoveResizeWindow，不注入任何输入事件。
+
+配置文件
+--------
+~/.config/touch-window-grip/targets.json
+
+    {
+      "defaults": {"strip": 80, "edge": 18, "corner": 54, "slop": 14,
+                   "tap": "reject", "min_width": 400, "min_height": 200,
+                   "resize": true},
+      "targets": [
+        {"name": "workbuddy", "match": ["workbuddy"], "strip": 80}
+      ]
+    }
+
+`match` 是 WM_CLASS / 窗口标题里的关键字（小写，包含即匹配）。
+
+命令行
+------
+  touch-window-grip                 常驻（处理配置里的所有 target）
+  touch-window-grip --profile NAME  只处理某个 target
+  touch-window-grip --list          打印当前配置
+  touch-window-grip --add CLASS     新增一个 target（可带 --strip 等）
+  touch-window-grip --remove CLASS  删除 target
+  touch-window-grip --status        打印配置、匹配到的窗口、守护状态
+  touch-window-grip --selftest      自检：移动 + 四种缩放，最后复原
+
+环境变量覆盖（只影响命令行临时调试，不写盘）
+  TWG_STRIP TWG_EDGE TWG_CORNER TWG_SLOP TWG_TAP TWG_MATCH
+  （旧名字 WBM_* 仍然认，保持向后兼容）
+"""
+
+import ctypes as C
+import ctypes.util
+import fcntl
+import json
+import os
+import select
+import signal
+import sys
+import time
+
+CONFIG_DIR = os.path.expanduser("~/.config/touch-window-grip")
+CONFIG_PATH = os.path.join(CONFIG_DIR, "targets.json")
+CACHE_DIR = os.path.expanduser("~/.cache/touch-window-grip")
+LOG_PATH = os.path.join(CACHE_DIR, "grip.log")
+LOCK_PATH = os.path.join(CACHE_DIR, "grip.lock")
+MAX_LOG = 1 << 20
+
+XI_TOUCH_BEGIN = 18
+XI_TOUCH_UPDATE = 19
+XI_TOUCH_END = 20
+
+XI_TOUCH_CLASS = 8
+XI_SLAVE_POINTER = 3
+GENERIC_EVENT = 35
+IS_VIEWABLE = 2
+XI_ANY_MODIFIER = -2147483648
+XIAcceptTouch = 6
+XIRejectTouch = 7
+XA_ATOM = 4
+
+DEFAULTS = {
+    "strip": 80,        # 顶部标题栏条高度（物理像素）；0 = 不拖动
+    "edge": 18,         # 边缘缩放带宽度（物理像素）；0 = 不按边缘缩放
+    "corner": 54,       # 角落缩放方块边长（物理像素）
+    "slop": 14,         # 超过多少像素才算拖动/缩放
+    "tap": "reject",    # reject = 交还应用 | none = 什么都不做
+    "min_width": 400,   # 只抓取宽度不小于此值的窗口
+    "min_height": 200,
+    "resize": True,
+}
+
+DEFAULT_CONFIG = {
+    "defaults": dict(DEFAULTS),
+    "targets": [
+        {"name": "workbuddy", "match": ["workbuddy"], "strip": 80},
+    ],
+}
+
+
+def log(msg):
+    try:
+        os.makedirs(CACHE_DIR, exist_ok=True)
+        if os.path.exists(LOG_PATH) and os.path.getsize(LOG_PATH) > MAX_LOG:
+            os.replace(LOG_PATH, LOG_PATH + ".1")
+        with open(LOG_PATH, "a", encoding="utf-8") as fh:
+            fh.write(time.strftime("%m-%d %H:%M:%S ") + msg + "\n")
+    except Exception:
+        pass
+
+
+# ---------------------------------------------------------------- 配置
+def load_config():
+    cfg = None
+    try:
+        with open(CONFIG_PATH, encoding="utf-8") as fh:
+            cfg = json.load(fh)
+    except FileNotFoundError:
+        cfg = json.loads(json.dumps(DEFAULT_CONFIG))
+        save_config(cfg)
+    except Exception as exc:
+        log("config read error: %r" % (exc,))
+        cfg = json.loads(json.dumps(DEFAULT_CONFIG))
+    cfg.setdefault("defaults", {})
+    cfg.setdefault("targets", [])
+    merged_defaults = dict(DEFAULTS)
+    merged_defaults.update({k: v for k, v in cfg["defaults"].items() if k in DEFAULTS})
+    cfg["defaults"] = merged_defaults
+    targets = []
+    for t in cfg["targets"]:
+        if not t.get("match"):
+            continue
+        prof = dict(merged_defaults)
+        prof.update({k: v for k, v in t.items() if k in DEFAULTS})
+        prof["name"] = t.get("name") or t["match"][0]
+        prof["match"] = [str(m).lower() for m in t["match"]]
+        targets.append(prof)
+    cfg["resolved"] = targets
+    return cfg
+
+
+def save_config(cfg):
+    try:
+        os.makedirs(CONFIG_DIR, exist_ok=True)
+        out = {"defaults": cfg.get("defaults", dict(DEFAULTS)),
+               "targets": cfg.get("targets", [])}
+        tmp = CONFIG_PATH + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as fh:
+            json.dump(out, fh, ensure_ascii=False, indent=2)
+            fh.write("\n")
+        os.replace(tmp, CONFIG_PATH)
+        return True
+    except Exception as exc:
+        log("config write error: %r" % (exc,))
+        return False
+
+
+def env_overrides(cfg):
+    """临时覆盖（TWG_* 优先，兼容旧的 WBM_*）。逐项生效，不要求全给。"""
+    def pick(name, kind):
+        for prefix in ("TWG_", "WBM_"):
+            raw = os.environ.get(prefix + name)
+            if raw not in (None, ""):
+                try:
+                    return kind(raw)
+                except ValueError:
+                    continue
+        return None
+
+    vals = {}
+    for name, kind in (("strip", float), ("edge", float), ("corner", float),
+                       ("slop", float)):
+        v = pick(name.upper(), kind)
+        if v is not None:
+            vals[name] = v
+    tap = pick("TAP", str)
+    if tap:
+        vals["tap"] = tap.strip().lower()
+    match = pick("MATCH", str)
+    if match:
+        vals["match"] = [m.strip().lower() for m in match.split(",") if m.strip()]
+    if vals:
+        for prof in cfg["resolved"]:
+            prof.update(vals)
+    return cfg
+
+
+# ---------------------------------------------------------------- ctypes 结构
+class XIEventMask(C.Structure):
+    _fields_ = [("deviceid", C.c_int),
+                ("mask_len", C.c_int),
+                ("mask", C.POINTER(C.c_ubyte))]
+
+
+class XIGrabModifiers(C.Structure):
+    _fields_ = [("modifiers", C.c_int), ("status", C.c_int)]
+
+
+class XIButtonState(C.Structure):
+    _fields_ = [("mask_len", C.c_int), ("mask", C.POINTER(C.c_ubyte))]
+
+
+class XIValuatorState(C.Structure):
+    _fields_ = [("mask_len", C.c_int), ("mask", C.POINTER(C.c_double)),
+                ("values", C.POINTER(C.c_double))]
+
+
+class XIModifierState(C.Structure):
+    _fields_ = [("base", C.c_int), ("latched", C.c_int),
+                ("locked", C.c_int), ("effective", C.c_int)]
+
+
+class XIGroupState(C.Structure):
+    _fields_ = [("base", C.c_int), ("latched", C.c_int),
+                ("locked", C.c_int), ("effective", C.c_int)]
+
+
+class XIDeviceEvent(C.Structure):
+    _fields_ = [("type", C.c_int),
+                ("serial", C.c_ulong),
+                ("send_event", C.c_int),
+                ("display", C.c_void_p),
+                ("extension", C.c_int),
+                ("evtype", C.c_int),
+                ("time", C.c_ulong),
+                ("deviceid", C.c_int),
+                ("sourceid", C.c_int),
+                ("detail", C.c_int),
+                ("root", C.c_ulong),
+                ("event", C.c_ulong),
+                ("child", C.c_ulong),
+                ("root_x", C.c_double),
+                ("root_y", C.c_double),
+                ("event_x", C.c_double),
+                ("event_y", C.c_double),
+                ("flags", C.c_int),
+                ("buttons", XIButtonState),
+                ("valuators", XIValuatorState),
+                ("mods", XIModifierState),
+                ("group", XIGroupState)]
+
+
+class XGenericEventCookie(C.Structure):
+    _fields_ = [("type", C.c_int),
+                ("serial", C.c_ulong),
+                ("send_event", C.c_int),
+                ("display", C.c_void_p),
+                ("extension", C.c_int),
+                ("evtype", C.c_int),
+                ("cookie", C.c_uint),
+                ("data", C.c_void_p)]
+
+
+class XITouchClassInfo(C.Structure):
+    _fields_ = [("type", C.c_int), ("sourceid", C.c_int),
+                ("mode", C.c_int), ("num_touches", C.c_int)]
+
+
+class XIDeviceInfo(C.Structure):
+    _fields_ = [("deviceid", C.c_int),
+                ("name", C.c_char_p),
+                ("use", C.c_int),
+                ("attachment", C.c_int),
+                ("enabled", C.c_int),
+                ("num_classes", C.c_int),
+                ("classes", C.POINTER(C.c_void_p))]
+
+
+class XClassHint(C.Structure):
+    # 必须用裸指针：c_char_p 会被 ctypes 复制成 Python bytes，再 XFree 就踩堆
+    _fields_ = [("res_name", C.c_void_p), ("res_class", C.c_void_p)]
+
+
+class XWindowAttributes(C.Structure):
+    _fields_ = [("x", C.c_int), ("y", C.c_int),
+                ("width", C.c_int), ("height", C.c_int),
+                ("border_width", C.c_int), ("depth", C.c_int),
+                ("visual", C.c_void_p), ("root", C.c_ulong),
+                ("class_", C.c_int), ("bit_gravity", C.c_int),
+                ("win_gravity", C.c_int), ("backing_store", C.c_int),
+                ("backing_planes", C.c_ulong), ("backing_pixel", C.c_ulong),
+                ("save_under", C.c_int), ("colormap", C.c_ulong),
+                ("map_installed", C.c_int), ("map_state", C.c_int),
+                ("all_event_masks", C.c_long), ("your_event_mask", C.c_long),
+                ("do_not_propagate_mask", C.c_long), ("override_redirect", C.c_int),
+                ("screen", C.c_void_p)]
+
+
+class XAspect(C.Structure):
+    _fields_ = [("x", C.c_int), ("y", C.c_int)]
+
+
+class XSizeHints(C.Structure):
+    _fields_ = [("flags", C.c_long),
+                ("x", C.c_int), ("y", C.c_int),
+                ("width", C.c_int), ("height", C.c_int),
+                ("min_width", C.c_int), ("min_height", C.c_int),
+                ("max_width", C.c_int), ("max_height", C.c_int),
+                ("width_inc", C.c_int), ("height_inc", C.c_int),
+                ("min_aspect", XAspect), ("max_aspect", XAspect),
+                ("base_width", C.c_int), ("base_height", C.c_int),
+                ("win_gravity", C.c_int)]
+
+
+PMinSize = 16
+PMaxSize = 32
+
+XERRORHANDLER = C.CFUNCTYPE(C.c_int, C.c_void_p, C.c_void_p)
+
+
+@XERRORHANDLER
+def _quiet_error(_dpy, _ev):
+    # 自检时可能对不存在的 touch id 调 XIAllowTouchEvents，静默掉 BadValue
+    return 0
+
+
+def _load():
+    x11 = C.CDLL(ctypes.util.find_library("X11") or "libX11.so.6")
+    xi = C.CDLL(ctypes.util.find_library("Xi") or "libXi.so.6")
+
+    x11.XOpenDisplay.restype = C.c_void_p
+    x11.XOpenDisplay.argtypes = [C.c_char_p]
+    x11.XDefaultRootWindow.restype = C.c_ulong
+    x11.XDefaultRootWindow.argtypes = [C.c_void_p]
+    x11.XPending.argtypes = [C.c_void_p]
+    x11.XNextEvent.argtypes = [C.c_void_p, C.c_void_p]
+    x11.XSync.argtypes = [C.c_void_p, C.c_int]
+    x11.XFlush.argtypes = [C.c_void_p]
+    x11.XFree.argtypes = [C.c_void_p]
+    x11.XConnectionNumber.argtypes = [C.c_void_p]
+    x11.XSetErrorHandler.argtypes = [XERRORHANDLER]
+    x11.XSetErrorHandler.restype = C.c_void_p
+    x11.XQueryTree.argtypes = [C.c_void_p, C.c_ulong,
+                               C.POINTER(C.c_ulong), C.POINTER(C.c_ulong),
+                               C.POINTER(C.POINTER(C.c_ulong)), C.POINTER(C.c_uint)]
+    x11.XGetClassHint.argtypes = [C.c_void_p, C.c_ulong, C.POINTER(XClassHint)]
+    x11.XGetWindowAttributes.argtypes = [C.c_void_p, C.c_ulong,
+                                         C.POINTER(XWindowAttributes)]
+    x11.XFetchName.argtypes = [C.c_void_p, C.c_ulong, C.POINTER(C.c_void_p)]
+    x11.XTranslateCoordinates.argtypes = [C.c_void_p, C.c_ulong, C.c_ulong,
+                                          C.c_int, C.c_int,
+                                          C.POINTER(C.c_int), C.POINTER(C.c_int),
+                                          C.POINTER(C.c_ulong)]
+    x11.XMoveWindow.argtypes = [C.c_void_p, C.c_ulong, C.c_int, C.c_int]
+    x11.XMoveResizeWindow.argtypes = [C.c_void_p, C.c_ulong, C.c_int, C.c_int,
+                                      C.c_uint, C.c_uint]
+    x11.XQueryExtension.argtypes = [C.c_void_p, C.c_char_p,
+                                    C.POINTER(C.c_int), C.POINTER(C.c_int),
+                                    C.POINTER(C.c_int)]
+    x11.XInternAtom.restype = C.c_ulong
+    x11.XInternAtom.argtypes = [C.c_void_p, C.c_char_p, C.c_int]
+    x11.XGetWindowProperty.restype = C.c_int
+    x11.XGetWindowProperty.argtypes = [
+        C.c_void_p, C.c_ulong, C.c_ulong, C.c_long, C.c_long, C.c_int,
+        C.c_ulong, C.POINTER(C.c_ulong), C.POINTER(C.c_int),
+        C.POINTER(C.c_ulong), C.POINTER(C.c_ulong),
+        C.POINTER(C.POINTER(C.c_ulong))]
+    x11.XGetWMNormalHints.restype = C.c_int
+    x11.XGetWMNormalHints.argtypes = [C.c_void_p, C.c_ulong,
+                                      C.POINTER(XSizeHints), C.POINTER(C.c_long)]
+
+    xi.XIQueryVersion.argtypes = [C.c_void_p, C.POINTER(C.c_int), C.POINTER(C.c_int)]
+    xi.XIQueryDevice.restype = C.POINTER(XIDeviceInfo)
+    xi.XIQueryDevice.argtypes = [C.c_void_p, C.c_int, C.POINTER(C.c_int)]
+    xi.XIFreeDeviceInfo.argtypes = [C.POINTER(XIDeviceInfo)]
+    # libXi 导出的是 XIGrabTouchBegin，实测签名（反汇编 + 调用验证）：
+    #   int XIGrabTouchBegin(Display*, int deviceid, Window grab_window,
+    #                        int num_modifiers, XIEventMask*, Bool owner_events,
+    #                        XIGrabModifiers*);
+    xi.XIGrabTouchBegin.argtypes = [C.c_void_p, C.c_int, C.c_ulong, C.c_int,
+                                    C.POINTER(XIEventMask), C.c_int,
+                                    C.POINTER(XIGrabModifiers)]
+    # void XIAllowTouchEvents(Display*, int deviceid, int detail,
+    #                         Window touch_window, int flags)
+    xi.XIAllowTouchEvents.argtypes = [C.c_void_p, C.c_int, C.c_int, C.c_ulong, C.c_int]
+    xi.XGetEventData.argtypes = [C.c_void_p, C.c_void_p]
+    xi.XGetEventData.restype = C.c_int
+    xi.XFreeEventData.argtypes = [C.c_void_p, C.c_void_p]
+    return x11, xi
+
+
+X11, XI = _load()
+X11.XSetErrorHandler(_quiet_error)
+
+
+# --------------------------------------------------------------------- 主体
+class Grip:
+    def __init__(self, dpy, devices, profiles, verbose=True):
+        self.dpy = dpy
+        self.root = X11.XDefaultRootWindow(dpy)
+        self.devices = devices
+        self.profiles = profiles
+        self.grabbed = {}      # win -> profile dict
+        self.touch = None
+        self._keep = []
+        self.verbose = verbose
+        self.screen = self._screen_size()
+
+    # --- 设备 -------------------------------------------------------------
+    @staticmethod
+    def find_touch_devices(dpy):
+        n = C.c_int(0)
+        info = XI.XIQueryDevice(dpy, 0, C.byref(n))
+        out = []
+        if not info:
+            return out
+        try:
+            for i in range(n.value):
+                dev = info[i]
+                if dev.use != XI_SLAVE_POINTER:
+                    continue
+                if dev.num_classes <= 0 or not dev.classes:
+                    continue
+                for j in range(dev.num_classes):
+                    if not dev.classes[j]:
+                        continue
+                    cls = C.cast(dev.classes[j], C.POINTER(XITouchClassInfo)).contents
+                    if cls.type == XI_TOUCH_CLASS:
+                        out.append((dev.deviceid,
+                                    dev.name.decode("utf-8", "replace") if dev.name else "?",
+                                    cls.num_touches))
+                        break
+        finally:
+            XI.XIFreeDeviceInfo(info)
+        return out
+
+    # --- 窗口 -------------------------------------------------------------
+    def _screen_size(self):
+        attrs = XWindowAttributes()
+        if X11.XGetWindowAttributes(self.dpy, self.root, C.byref(attrs)):
+            return attrs.width, attrs.height
+        return 0, 0
+
+    def _walk(self, win, depth=0, acc=None):
+        acc = [] if acc is None else acc
+        if depth > 3:
+            return acc
+        root_ret, parent_ret = C.c_ulong(), C.c_ulong()
+        children = C.POINTER(C.c_ulong)()
+        nchild = C.c_uint()
+        if not X11.XQueryTree(self.dpy, win, C.byref(root_ret), C.byref(parent_ret),
+                              C.byref(children), C.byref(nchild)):
+            return acc
+        try:
+            if nchild.value:
+                for i in range(nchild.value):
+                    child = children[i]
+                    acc.append(child)
+                    self._walk(child, depth + 1, acc)
+        finally:
+            if children:
+                X11.XFree(children)
+        return acc
+
+    def _names(self, win):
+        names = []
+        hint = XClassHint()
+        if X11.XGetClassHint(self.dpy, win, C.byref(hint)):
+            try:
+                for raw in (hint.res_name, hint.res_class):
+                    if raw:
+                        value = C.cast(raw, C.c_char_p).value
+                        if value:
+                            names.append(value.decode("utf-8", "replace").lower())
+            finally:
+                for raw in (hint.res_name, hint.res_class):
+                    if raw:
+                        X11.XFree(raw)
+        name_ptr = C.c_void_p()
+        if X11.XFetchName(self.dpy, win, C.byref(name_ptr)) and name_ptr.value:
+            try:
+                value = C.cast(name_ptr, C.c_char_p).value
+                if value:
+                    names.append(value.decode("utf-8", "replace").lower())
+            finally:
+                X11.XFree(name_ptr)
+        return " ".join(names)
+
+    def _viewable_size(self, win):
+        attrs = XWindowAttributes()
+        if not X11.XGetWindowAttributes(self.dpy, win, C.byref(attrs)):
+            return None
+        if attrs.map_state != IS_VIEWABLE:
+            return None
+        return attrs.width, attrs.height
+
+    def _abs(self, win):
+        rx, ry, child = C.c_int(), C.c_int(), C.c_ulong()
+        if not X11.XTranslateCoordinates(self.dpy, win, self.root, 0, 0,
+                                         C.byref(rx), C.byref(ry), C.byref(child)):
+            return None
+        return rx.value, ry.value
+
+    def _geometry(self, win):
+        size = self._viewable_size(win)
+        origin = self._abs(win)
+        if not size or not origin:
+            return None
+        return origin[0], origin[1], size[0], size[1]
+
+    def _hints(self, win):
+        """返回 (min_w, min_h, max_w, max_h)。"""
+        hints = XSizeHints()
+        supplied = C.c_long(0)
+        if not X11.XGetWMNormalHints(self.dpy, win, C.byref(hints), C.byref(supplied)):
+            return 1, 1, 0, 0
+        min_w = hints.min_width if hints.flags & PMinSize else 1
+        min_h = hints.min_height if hints.flags & PMinSize else 1
+        max_w = hints.max_width if hints.flags & PMaxSize else 0
+        max_h = hints.max_height if hints.flags & PMaxSize else 0
+        if max_w <= 0 or max_w > 100000:
+            max_w = 0
+        if max_h <= 0 or max_h > 100000:
+            max_h = 0
+        return max(min_w, 1), max(min_h, 1), max_w, max_h
+
+    def _has_state(self, win, wanted):
+        atom = X11.XInternAtom(self.dpy, b"_NET_WM_STATE", 0)
+        if not atom:
+            return False
+        actual_type, actual_format = C.c_ulong(), C.c_int()
+        nitems, after = C.c_ulong(), C.c_ulong()
+        prop = C.POINTER(C.c_ulong)()
+        status = X11.XGetWindowProperty(self.dpy, win, atom, 0, 32, 0, XA_ATOM,
+                                        C.byref(actual_type), C.byref(actual_format),
+                                        C.byref(nitems), C.byref(after), C.byref(prop))
+        if status != 0 or not prop:
+            return False
+        try:
+            if actual_format.value != 32:
+                return False
+            atoms = [prop[i] for i in range(nitems.value)]
+        finally:
+            X11.XFree(prop)
+        for name in wanted:
+            if X11.XInternAtom(self.dpy, name.encode(), 0) in atoms:
+                return True
+        return False
+
+    def _not_resizable(self, win):
+        return self._has_state(win, ("_NET_WM_STATE_MAXIMIZED_VERT",
+                                     "_NET_WM_STATE_MAXIMIZED_HORZ",
+                                     "_NET_WM_STATE_FULLSCREEN"))
+
+    def _grab(self, win, prof):
+        mask_bytes = (C.c_ubyte * 3)(0, 0, 0x1C)   # bit18|19|20 = TouchBegin/Update/End
+        mask = XIEventMask(self.devices[0][0], 3, mask_bytes)
+        mods = (XIGrabModifiers * 1)()
+        mods[0].modifiers = XI_ANY_MODIFIER
+        ok = 0
+        for devid, _name, _touches in self.devices:
+            mask.deviceid = devid
+            mods[0].status = 0
+            status = XI.XIGrabTouchBegin(self.dpy, devid, win, 1, C.byref(mask), 1, mods)
+            if status == 0 and mods[0].status == 0:
+                ok += 1
+            else:
+                log("grab failed win=0x%x dev=%d status=%s mod_status=%s"
+                    % (win, devid, status, mods[0].status))
+        if ok:
+            self.grabbed[win] = prof
+            self._keep.append((mask_bytes, mask, mods))
+            log("grabbed win=0x%x profile=%s devices=%d geom=%s"
+                % (win, prof["name"], ok, self._geometry(win)))
+        return ok
+
+    def _match_windows(self):
+        """按配置找出所有目标窗口（不抓取，纯查询）。"""
+        out = []
+        for win in self._walk(self.root):
+            size = self._viewable_size(win)
+            if not size:
+                continue
+            names = self._names(win)
+            for prof in self.profiles:
+                if not any(k in names for k in prof["match"]):
+                    continue
+                if size[0] < prof["min_width"] or size[1] < prof["min_height"]:
+                    continue
+                out.append((win, prof))
+                break
+        return out
+
+    def rescan(self):
+        # 清理已销毁的窗口
+        for win in list(self.grabbed):
+            if self._viewable_size(win) is None:
+                del self.grabbed[win]
+        for win, prof in self._match_windows():
+            if win in self.grabbed:
+                continue
+            self._grab(win, prof)
+
+    # --- 区域分流 ---------------------------------------------------------
+    def classify(self, win, rx, ry, w, h, prof):
+        """返回 (mode, edges)：mode = 'resize' | 'move' | None。
+
+        edges 是包含 'l'/'r'/'t'/'b' 的字符串，比如 'tl' 表示左上角。
+        """
+        if prof["resize"] and not self._not_resizable(win):
+            c = prof["corner"]
+            e = prof["edge"]
+            if c > 0:
+                left = rx <= c
+                right = rx >= w - c
+                top = ry <= c
+                bottom = ry >= h - c
+                if (left or right) and (top or bottom):
+                    edges = ("l" if left else "r") + ("t" if top else "b")
+                    return "resize", edges
+            if e > 0:
+                edges = ""
+                if rx <= e:
+                    edges += "l"
+                elif rx >= w - e:
+                    edges += "r"
+                if ry <= e:
+                    edges += "t"
+                elif ry >= h - e:
+                    edges += "b"
+                if edges:
+                    return "resize", edges
+        if 0 <= ry <= prof["strip"] and 0 <= rx <= w:
+            return "move", ""
+        return None, ""
+
+    # --- 动作 -------------------------------------------------------------
+    def _allow(self, devid, touch_id, flag):
+        try:
+            XI.XIAllowTouchEvents(self.dpy, devid, touch_id, 0, flag)
+            X11.XFlush(self.dpy)
+        except Exception as exc:
+            log("allow error: %r" % (exc,))
+
+    def _move(self, win, x, y):
+        X11.XMoveWindow(self.dpy, win, int(x), int(y))
+        X11.XFlush(self.dpy)
+
+    def _resize(self, t, dx, dy):
+        wx, wy, w0, h0 = t["wx"], t["wy"], t["w"], t["h"]
+        edges = t["edges"]
+        w = w0 + dx if "r" in edges else (w0 - dx if "l" in edges else w0)
+        h = h0 + dy if "b" in edges else (h0 - dy if "t" in edges else h0)
+        w = max(t["min_w"], w)
+        h = max(t["min_h"], h)
+        if t["max_w"]:
+            w = min(t["max_w"], w)
+        if t["max_h"]:
+            h = min(t["max_h"], h)
+        x, y = wx, wy
+        if "l" in edges:
+            x = wx + (w0 - w)
+        if "t" in edges:
+            y = wy + (h0 - h)
+        if (x, y, w, h) == t.get("last"):
+            return
+        t["last"] = (x, y, w, h)
+        X11.XMoveResizeWindow(self.dpy, t["win"], int(x), int(y), int(w), int(h))
+        X11.XFlush(self.dpy)
+
+    # --- 事件 -------------------------------------------------------------
+    def begin(self, ev, allow_call=True):
+        if self.touch is not None:
+            # 多指：只跟第一根手指，其余还给应用
+            if allow_call:
+                self._allow(ev.deviceid, ev.detail, XIRejectTouch)
+            return
+        win = self._pick_window(ev)
+        geom = self._geometry(win) if win else None
+        if not geom:
+            if allow_call:
+                self._allow(ev.deviceid, ev.detail, XIRejectTouch)
+            return
+        wx, wy, w0, h0 = geom
+        prof = self.grabbed[win]
+        rx = ev.root_x - wx
+        ry = ev.root_y - wy
+        mode, edges = self.classify(win, rx, ry, w0, h0, prof)
+        if mode is None:
+            # 不在任何可动手区：立刻还给应用，滚动/点击保持原样
+            if allow_call:
+                self._allow(ev.deviceid, ev.detail, XIRejectTouch)
+            return
+        if allow_call:
+            self._allow(ev.deviceid, ev.detail, XIAcceptTouch)
+        min_w, min_h, max_w, max_h = self._hints(win) if mode == "resize" else (0, 0, 0, 0)
+        self.touch = {
+            "id": ev.detail,
+            "dev": ev.deviceid,
+            "win": win,
+            "mode": mode,
+            "edges": edges,
+            "profile": prof["name"],
+            "t0": time.monotonic(),
+            "x0": ev.root_x,
+            "y0": ev.root_y,
+            "wx": wx, "wy": wy, "w": w0, "h": h0,
+            "min_w": min_w, "min_h": min_h, "max_w": max_w, "max_h": max_h,
+            "slop": prof["slop"],
+            "tap": prof["tap"],
+            "active": False,
+            "dist": 0.0,
+            "last": None,
+        }
+
+    def handle(self, evtype, ev, allow_call=True):
+        if evtype == XI_TOUCH_BEGIN:
+            self.begin(ev, allow_call)
+            return
+
+        t = self.touch
+        if t is None or ev.detail != t["id"] or ev.deviceid != t["dev"]:
+            return
+
+        dx = ev.root_x - t["x0"]
+        dy = ev.root_y - t["y0"]
+        t["dist"] = max(t["dist"], (dx * dx + dy * dy) ** 0.5)
+
+        if evtype == XI_TOUCH_UPDATE:
+            if not t["active"] and t["dist"] >= t["slop"]:
+                t["active"] = True
+                log("%s start win=0x%x edges=%s at (%.0f,%.0f)"
+                    % (t["mode"], t["win"], t["edges"] or "-", t["x0"], t["y0"]))
+            if t["active"]:
+                if t["mode"] == "move":
+                    self._move(t["win"], t["wx"] + dx, t["wy"] + dy)
+                else:
+                    self._resize(t, dx, dy)
+            return
+
+        # XI_TOUCH_END
+        # 这里**不能**用 XTEST 补点击：Xwayland 带 -enable-ei-portal 时，
+        # 任何 XTEST 注入都会触发 portal 的「远程桌面 / 允许远程交互」授权框，
+        # 那个框会抢焦点、把键盘顶没。改成把触摸交还给应用，让它自己合成点击。
+        if not t["active"] and (time.monotonic() - t["t0"]) < 0.6:
+            if t["tap"] != "none":
+                self._allow(t["dev"], t["id"], XIRejectTouch)   # 交还，应用照常处理
+                log("tap -> reject to app")
+        self.touch = None
+
+    def _pick_window(self, ev):
+        if ev.event in self.grabbed:
+            return ev.event
+        # 被动抓取时 event 应等于抓取窗口；万一不是，按坐标找
+        for win in self.grabbed:
+            geom = self._geometry(win)
+            if not geom:
+                continue
+            wx, wy, w, h = geom
+            if wx <= ev.root_x <= wx + w and wy <= ev.root_y <= wy + h:
+                return win
+        return None
+
+
+
+# ------------------------------------------------------------------- 自检
+def selftest(grip, devices):
+    """不依赖真实手指，直接驱动状态机，验证分类、移动、四向缩放并复原。"""
+    matches = grip._match_windows()
+    if not matches:
+        print("FAIL: 没有匹配到窗口（检查 targets.json 的 match / min_width）")
+        return 5
+    win, prof = matches[0]
+    # 自检只需要分类与状态机；不真的抓取（守护进程在跑时抓不到也无所谓）
+    grip.grabbed.setdefault(win, prof)
+    print("window=0x%x profile=%s" % (win, prof["name"]))
+
+    g0 = grip._geometry(win)
+    if not g0:
+        print("FAIL: 读不到窗口几何")
+        return 5
+    wx, wy, w0, h0 = g0
+    print("geom=%s screen=%s hints=%s" % (g0, grip.screen, grip._hints(win)))
+
+    def fake(x, y, detail=12345):
+        e = XIDeviceEvent()
+        e.deviceid = devices[0][0]
+        e.detail = detail
+        e.event = win
+        e.root_x = x
+        e.root_y = y
+        return e
+
+    def restore(geom):
+        X11.XMoveResizeWindow(grip.dpy, win, *geom)
+        X11.XSync(grip.dpy, 0)
+        return grip._wait_geom(win, geom)
+
+    def forever_restore():
+        return restore(g0)
+
+    def drag(sx, sy, dx, dy, label, expect):
+        grip.touch = None
+        grip.handle(XI_TOUCH_BEGIN, fake(sx, sy), allow_call=False)
+        if grip.touch is None:
+            print("FAIL: %-9s 没有进入动作状态" % label)
+            return False
+        grip.handle(XI_TOUCH_UPDATE, fake(sx + dx, sy + dy), allow_call=False)
+        got = grip._wait_geom(win, expect)
+        grip.handle(XI_TOUCH_END, fake(sx + dx, sy + dy), allow_call=False)
+        ok = got == expect
+        print("%s %-9s got=%s expect=%s" % ("OK  " if ok else "BAD ", label, got, expect))
+        return ok
+
+    results = []
+    checks = [
+        ("body", (w0 // 2, h0 // 2), (None, "")),
+        ("strip", (w0 // 2, 30), ("move", "")),
+        ("corner-tl", (5, 5), ("resize", "lt")),
+        ("corner-br", (w0 - 5, h0 - 5), ("resize", "rb")),
+        ("edge-r", (w0 - 3, h0 // 2), ("resize", "r")),
+        ("edge-t", (w0 // 2, 3), ("resize", "t")),
+        ("edge-b", (w0 // 2, h0 - 3), ("resize", "b")),
+    ]
+    for label, (rx, ry), want in checks:
+        got = grip.classify(win, rx, ry, w0, h0, prof)
+        ok = got == want
+        print("%s 分类 %-9s got=%s expect=%s" % ("OK  " if ok else "BAD ", label, got, want))
+        results.append(ok)
+
+    # 基准几何：横向留出余量。窗口正好铺满工作区宽度时 mutter 会把它当贴边窗口，
+    # 拒绝横向移动/加宽（原生鼠标也一样），那样测出来的是环境限制，不是逻辑问题。
+    min_w, _min_h, _max_w, _max_h = grip._hints(win)
+    sw, _sh = grip.screen
+    tw = min(w0, max(min_w, sw - 420)) if sw else w0
+    base = (wx, wy, tw, h0)
+    if base != g0:
+        X11.XMoveResizeWindow(grip.dpy, win, *base)
+        X11.XSync(grip.dpy, 0)
+        got = grip._wait_geom(win, base)
+        print("%s 基准    got=%s expect=%s（为横向留余量）"
+              % ("OK  " if got == base else "WARN", got, base))
+        if got != base:
+            base = got
+    bx, by, bw, bh = base
+
+    try:
+        # 位移方向都取"有余量"的一侧：mutter 会按工作区夹住左/上边界
+        results.append(drag(bx + 200, by + 20, 40, 30, "move",
+                            (bx + 40, by + 30, bw, bh)))
+        restore(base)
+
+        results.append(drag(bx + bw - 3, by + bh // 2, 60, 0, "resize-r",
+                            (bx, by, bw + 60, bh)))
+        restore(base)
+
+        results.append(drag(bx + bw // 2, by + bh - 3, 0, 60, "resize-b",
+                            (bx, by, bw, bh + 60)))
+        restore(base)
+
+        results.append(drag(bx + bw - 5, by + bh - 5, 40, 40, "corner-br",
+                            (bx, by, bw + 40, bh + 40)))
+    finally:
+        forever_restore()
+
+    back = grip._geometry(win)
+    print("restored -> %s (expect %s)" % (back, g0))
+    ok = all(results) and back == g0
+    print("SELFTEST", "OK" if ok else "MISMATCH")
+    return 0 if ok else 7
+
+
+def _wait_geom(self, win, expect, timeout=1.2):
+    end = time.monotonic() + timeout
+    while time.monotonic() < end:
+        X11.XSync(self.dpy, 0)
+        now = self._geometry(win)
+        if now == expect:
+            return now
+        time.sleep(0.02)
+    return self._geometry(win)
+
+
+Grip._wait_geom = _wait_geom
+
+
+# ------------------------------------------------------------------- 命令行
+def cmd_list(cfg):
+    print("配置: %s" % CONFIG_PATH)
+    d = cfg["defaults"]
+    print("默认: strip=%s edge=%s corner=%s slop=%s tap=%s resize=%s min=%sx%s"
+          % (d["strip"], d["edge"], d["corner"], d["slop"], d["tap"],
+             d["resize"], d["min_width"], d["min_height"]))
+    for prof in cfg["resolved"]:
+        extra = []
+        for k in ("strip", "edge", "corner", "slop", "tap", "resize",
+                  "min_width", "min_height"):
+            if prof[k] != d[k]:
+                extra.append("%s=%s" % (k, prof[k]))
+        print("  - %-16s match=%-28s %s"
+              % (prof["name"], ",".join(prof["match"]), " ".join(extra)))
+    return 0
+
+
+def cmd_add(cfg, name, opts):
+    raw = {"name": name, "match": [name.lower()]}
+    for key in ("strip", "edge", "corner", "slop", "tap", "min_width", "min_height", "resize"):
+        if key in opts:
+            raw[key] = opts[key]
+    cfg["targets"] = [t for t in cfg["targets"]
+                      if (t.get("name") or "") != name]
+    cfg["targets"].append(raw)
+    if not save_config(cfg):
+        print("写入失败: %s" % CONFIG_PATH)
+        return 1
+    print("已添加 %s -> %s" % (name, CONFIG_PATH))
+    return 0
+
+
+def cmd_remove(cfg, name):
+    before = len(cfg["targets"])
+    cfg["targets"] = [t for t in cfg["targets"]
+                      if (t.get("name") or "") != name
+                      and name not in t.get("match", [])]
+    if len(cfg["targets"]) == before:
+        print("没有找到 %s" % name)
+        return 1
+    save_config(cfg)
+    print("已删除 %s" % name)
+    return 0
+
+
+def cmd_status(cfg):
+    dpy = X11.XOpenDisplay(None)
+    if not dpy:
+        print("无法连接 X 显示")
+        return 2
+    grip = Grip(dpy, [], cfg["resolved"])
+    print("配置: %s" % CONFIG_PATH)
+    print("显示: %s" % (os.environ.get("DISPLAY") or "(默认)"))
+    print("守护: %s" % ("运行中" if lock_held() else "未运行"))
+    found = False
+    for win in grip._walk(grip.root):
+        size = grip._viewable_size(win)
+        if not size:
+            continue
+        names = grip._names(win)
+        for prof in cfg["resolved"]:
+            if any(k in names for k in prof["match"]):
+                print("窗口 0x%-8x %-28s %dx%d+%d+%d  profile=%s  resize=%s"
+                      % (win, names[:28], size[0], size[1],
+                         (grip._abs(win) or (0, 0))[0], (grip._abs(win) or (0, 0))[1],
+                         prof["name"], not grip._not_resizable(win)))
+                found = True
+                break
+    if not found:
+        print("没有匹配到任何窗口（应用没开？或不是 X11 客户端？）")
+    return 0
+
+
+def lock_held():
+    try:
+        os.makedirs(CACHE_DIR, exist_ok=True)
+        fh = open(LOCK_PATH, "a+")
+        try:
+            fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            fcntl.flock(fh, fcntl.LOCK_UN)
+            return False
+        finally:
+            fh.close()
+    except OSError:
+        return True
+    except Exception:
+        return False
+
+
+def parse_opts(argv):
+    opts = {}
+    i = 0
+    while i < len(argv):
+        a = argv[i]
+        if a.startswith("--") and i + 1 < len(argv) and not argv[i + 1].startswith("--"):
+            key = a[2:].replace("-", "_")
+            val = argv[i + 1]
+            if key in ("strip", "edge", "corner", "slop", "min_width", "min_height"):
+                opts[key] = int(float(val))
+            elif key == "resize":
+                opts[key] = val.lower() not in ("0", "false", "no", "off")
+            else:
+                opts[key] = val
+            i += 2
+            continue
+        if a == "--no-resize":
+            opts["resize"] = False
+            i += 1
+            continue
+        i += 1
+    return opts
+
+
+def main():
+    argv = sys.argv[1:]
+    opts = parse_opts(argv)
+    cfg = env_overrides(load_config())
+
+    if "--list" in argv:
+        return cmd_list(cfg)
+    if "--status" in argv:
+        return cmd_status(cfg)
+    if "--add" in argv and opts.get("add"):
+        return cmd_add(cfg, opts["add"], opts)
+    if "--remove" in argv and opts.get("remove"):
+        return cmd_remove(cfg, opts["remove"])
+
+    profile = opts.get("profile")
+    profiles = cfg["resolved"]
+    if profile:
+        profiles = [p for p in profiles if p["name"] == profile]
+        if not profiles:
+            print("没有名为 %s 的 target，用 --list 查看" % profile)
+            return 1
+
+    dpy = X11.XOpenDisplay(None)
+    if not dpy:
+        log("cannot open display")
+        return 2
+
+    ev, err, major = C.c_int(), C.c_int(), C.c_int()
+    if not X11.XQueryExtension(dpy, b"XInputExtension", C.byref(ev), C.byref(err),
+                               C.byref(major)):
+        log("no XInput extension")
+        return 3
+    xi_opcode = ev.value
+    maj, mnr = C.c_int(2), C.c_int(4)
+    XI.XIQueryVersion(dpy, C.byref(maj), C.byref(mnr))
+
+    devices = Grip.find_touch_devices(dpy)
+    log("start: xi=%s devices=%s screen=%s targets=%s"
+        % ((maj.value, mnr.value), devices, Grip(dpy, [], []).screen,
+           [(p["name"], p["match"]) for p in profiles]))
+    if not devices:
+        log("no touch device found; exiting")
+        return 4
+
+    grip = Grip(dpy, devices, profiles)
+
+    if "--selftest" in argv:
+        return selftest(grip, devices)
+
+    # ---- 单实例 ----
+    os.makedirs(CACHE_DIR, exist_ok=True)
+    lock = open(LOCK_PATH, "w")
+    try:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        log("another instance is running; exiting")
+        return 0
+
+    stop = {"flag": False}
+
+    def _bye(*_a):
+        stop["flag"] = True
+
+    signal.signal(signal.SIGTERM, _bye)
+    signal.signal(signal.SIGINT, _bye)
+
+    try:
+        fd = X11.XConnectionNumber(dpy)
+    except Exception:
+        fd = -1
+
+    ev_buf = C.create_string_buffer(192)
+    grip.rescan()
+    next_scan = time.monotonic() + 3.0
+
+    while not stop["flag"]:
+        while X11.XPending(dpy):
+            X11.XNextEvent(dpy, ev_buf)
+            etype = C.cast(ev_buf, C.POINTER(C.c_int)).contents.value
+            if etype != GENERIC_EVENT:
+                continue
+            cookie = C.cast(ev_buf, C.POINTER(XGenericEventCookie)).contents
+            if cookie.extension != xi_opcode:
+                continue
+            if not XI.XGetEventData(dpy, ev_buf):
+                continue
+            try:
+                if cookie.evtype in (XI_TOUCH_BEGIN, XI_TOUCH_UPDATE, XI_TOUCH_END):
+                    dev = C.cast(cookie.data, C.POINTER(XIDeviceEvent)).contents
+                    try:
+                        grip.handle(cookie.evtype, dev)
+                    except Exception as exc:
+                        log("handle error: %r" % (exc,))
+            finally:
+                XI.XFreeEventData(dpy, ev_buf)
+
+        now = time.monotonic()
+        if now >= next_scan:
+            try:
+                grip.rescan()
+            except Exception as exc:
+                log("rescan error: %r" % (exc,))
+            next_scan = now + 3.0
+
+        if fd >= 0:
+            try:
+                select.select([fd], [], [], 0.5)
+            except (OSError, ValueError):
+                time.sleep(0.2)
+        else:
+            time.sleep(0.05)
+
+    log("bye")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

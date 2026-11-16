@@ -1,0 +1,21 @@
+{
+  "defaults": {
+    "strip": 80,
+    "edge": 18,
+    "corner": 54,
+    "slop": 14,
+    "tap": "reject",
+    "min_width": 400,
+    "min_height": 200,
+    "resize": true
+  },
+  "targets": [
+    {
+      "name": "workbuddy",
+      "match": [
+        "workbuddy"
+      ],
+      "strip": 80
+    }
+  ]
+}
