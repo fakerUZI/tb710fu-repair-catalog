@@ -18,3 +18,7 @@ Snap 社区条目分为已具备内核支持时的用户态修复，以及旧 Ub
 ## 中文输入法方案的选择
 
 `gnome-ibus-pinyin` 与 `ime-preedit-backspace` 是两种互斥方案：前者关闭 Fcitx5 的 IBus 前端并使用 IBus libpinyin；后者依赖 Fcitx5 / WowType / Kimpanel 的共享候选区。请按条目说明选择一个，先回退当前方案再切换，不要同时应用；切换后需要注销并重新登录。
+
+## snap1 内置麦克风修复
+
+`microphone-snap1`：[麦克风修复与回退说明](contributions/microphone-snap1/attachments/README.md)。仅支持已验证的 `7.2.6-tb710fu-snap1`、固件、GPT 和启动镜像，默认只读检查。显式 apply 会写 boot_a 并安装双麦克风路由，完成后自行重启。核心声学采集和重启验证通过；新安装器完整 apply/rollback 尚未在真实设备上重跑，详见[验证边界](contributions/microphone-snap1/attachments/VALIDATION.md)。

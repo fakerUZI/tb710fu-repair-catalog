@@ -226,6 +226,65 @@
           "sha256": "26589801d4d1e2febbe49c5f4ad2b0f96ebb327ad21b083922fd57c8191f2884"
         }
       ]
+    },
+    {
+      "id": "microphone-snap1",
+      "title": "snap1 内置麦克风修复（SoundWire 采集接口）",
+      "description": "修复 Ubuntu ARM64 / 7.2.6-tb710fu-snap1 上内置麦克风持续全零的问题：从精确匹配的原 snap1 启动镜像重建采集链路，使用 TX SoundWire 采集 DAI 1，保存双 AMIC 开机路由及 WirePlumber 麦克风名称。仅支持附件中匹配的引导固件、GPT 布局和原始 WCD 模块；其他版本拒绝。默认只读 check；设置 TB710FU_FIX_ACTION=apply 明确应用后自行重启，在声音设置选择“TB710FU 内置麦克风”；rollback 恢复本包最近备份。2026-11-16 核心修复已在 Ubuntu 单系统 TB710FU 上通过双麦克风声学 880 Hz 响应、PipeWire 录音和重启验证。差异补丁重建的完整启动镜像与实机版本 SHA256 一致。新安装包装完整 apply/rollback 尚未重新部署，状态待审核；依赖、使用和验证边界见附件 README.md。",
+      "device": "TB710FU",
+      "status": "community-review",
+      "risk": "apply 会写 boot_a 并安装三个麦克风配置文件；执行前保存工作并准备自己的独立恢复方式。脚本先检查当前固件、动态解析 boot_a、验证六个 GPT 和已知镜像/模块，保存本机私有备份后再写入并完整回读，不写 GPT、不改分区、不自动重启。断电、强制终止或存储故障仍可能导致不能启动；脚本异常恢复不能代替独立恢复。默认 check 不修改系统；明确设置 apply 才应用，成功后自行重启。rollback 只恢复本安装器最近一次备份，设备身份或此后配置改变则拒绝覆盖；启动失败须用自己的恢复环境从本机私有备份恢复。保留后摄和原 WCD 模块，不恢复退役前摄实验。数字增益 +12 dB，响声可能削波，可降低输入音量。核心实机验证已通过，新安装包装完整 apply/rollback 尚未在实机重跑。备份包含本机 GPT 身份信息，仅保留在 root 私有目录，禁止上传。",
+      "script": {
+        "path": "contributions/microphone-snap1/script.sh",
+        "sha256": "d1c836b76c8965a3e135607f2f26376fbab91188a662e4670a6f9c6e72a00365",
+        "requires_admin": true
+      },
+      "attachments": [
+        {
+          "path": "contributions/microphone-snap1/attachments/repair.py",
+          "sha256": "df0e804e35f961a69fd68c13da74aed4f5ade4c0f0b15f72e5c8ff1d6e97e75b"
+        },
+        {
+          "path": "contributions/microphone-snap1/attachments/boot-delta.json",
+          "sha256": "20efdde7d4893b92f123c8d3e6fa5116bd6943ef60300359f900bb25a15e9df6"
+        },
+        {
+          "path": "contributions/microphone-snap1/attachments/compatibility.json",
+          "sha256": "f0ffd7f7050aa04ba94f4028027de921062c048f5f2b6f034f9522966117d28a"
+        },
+        {
+          "path": "contributions/microphone-snap1/attachments/tb-microphone-init",
+          "sha256": "143475fad61cdbaa9018ccd680a0022b2f4adc16f1a6308efd2c1f0ddf6ec6e5"
+        },
+        {
+          "path": "contributions/microphone-snap1/attachments/tb-microphone-init.service",
+          "sha256": "43b20f7ba81684d011ded18491dbb0d0b6dfa7acdc54d2ca4eac4213b756ee7b"
+        },
+        {
+          "path": "contributions/microphone-snap1/attachments/60-tb710fu-microphone.conf",
+          "sha256": "3d5d55d67a51aea46f812c8eebfe16c94df8c61e5fe40d6c3a8f1b6ee0519657"
+        },
+        {
+          "path": "contributions/microphone-snap1/attachments/payload-sha256.json",
+          "sha256": "052304c78eea685f2104b9e4faf5ba56395e206533f9a44e532a69bb728195df"
+        },
+        {
+          "path": "contributions/microphone-snap1/attachments/README.md",
+          "sha256": "84b1c1c3eccce632587ebee743eaf0fc128e489973412372b7219d03337d5dda"
+        },
+        {
+          "path": "contributions/microphone-snap1/attachments/VALIDATION.md",
+          "sha256": "d8497c0951ba35f48793811e29c36cbbc25139675749e822cc41087f818e6a0a"
+        },
+        {
+          "path": "contributions/microphone-snap1/attachments/test-repair.py",
+          "sha256": "480d12c9ea04114cd4c9ae9e5e70ecba7ab427fe01b5da1767f495815f94e8da"
+        },
+        {
+          "path": "contributions/microphone-snap1/attachments/DTB-CHANGE.patch",
+          "sha256": "9c064de1ee13140d539a284153a484d803a79ac14bba38b05858f3fcd00e483a"
+        }
+      ]
     }
   ]
 }

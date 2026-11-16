@@ -1,0 +1,8 @@
+{
+  "repair.py": "df0e804e35f961a69fd68c13da74aed4f5ade4c0f0b15f72e5c8ff1d6e97e75b",
+  "boot-delta.json": "20efdde7d4893b92f123c8d3e6fa5116bd6943ef60300359f900bb25a15e9df6",
+  "compatibility.json": "f0ffd7f7050aa04ba94f4028027de921062c048f5f2b6f034f9522966117d28a",
+  "tb-microphone-init": "143475fad61cdbaa9018ccd680a0022b2f4adc16f1a6308efd2c1f0ddf6ec6e5",
+  "tb-microphone-init.service": "43b20f7ba81684d011ded18491dbb0d0b6dfa7acdc54d2ca4eac4213b756ee7b",
+  "60-tb710fu-microphone.conf": "3d5d55d67a51aea46f812c8eebfe16c94df8c61e5fe40d6c3a8f1b6ee0519657"
+}
