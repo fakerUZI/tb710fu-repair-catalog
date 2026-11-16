@@ -14,7 +14,3 @@ Snap 社区条目分为已具备内核支持时的用户态修复，以及旧 Ub
 
 - `ime-preedit-backspace`：[中文拼音候选区与退格修复](contributions/ime-preedit-backspace/attachments/README.md)。适用于已有 TB710FU 候选区的 Ubuntu 26.04 / GNOME 50；核心来自历史实机修复，新安装包装尚待实机复核。
 - [完整源码包](packages/ime-preedit-backspace-20261116.zip)及[包校验值](packages/SHA256SUMS)可供下载审查。仓库内的真实修复仍须逐项审查依赖、风险、哈希和适用版本，不能自动执行。
-
-## 中文输入法方案的选择
-
-`gnome-ibus-pinyin` 与 `ime-preedit-backspace` 是两种互斥方案：前者关闭 Fcitx5 的 IBus 前端并使用 IBus libpinyin；后者依赖 Fcitx5 / WowType / Kimpanel 的共享候选区。请按条目说明选择一个，先回退当前方案再切换，不要同时应用；切换后需要注销并重新登录。
