@@ -2,6 +2,81 @@
   "schema_version": 1,
   "issues": [
     {
+      "id": "kernel-offline-upgrade",
+      "title": "TB710FU 日期内核升级（本次接受无日期旧版本）",
+      "description": "唯一内核升级入口，位于目录第一项。本次目标为 7.2.6-tb710fu-20261117，source_policy=undated：接受所有合法且不带日期的旧内核版本，包括原版、snap1、snap2 和其他自定义版本；不再限定单一旧版本。所有带日期的版本均不能使用本次迁移。后续发布使用 dated-before-target，仅接受日期版本，目标日期必须严格大于设备当前内核日期；拒绝同日覆盖、倒退、无效日期与未来目标日期。\n\n当前为脚本/构建计划阶段：日期版 Image、完整模块和摄像头配套尚未构建/验证，不能安装。历史原版到 snap1 的升级入口、旧格式分支及七个载荷分片已从当前仓库移除，本条目不会调用旧包。默认 check，只读检查 TB710FU/Ubuntu ARM64 和版本资格，并明确报告载荷缺失；不声称已通过固件/GPT/镜像预检。install 等其他动作在缺少载荷时停止。\n\n日期版载荷审核发布后仍须完整核验附件哈希、升级器版本策略、当前固件/GPT、boot/DT、模块与配套服务；版本字符串匹配不等于所有设备状态均可安装。真实安装将备份并写启动分区，需要管理员权限和明确授权，不自动重启。见 KERNEL-README.md、KERNEL-VERSIONING.md 与 VALIDATION.md。",
+      "device": "TB710FU",
+      "status": "community-review",
+      "risk": "当前无可安装的日期版载荷；check 只读，install/validate/status/finish/rollback 会停止，不使用旧 snap1 载荷。真正发布载荷后的安装会写 boot、安装配套模块和服务，存在无法启动风险；必须核实当前固件/GPT，准备本机备份及外部恢复方式，完成审核后才能启用。保留已工作的后摄及本次前摄适配。不要上传设备备份、凭据、唯一标识或已退役实验。",
+      "script": {
+        "path": "contributions/kernel-offline-upgrade/script.sh",
+        "sha256": "69e0a6598655dd35e35e6b079b07b5fefd5b472fec2e7f2546b7acff3a290dc4",
+        "requires_admin": true
+      },
+      "attachments": [
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/0001-apparmor-preserve-network-feature-abi.patch",
+          "sha256": "15a727c4e6acaf03ad785b7f4b810fd994349bb88c4415fc34a8f1a08a93c9a1"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/KERNEL-README.md",
+          "sha256": "a29da3e1268c4d3053447aed3cf51bc5a8576804589e61ade21c04ff91c2f50e"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/KERNEL-VERSIONING.md",
+          "sha256": "f7222606eb2a44b478ec0c2a61dc5c9d1e764947e0f4e842fe3008e9f28a2e7c"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/VALIDATION.md",
+          "sha256": "b2de851e2ee272fbdb2fb3a7a18989ac77117c94e33bec9783ad4b8a41d07bd9"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/assemble-kernel-bundle.py",
+          "sha256": "fe5ef94298303760cf7bd672273cc5dc19d6cbbf556b2d41765e40c82a046731"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/build-kernel.sh",
+          "sha256": "0da21a86643a85c3dbcbdd70ced7f0672302690b0f31700cc050cb72ecfc8872"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/bundle-parts.json",
+          "sha256": "3ca42c22dfff2e692a543dda06e93e7612ad37878670c3ebb5a341399b40024c"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/kernel-release.json",
+          "sha256": "23e1a1c564cdfdf16e809f271c8088618d2b1ac2b559a3b51a1bc93722cf7ffe"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/kernel-release.py",
+          "sha256": "ac1a3925d2d4ac45adbabbf3a87fed0167a3a65ce06309bf8b41d902c2fd31af"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/network-repair/0001-ath12k-vdev-restart-count.patch",
+          "sha256": "0da9f01b96dec2560a9c7417f6723a577fdf0a9a924168e5f27c63d08fb6cd97"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/network-repair/0002-ath12k-station-start-once.patch",
+          "sha256": "2f49b747adaab4e2f5b5e73849b33aa538f91aa57ba5e18e971a1f4b30a49335"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/network-repair/0003-ath12k-identify-vdev-fix.patch",
+          "sha256": "45fe2d9dacf51d2f2beeb083cee1c96aca8b0c4a0af5d959b4e511e7081c6df8"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/network-repair/assert-modules.sh",
+          "sha256": "32b7cedfdd48e0620ab00acef83f030c9c9d4edd368c3c62ac21475fb692de1a"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/network-repair/configure-build.sh",
+          "sha256": "30393e372c263be5e455d0731a1d3d665677912053e5313fc77d3a07dda6c389"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/network-repair/netfilter.config",
+          "sha256": "6e487696e606e675f9b42d00bdc214c54e6e282af590973ecb3811432acf3ad4"
+        }
+      ]
+    },
+    {
       "id": "snap-userspace-confinement-repair",
       "title": "Snap 用户态严格隔离修复与验证",
       "description": "适用于 TB710FU Ubuntu ARM64/systemd，当前内核已具备 AppArmor、Seccomp、命名空间、SquashFS xattrs 及 LZO/LZ4 等功能，但 Snap 报 partial、snap-confine 能力异常或 AppArmor 默认 ABI 不兼容的情况。主入口通过 TB710FU_ATTACHMENTS_DIR 加载单文件 Python 修复器，不依赖当前目录。需要 Python 3、管理员权限，首次安装缺失依赖或 hello-world 需要联网。\n\n执行会先检查运行内核，缺功能时在修改配置前停止，不能替代内核升级。通过后备份配置，安装缺失的用户态工具，为已验证 TB710FU 7.2 内核设置默认 AppArmor ABI，按 snapd 包清单恢复文件能力，启动服务，并以普通用户实测 strict/full、hello-world、Seccomp、文件/网络拒绝。默认普通用户为 sudo 原用户或 ubuntu，可通过 TB710FU_SNAP_USER 指定。不会自动安装 IDEA，不添加 IDEA 专项设置。\n\n实机验证：Ubuntu 26.04.1 ARM64、7.2.6-tb710fu-snap1 上通过了配置修复、普通用户运行、AppArmor 实际文件/网络拒绝及 Seccomp 检查，16 项 apt hold 保留。旧内核缺功能的拒绝路径亦已检查。脚本不刷写 boot/GPT、不重启、不改 USB/摄像头/桌面输入法。旧内核请先使用“Snap 内核完整升级”条目。",
@@ -29,114 +104,11 @@
       ]
     },
     {
-      "id": "snap-kernel-offline-upgrade",
-      "title": "Snap 内核完整升级（旧 Ubuntu 内执行）",
-      "description": "TB710FU 旧 Ubuntu 内执行的完整离线 Snap 内核升级。适用于 Ubuntu ARM64/systemd、内核 7.2.6-tb710fu、已验证 A 槽 Ubuntu boot 基线，及匹配的 ABL/XBL 固件、GPT 几何、ext4 arch 根分区、后摄/USB 服务。目标为已实机启动验证的 7.2.6-tb710fu-snap1，补齐 AppArmor、SquashFS xattrs、LZO/LZ4，并安装完整匹配模块。不同固件、布局、启动镜像或未知残留目录会停止，不能强制通用刷写。\n\n完整升级载荷约 56 MiB，按 8 MiB 分片以满足单附件 10 MiB 限制。修复助手需下载本条目的全部附件；入口从 TB710FU_ATTACHMENTS_DIR 读取并逐项验证分片、压缩包、升级器及载荷，拒绝越界路径、链接和特殊文件。需要 Python 3.11+、gdisk、fdisk、kmod、util-linux、管理员权限、电量至少 30%、解包分区至少 512 MiB 及安装时根分区至少 1 GiB 可用空间。内核安装本身离线；重启后的用户态依赖/hello-world 首次下载需要网络。\n\n确认并执行本条目即备份当前 boot/GPT、安装模块和配套文件、写入 boot_a、完整回读校验，并安装重启后自动收尾服务；不自动重启，成功后请保存工作并手动 sudo reboot。重启后完成 Snap strict/full 与普通用户隔离验证。可设置 TB710FU_SNAP_KERNEL_ACTION=check 只读检查，validate 仅解包校验，status/finish/rollback 查看、重试收尾或回退。普通桌面用户默认 sudo 原用户或 ubuntu，可由 TB710FU_SNAP_USER 指定。\n\n验证边界：目标内核/模块已实机启动，Snap 实际隔离通过；新升级器在实机通过只读预检及“已经是目标内核”的无写入路径，boot 和六份 GPT 保持不变。7 项隔离环境测试覆盖完整安装/收尾、主动回退、部分写入中断恢复、网络失败重试、归档拒绝和 GPT/写前校验。未为了测试新升级器将当前平板降级重刷，因此不能声称自动旧到新流程已完成实机端到端测试。\n\n2026-11-17：附带构建源码已补齐 IPv4/IPv6 legacy/xt NAT 配置及 ath12k 两枚计数补丁，并增加模块完整性断言。既有已验证升级分片保持原样；已运行旧 snap1 的用户请使用独立“snap1 内核网络修复”条目获得网络模块修复。\n\n版本策略：新构建采用 Linux版本-tb710fu-YYYYMMDD；日期版升级包必须精确匹配 source_version，目标日期严格晚于旧内核，且不能使用未来日期。新增 kernel-release.json 是 snap1 → 20261117 的构建计划示例，尚未生成或实机验证日期版载荷；本条目当前分片仍仅提供原版 → snap1。详见 KERNEL-VERSIONING.md。",
-      "device": "TB710FU",
-      "status": "community-review",
-      "risk": "高风险：本条目会写启动分区和 boot_a 启动重试/成功属性，并安装内核模块及后摄/USB 兼容文件。保留分区布局和用户数据，但掉电、UFS 故障、误判的系统差异或写入中断仍可能使设备无法启动。执行前务必阅读完整说明、确认电量和备份并准备外部救援方式。不会进行已停止的前摄实验、修改桌面输入法、安装 IDEA 或解除更新保护。\n备份：/var/backups/tb710fu-snap-support-20261116/kernel-upgrade-时间-随机后缀/ 保存现场 boot、全部 UFS LUN GPT、配套文件和状态；kernel-upgrade-active 链接指向活动记录。写入错误会尝试恢复本次备份及属性，不能保证在硬件故障/掉电后自动恢复。进入新内核后只有本地服务和 Snap strict/full 检查通过才标记启动成功；网络验证失败可联网后 finish 重试，不重复刷写。\n回退：若 Ubuntu 仍可启动，使用 TB710FU_SNAP_KERNEL_ACTION=rollback 重新运行本条目，或 sudo python3 /var/backups/tb710fu-snap-support-20261116/kernel-upgrade-active/payload/upgrade-ubuntu-kernel.py --rollback，然后手动重启。回退仍核验当前固件/GPT，拒绝覆盖其他操作改动的镜像。完全无法启动时需外部救援并使用保留的本机备份；源码回退不等于启动分区回退。不要上传升级生成的设备备份或私有 USB 身份文件。",
-      "script": {
-        "path": "contributions/snap-kernel-offline-upgrade/script.sh",
-        "sha256": "fd13f6a3d60d30f94291c7cffb6fab745e5251a507cb0aa9db8936a29ffb2899",
-        "requires_admin": true
-      },
-      "attachments": [
-        {
-          "path": "contributions/snap-kernel-offline-upgrade/attachments/assemble-kernel-bundle.py",
-          "sha256": "d8c6e4544073672d3ccce4f4835b7d304168189cd1e987910f5ced9e6a53fd3e"
-        },
-        {
-          "path": "contributions/snap-kernel-offline-upgrade/attachments/bundle-parts.json",
-          "sha256": "f9064f1b7ccbfeda2712fb1c00d9329699ef4762f67f4846f3602b6a8606c79d"
-        },
-        {
-          "path": "contributions/snap-kernel-offline-upgrade/attachments/KERNEL-README.md",
-          "sha256": "cae06e08e54e26d1d6dac32cbc829ccc53439f84ff39dc5a74dcb72d29ffaef4"
-        },
-        {
-          "path": "contributions/snap-kernel-offline-upgrade/attachments/VALIDATION.md",
-          "sha256": "95cb4386701d6b669b1118158ffb9ffff44e7da69588d762cb23c20046ac6588"
-        },
-        {
-          "path": "contributions/snap-kernel-offline-upgrade/attachments/build-kernel.sh",
-          "sha256": "0da21a86643a85c3dbcbdd70ced7f0672302690b0f31700cc050cb72ecfc8872"
-        },
-        {
-          "path": "contributions/snap-kernel-offline-upgrade/attachments/0001-apparmor-preserve-network-feature-abi.patch",
-          "sha256": "15a727c4e6acaf03ad785b7f4b810fd994349bb88c4415fc34a8f1a08a93c9a1"
-        },
-        {
-          "path": "contributions/snap-kernel-offline-upgrade/attachments/kernel-upgrade.part01",
-          "sha256": "7cd00212493cc3cc391c7be67670c91e47339b994cdc7e7ce29da9589657e3b9"
-        },
-        {
-          "path": "contributions/snap-kernel-offline-upgrade/attachments/kernel-upgrade.part02",
-          "sha256": "72c9d541b5640a442e34b49b237c256c59fbf5c885e7979ab3316274b8fa9222"
-        },
-        {
-          "path": "contributions/snap-kernel-offline-upgrade/attachments/kernel-upgrade.part03",
-          "sha256": "8066f64cb563d30154a7b4129407fee64ae287464db2029bd996feaef906c680"
-        },
-        {
-          "path": "contributions/snap-kernel-offline-upgrade/attachments/kernel-upgrade.part04",
-          "sha256": "562fea41a933dbe08b794d7df333074f63620574ecdae74c52c88e3834a7040a"
-        },
-        {
-          "path": "contributions/snap-kernel-offline-upgrade/attachments/kernel-upgrade.part05",
-          "sha256": "d79aa24a1b3f56662ec9b81264b4462b3e26cd3d189ca3f8e77c90df7bd7fff9"
-        },
-        {
-          "path": "contributions/snap-kernel-offline-upgrade/attachments/kernel-upgrade.part06",
-          "sha256": "d2e0cc52f9af8799238e5ad09245486ec5c5785870a03e6ac4e16909a624dcfd"
-        },
-        {
-          "path": "contributions/snap-kernel-offline-upgrade/attachments/kernel-upgrade.part07",
-          "sha256": "a20dfbbccc73ca1942e76616f03fc41111702775e5f0846542f3886a1704ea90"
-        },
-        {
-          "path": "contributions/snap-kernel-offline-upgrade/attachments/network-repair/0001-ath12k-vdev-restart-count.patch",
-          "sha256": "0da9f01b96dec2560a9c7417f6723a577fdf0a9a924168e5f27c63d08fb6cd97"
-        },
-        {
-          "path": "contributions/snap-kernel-offline-upgrade/attachments/network-repair/0002-ath12k-station-start-once.patch",
-          "sha256": "2f49b747adaab4e2f5b5e73849b33aa538f91aa57ba5e18e971a1f4b30a49335"
-        },
-        {
-          "path": "contributions/snap-kernel-offline-upgrade/attachments/network-repair/0003-ath12k-identify-vdev-fix.patch",
-          "sha256": "45fe2d9dacf51d2f2beeb083cee1c96aca8b0c4a0af5d959b4e511e7081c6df8"
-        },
-        {
-          "path": "contributions/snap-kernel-offline-upgrade/attachments/network-repair/assert-modules.sh",
-          "sha256": "32b7cedfdd48e0620ab00acef83f030c9c9d4edd368c3c62ac21475fb692de1a"
-        },
-        {
-          "path": "contributions/snap-kernel-offline-upgrade/attachments/network-repair/configure-build.sh",
-          "sha256": "30393e372c263be5e455d0731a1d3d665677912053e5313fc77d3a07dda6c389"
-        },
-        {
-          "path": "contributions/snap-kernel-offline-upgrade/attachments/network-repair/netfilter.config",
-          "sha256": "6e487696e606e675f9b42d00bdc214c54e6e282af590973ecb3811432acf3ad4"
-        },
-        {
-          "path": "contributions/snap-kernel-offline-upgrade/attachments/kernel-release.py",
-          "sha256": "2eadc0e90b64f937207f04fc7359608ac2a7ad26a24a37b81b5ff277eefe1c0e"
-        },
-        {
-          "path": "contributions/snap-kernel-offline-upgrade/attachments/kernel-release.json",
-          "sha256": "587a4bd95473f06cf0ac492871243af5cfb6a8fdf24cd53f23a6fbe8d2aaf6a4"
-        },
-        {
-          "path": "contributions/snap-kernel-offline-upgrade/attachments/KERNEL-VERSIONING.md",
-          "sha256": "7d84e4a83860a4b12cc721239d8a2c3438ae964004f02998038f734c814986e5"
-        }
-      ]
-    },
-    {
       "id": "network-repair-snap1",
       "title": "snap1 内核网络修复（iptables/NAT 与 ath12k）",
       "device": "TB710FU",
       "status": "community-review",
-      "description": "仅适用于 TB710FU Ubuntu ARM64、已知配置和原模块指纹的 7.2.6-tb710fu-snap1。修复 IPv4/IPv6 legacy filter/mangle/raw/nat 表与 DNAT/SNAT/REDIRECT/REJECT/NETMAP，并回移 ath12k restart 计数、station 重复 start 两枚上游补丁。保留 tb_poll_off、硬件去重、节电参数；只读 tb_vdev_count_fix=1 标识已加载的修复驱动。\n\n离线压缩包小于 1 MiB，更换/新增 19 个网络模块及模块预载配置；不写 boot/GPT/DT/固件，不替换前后摄、USB 或 Snap/AppArmor 配置。安装前验证设备、运行配置、原模块、清单和每个新模块 SHA256、vermagic、依赖。不是所有同名内核均适用。\n\n默认 check 只读；TB710FU_FIX_ACTION=apply 安装后须保存工作并手动重启，再用 verify 在隔离 netns 测试真实 UDP NAT/拒绝投递；rollback 恢复首次备份后也须重启。入口不自动重启、不切换 iptables alternatives、不在宿主防火墙添加规则。现场 Wi-Fi 压力测试工具会断开网络，须单独显式运行且要求 USB 救援正常。\n\n不增加会改变内核结构布局的 ARP 支持，不包括 security 表。现有原内核的 /proc/config.gz 保持不变，能力应以模块与流量测试判断。原 7.2.6-tb710fu 用户需先完成已有 Snap 内核升级。详见 README 与 VALIDATION。",
+      "description": "仅适用于 TB710FU Ubuntu ARM64、已知配置和原模块指纹的 7.2.6-tb710fu-snap1。修复 IPv4/IPv6 legacy filter/mangle/raw/nat 表与 DNAT/SNAT/REDIRECT/REJECT/NETMAP，并回移 ath12k restart 计数、station 重复 start 两枚上游补丁。保留 tb_poll_off、硬件去重、节电参数；只读 tb_vdev_count_fix=1 标识已加载的修复驱动。\n\n离线压缩包小于 1 MiB，更换/新增 19 个网络模块及模块预载配置；不写 boot/GPT/DT/固件，不替换前后摄、USB 或 Snap/AppArmor 配置。安装前验证设备、运行配置、原模块、清单和每个新模块 SHA256、vermagic、依赖。不是所有同名内核均适用。\n\n默认 check 只读；TB710FU_FIX_ACTION=apply 安装后须保存工作并手动重启，再用 verify 在隔离 netns 测试真实 UDP NAT/拒绝投递；rollback 恢复首次备份后也须重启。入口不自动重启、不切换 iptables alternatives、不在宿主防火墙添加规则。现场 Wi-Fi 压力测试工具会断开网络，须单独显式运行且要求 USB 救援正常。\n\n不增加会改变内核结构布局的 ARP 支持，不包括 security 表。现有原内核的 /proc/config.gz 保持不变，能力应以模块与流量测试判断。原 7.2.6-tb710fu 不适用本模块包；当前唯一日期内核升级条目载荷待构建，不能用旧升级包代替。详见 README 与 VALIDATION。",
       "risk": "管理员操作会更换 Wi-Fi 与 netfilter 模块文件；生效/回退均需重启，Wi-Fi、VPN 与连接会中断。不写启动分区，但模块错误仍可能导致网络不可用或内核异常；请保留 USB SSH 与离线附件。\n首次原模块与预载配置备份在 /var/backups/tb710fu-network-repair-20261117/；后续已审核修订不覆盖最初快照。安装可捕获错误时尝试恢复，不能保证掉电或内核崩溃后自动恢复。未知原文件/备份损坏会拒绝覆盖；回退请用同一离线附件的 rollback 并重启。备份不得公开上传。",
       "script": {
         "path": "contributions/network-repair-snap1/script.sh",
@@ -146,11 +118,11 @@
       "attachments": [
         {
           "path": "contributions/network-repair-snap1/attachments/README.md",
-          "sha256": "758850b6bc805668f5970492b1e5e3ad0a515ba9ba241f24ad12fe0162a36a99"
+          "sha256": "e2e1179360fa7b97d3f90120e6e905a8fb2a06d1cc98dbd5cb72395b720ff1eb"
         },
         {
           "path": "contributions/network-repair-snap1/attachments/VALIDATION.md",
-          "sha256": "b5c61e1f5487150f6de9263aadab8eb027b3aff2ea5d866beb9cf3a88bac2b87"
+          "sha256": "0fb15087dc332912a68cab650432094427d193ad9443a9c18b168c0fb3156d78"
         },
         {
           "path": "contributions/network-repair-snap1/attachments/install-network-repair.py",

@@ -80,7 +80,7 @@ boot_a 与 boot_b 哈希在本次网络模块更新前后保持一致。
   提交 `110fbccb59ed3ea3bc323fc05601ad6fd442f02d`。
 - [tb710fu-hyperos-steamos](https://github.com/lich-wang/tb710fu-hyperos-steamos/tree/5e99ee13df849f592a4594910473f1bbdbd79ee3)，
   提交 `5e99ee13df849f592a4594910473f1bbdbd79ee3`。
-- `snap-kernel-offline-upgrade/attachments/network-repair/` 中的三份补丁、
+- `kernel-offline-upgrade/attachments/network-repair/` 中的三份补丁、
   配置片段和构建断言。前两份保留上游作者，第三份仅添加只读版本标识。
 
 上游来源：[restart 计数](https://lists.openwall.net/linux-kernel/2026/10/20/2963)、

@@ -53,40 +53,58 @@ def extract(archive, destination, expected_root):
                 target.chmod(0o600)
 
 
+def policy_module():
+    loader = importlib.util.spec_from_file_location('tb_kernel_release', Path(__file__).with_name('kernel-release.py'))
+    policy = importlib.util.module_from_spec(loader)
+    loader.loader.exec_module(policy)
+    return policy
+
+
 def check_release(spec, module, action, current=None):
-    """Bind source/target metadata to the actual installer before device actions."""
-    source, target = spec['source_version'], spec['target_version']
-    require(source == module.OLD_VERSION and target == module.VERSION,
-            '分片清单的旧/新版本与已校验升级器不符。')
-    if spec['format'] == 1:
-        require((source, target) == ('7.2.6-tb710fu', '7.2.6-tb710fu-snap1'),
-                '历史格式仅允许已审核的原版到 snap1 升级。')
-    else:
-        loader = importlib.util.spec_from_file_location('tb_kernel_release', Path(__file__).with_name('kernel-release.py'))
-        policy = importlib.util.module_from_spec(loader)
-        loader.loader.exec_module(policy)
-        plan = {'format': 1, 'source_version': source, 'target_version': target}
-        policy.validate(plan)
+    """Bind the actual installer to the same version policy as the catalog entry."""
+    require(spec['format'] == 2, '历史升级包已经移除，仅支持日期版升级包。')
+    plan = spec['release']
+    policy = policy_module()
+    policy.validate(plan)
+    require(module.RELEASE_PLAN == plan and module.VERSION == plan['target_version'],
+            '升级器的版本策略与分片清单不符。')
     if action in ('install', 'check'):
-        current = platform.release() if current is None else current
-        # The historical installer has an already-target read-only/no-op path.
-        if spec['format'] == 1 and current == target:
-            return
-        require(current == source, '本次更新要求旧内核 ' + source + '，实际为 ' + current + '。')
+        policy.validate(plan, platform.release() if current is None else current)
+
+
+def environment():
+    require(platform.system() == 'Linux' and platform.machine() == 'aarch64', '仅支持 TB710FU Ubuntu ARM64。')
+    require('ID=ubuntu' in Path('/etc/os-release').read_text().splitlines(), '仅支持 Ubuntu。')
+    compatible = Path('/sys/firmware/devicetree/base/compatible').read_bytes().split(b'\0')
+    require(b'lenovo,tb710fu' in compatible, '机型不是 TB710FU。')
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--attachments-dir', type=Path, required=True)
-    parser.add_argument('--action', choices=['install', 'check', 'validate', 'status', 'finish', 'rollback'], default='install')
+    parser.add_argument('--action', choices=['install', 'check', 'validate', 'status', 'finish', 'rollback'], default='check')
     parser.add_argument('--user', default='ubuntu')
     args = parser.parse_args()
     require(sys.version_info >= (3, 11), '需要 Python 3.11 或更新版本。')
-    require(args.action == 'validate' or os.geteuid() == 0, '需要管理员权限。')
+    require(args.action in ('validate', 'check') or os.geteuid() == 0, '需要管理员权限。')
     os.umask(0o077)
     attachments = args.attachments_dir.resolve(strict=True)
     spec = json.loads((attachments / 'bundle-parts.json').read_text())
-    require(spec['format'] in (1, 2) and 0 < len(spec['parts']) <= 20, '不支持的分片清单。')
+    require(spec['format'] == 2, '历史升级包已移除，仅支持日期版升级包。')
+    plan = json.loads((attachments / 'kernel-release.json').read_text())
+    require(spec['release'] == plan, '发布计划与载荷版本策略不一致。')
+    policy_module().validate(plan)
+    if args.action in ('install', 'check'):
+        environment()
+        policy_module().validate(plan, platform.release())
+    if spec.get('payload_status') == 'not-built':
+        require(spec['parts'] == [], '未构建状态不能包含分片。')
+        if args.action == 'check':
+            print('版本资格通过：' + platform.release() + ' -> ' + plan['target_version'])
+            print('日期版载荷尚未构建，不能安装；未进行固件/GPT/镜像预检，未写入设备。')
+            return 0
+        raise ValueError('日期版载荷尚未构建；已移除历史 snap1 分片，不能执行此动作。')
+    require(spec.get('payload_status') == 'ready' and 0 < len(spec['parts']) <= 20, '缺少完整的已审核日期版载荷。')
     require(shutil.disk_usage('/var/tmp').free >= 512 * 1024 * 1024, '/var/tmp 至少需要 512 MiB 可用空间。')
     with tempfile.TemporaryDirectory(prefix='tb710fu-snap-bundle-', dir='/var/tmp') as temp:
         temp = Path(temp)
