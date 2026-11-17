@@ -44,8 +44,8 @@
 
 当前日期内核入口另提供[手电筒与三路相机补充](contributions/kernel-offline-upgrade/attachments/flash-camera/README.md)：`camera-install` 包含主摄自动对焦、前摄/微距切换与匹配的 libcamera 增益修复；`flash-install` 提供硬件/应用部分。均不刷设备分区，完整内核升级仍只使用第一项入口。
 
-## USB-C 直连 SSD 候选（待实测）
+## USB-C 直连 SSD 测试候选（目标 SSD 尚未实测）
 
-[Issue #19 的候选说明与恢复步骤](contributions/usb-c-ucsi-host-candidate/attachments/README.md)。提供保持 UCSI 绑定的单次 host 协商候选、只读采样和独立 UCSI tracing；已通过隔离测试与本机只读检查，目标 SSD 未实测，不宣称修复完成。
+[Issue #19 的测试说明与恢复步骤](contributions/usb-c-ucsi-host-candidate/attachments/README.md)。提供保持 UCSI 绑定的单次 host 协商候选、只读采样和可并行的独立 UCSI tracing。已复核软件逻辑；macOS 与 Linux ARM64 隔离环境各 32 项测试、平板只读检查通过。**目标 SSD 尚未实测，真实 host/trace 管理员路径也未验证，不宣称故障已修复。**
 
-[可导入测试包](packages/usb-c-ucsi-host-candidate-20261117.tbfix)与[SHA-256](packages/usb-c-ucsi-host-candidate-20261117.tbfix.sha256)供审查。本候选不加入正式 `catalog.json`，现有六个条目不变；验收前保留 issue 开启。
+[预发布测试包 v20261117.1](https://github.com/fakerUZI/tb710fu-repair-catalog/releases/tag/usb-c-ucsi-host-test-20261117.1)、[仓库内可导入包](packages/usb-c-ucsi-host-candidate-20261117.tbfix)及[SHA-256](packages/usb-c-ucsi-host-candidate-20261117.tbfix.sha256)。本候选不加入正式 `catalog.json`，现有六个条目不变；issue #19 保持开启，待目标硬件验收。

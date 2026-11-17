@@ -1,15 +1,15 @@
 # USB-C / UCSI host 候选与测试包（issue #19）
 
-状态：**待审核、待目标 SSD 实测**。2026-11-17 用户确认当前没有 issue 中的 SSD，要求先完成可审查候选和测试包。本包修正测试方法中“解绑 UCSI / 强写 role”的路径，尚不能宣称修复 C-C 直连 SSD，也不应关闭 [issue #19](https://github.com/fakerUZI/tb710fu-repair-catalog/issues/19)。
+状态：**测试候选，目标 SSD 尚未实测**。2026-11-17 用户确认当前没有 issue 中的 SSD，并授权复核 PR #20、修正问题后合并和发布测试包。本包已复核软件逻辑并修正测试工具的问题，尚不能宣称修复 C-C 直连 SSD；[issue #19](https://github.com/fakerUZI/tb710fu-repair-catalog/issues/19) 保持开启。
 
 适用：Lenovo TB710FU、Ubuntu 26.04 arm64、`7.2.6-tb710fu` 系列内核，单口 `a600000.usb`、`ucsi_glink.pmic_glink_ucsi`。本轮读取的设备版本为 `7.2.6-tb710fu-20261118`；不是对其他内核的兼容性承诺。依赖 Python 3、Bash；host 候选另需 systemd 和 root，trace 需已挂载的 tracefs、UCSI tracepoints 和 root。无额外下载。
 
 ## 候选行为
 
 - 默认 `check` 只读；`watch` 每 0.1 秒采样，默认 30 秒。
-- `host` / 修复助手的 `apply`：要求 UCSI 已绑定、PC USB 网络已断开、NCM 服务已停止、gadget UDC 已释放、没有下游 USB 设备。等待 partner 出现后，最多向 `port0/data_role` 写一次 `host`，通过内核 UCSI `SET_UOR` 请求角色协商。保留 UCSI，不写底层 role，不要求 source，不强设 3A。
-- 未出现 partner、只稳定 host 而没有枚举、短暂枚举后消失，均返回 **3（未解决）**。系统调用或前置条件错误返回 1，参数错误 2，中断 130。返回 0 仅表示观测到下游枚举与 host 连续至少 3 秒；VID:PID、设备容量、挂载和文件可读仍须现场确认，不能当作整个 issue 修复成功。
-- `trace` 在独立 tracefs instance 中打开三个 UCSI 事件，停止后删除自己的 instance，不读写全局 trace 或全局事件开关；异常和 Ctrl+C 同样清理。缓冲区有限，极高事件量或硬杀进程可能需要手动清理，见下文。
+- `host` / 修复助手的 `apply`：要求 UCSI 已绑定、PC USB 网络已断开、NCM 服务已停止、configfs 可检查且 gadget UDC 已释放、没有 partner 或下游 USB 设备。等待新 partner 出现后，重新检查条件，最多向 `port0/data_role` 写一次 `host`，通过内核 UCSI `SET_UOR` 请求角色协商。连接消失或被替换时终止本次测试；保留 UCSI，不写底层 role，不要求 source，不强设 3A。测试时仍须避免其他程序同时修改 USB 状态，这些检查无法使用户态观察和内核写入完全原子化。
+- 未出现 partner、只稳定 host 而没有目标枚举、短暂枚举或反复重新枚举，均返回 **3（未解决）**。系统调用、连接变化或前置条件错误返回 1，参数错误 2，中断 130。默认目标为 issue 中的 `152d:0562`，返回 0 仅表示该 VID:PID 的同一次枚举与 host 连续至少 3 秒；设备容量、挂载和文件可读仍须现场确认，不能当作整个 issue 修复成功。USB 总线路径和临时地址仅在进程内用于识别枚举变化，不写入日志。
+- `trace` 在独立 tracefs instance 中仅打开三个 UCSI 事件，使用 `nop` tracer 和 `mono` 时钟；停止后删除自己的 instance，不读写全局 trace 或全局事件开关，可与 host 测试并行。异常和 Ctrl+C 同样清理。缓冲区有限，极高事件量可能丢失较早事件；硬杀进程后可能需要手动清理，见下文。
 - 不安装文件、替换原 `tb-usbmode`、启用守护进程、修改 boot/DT/固件/内核、写分区或挂载存储。相机适配不受本包修改。
 
 ## 执行与配合测试
@@ -20,9 +20,11 @@
 bash script.sh
 TB710FU_FIX_ACTION=watch bash script.sh --seconds 30
 sudo env TB710FU_FIX_ACTION=trace bash script.sh --seconds 30
+# 对照 U 盘等其他设备时，显式指定其 VID:PID；这不算目标 SSD 验证：
+# sudo env TB710FU_FIX_ACTION=host bash script.sh --target 1234:5678 --seconds 30
 ```
 
-trace 与 watch 不主动改变 USB 数据角色，可以分别记录 C-C 失败及 C-OTG 成功的过程。不要在后台跑强制 host 循环或旧 `tb-usbmode host`；它们会污染证据。日志只输出角色、UCSI 是否绑定、是否有 partner、方向、电源模式、VID:PID/速率及 UCSI 命令/连接事件，省略序列号、账户、IP、UUID、挂载路径、进程名与 PID。发布前仍须人工审查日志。
+trace 与 watch 不主动改变 USB 数据角色，可以分别记录 C-C 失败及 C-OTG 成功的过程。host/watch 样本带有相对秒数及 `monotonic` 秒数，可对齐 trace 的 `mono` 时间戳。不要在后台跑强制 host 循环或旧 `tb-usbmode host`；它们会污染证据。日志只输出时间、角色、UCSI 是否绑定、是否有 partner、方向、电源模式、VID:PID/速率及 UCSI 命令/连接事件，省略序列号、账户、IP、UUID、挂载路径、进程名与 PID。发布前仍须人工审查日志。
 
 host 候选须在平板本地终端或独立 Wi-Fi SSH 运行；**先卸载并拔出所有 USB 存储，再断开 PC**。在本地执行以下临时准备（会中断 USB 救援网络）：
 

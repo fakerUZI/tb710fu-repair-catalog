@@ -7,7 +7,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parent
 IDENT = 'usb-c-ucsi-host-candidate'
-TITLE = 'USB-C UCSI 协商 host 候选与测试（issue #19，待实测）'
+TITLE = 'USB-C UCSI host 测试候选（目标 SSD 尚未实测）'
 ATTACHMENTS = ('usb-c-test.py', 'test-usb-c.py', 'README.md', 'VALIDATION.md', 'source-evidence.json')
 
 

@@ -33,6 +33,12 @@ def selected(value):
     return match[1] if match else value
 
 
+def target_id(value):
+    if not re.fullmatch(r'[0-9a-fA-F]{4}:[0-9a-fA-F]{4}', value):
+        raise argparse.ArgumentTypeError('目标必须是四位 VID:四位 PID，例如 152d:0562。')
+    return value.lower()
+
+
 class Probe:
     def __init__(self, sysroot=Path('/sys'), config=Path('/sys/kernel/config'),
                  run=subprocess.run, clock=time.monotonic, sleep=time.sleep):
@@ -42,6 +48,26 @@ class Probe:
         self.clock = clock
         self.sleep = sleep
 
+    def partner_generation(self):
+        try:
+            stat = (self.sys / 'class/typec/port0-partner').stat()
+            return stat.st_dev, stat.st_ino
+        except FileNotFoundError:
+            return None
+
+    def usb_generation(self, target):
+        # Ephemeral bus path/address identifies one enumeration, never logged.
+        generation = []
+        for dev in (self.sys / 'bus/usb/devices').glob('*'):
+            if dev.name.startswith('usb'):
+                continue
+            if f"{read(dev / 'idVendor')}:{read(dev / 'idProduct')}".lower() != target:
+                continue
+            address = read(dev / 'devnum')
+            if address and address.isdecimal():
+                generation.append((dev.name, address))
+        return tuple(sorted(generation))
+
     def snapshot(self):
         port = self.sys / PORT
         devices = []
@@ -50,12 +76,12 @@ class Probe:
             vendor, product = read(dev / 'idVendor'), read(dev / 'idProduct')
             if not vendor or not product or dev.name.startswith('usb'):
                 continue
-            if not re.fullmatch('[0-9a-fA-F]{4}', vendor + '') or not re.fullmatch('[0-9a-fA-F]{4}', product):
+            if not re.fullmatch('[0-9a-fA-F]{4}', vendor) or not re.fullmatch('[0-9a-fA-F]{4}', product):
                 continue
-            devices.append({'vid_pid': vendor + ':' + product, 'speed': read(dev / 'speed')})
+            devices.append({'vid_pid': (vendor + ':' + product).lower(), 'speed': read(dev / 'speed')})
         return {'role': read(self.sys / ROLE),
                 'ucsi_bound': (self.sys / DRIVER / DEVICE).is_symlink(),
-                'partner': (self.sys / 'class/typec/port0-partner').exists(),
+                'partner': self.partner_generation() is not None,
                 'data_role': selected(read(port / 'data_role')),
                 'power_role': selected(read(port / 'power_role')),
                 'orientation': read(port / 'orientation'),
@@ -79,60 +105,95 @@ class Probe:
         if not (self.sys / DRIVER / DEVICE).is_symlink():
             raise RuntimeError('UCSI 已解绑。先在平板本机执行 sudo tb-usbmode rebind，确认 port0 恢复；不要使用旧 host 动作。')
         # Avoid dropping the rescue link even when sudo strips SSH_CONNECTION.
-        if read(self.sys / 'class/net/usb0/carrier') == '1':
-            raise RuntimeError('USB 救援链路仍连接；请在平板本机或 Wi-Fi 会话中断开 PC 后测试。')
+        net = self.sys / 'class/net/usb0'
+        carrier = read(net / 'carrier')
+        if net.exists() and carrier not in ('0',):
+            raise RuntimeError('USB 救援链路仍连接或状态不可读；请在平板本机或 Wi-Fi 会话中断开 PC 并核对状态。')
         result = self.run(['systemctl', 'show', SERVICE, '--property=ActiveState', '--value'],
                           capture_output=True, text=True, timeout=5, check=True)
         if result.stdout.strip() not in ('inactive', 'failed'):
             raise RuntimeError('USB gadget 服务仍可能写回 device。先在本机停止 tb-ubuntu-usb-ncm.service；本工具不修改服务。')
-        for udc in (self.config / 'usb_gadget').glob('*/UDC'):
+        gadgets = self.config / 'usb_gadget'
+        if not gadgets.is_dir():
+            raise RuntimeError('无法检查 configfs 的 usb_gadget；未请求角色切换。')
+        for udc in gadgets.glob('*/UDC'):
             value = read(udc)
             if value is None or value:
                 raise RuntimeError('gadget 仍绑定 UDC 或不可读取。先安全断开 gadget；本工具不解绑 gadget。')
 
-    def host(self, seconds, emit=print):
+    def host(self, seconds, emit=print, target='152d:0562'):
         self.preflight_host()
-        deadline = self.clock() + seconds
+        start = self.clock()
+        deadline = start + seconds
         requested = False
         host_since = None
-        enumerated = False
+        stable_generation = None
+        partner_generation = None
         # A pre-existing downstream device cannot be counted as newly enumerated.
-        if self.snapshot()['usb']:
+        initial = self.snapshot()
+        if initial['usb']:
             raise RuntimeError('已有下游 USB 设备；先安全卸载并拔出，再开始直连测试。')
-        emit('等待插入 SSD；只通过 UCSI data_role 请求一次 host，不强制电源角色。')
+        if initial['partner'] or self.partner_generation() is not None:
+            raise RuntimeError('已有 Type-C partner；先断开线材，从未连接状态开始测试。')
+        emit(f'等待插入目标 {target}；只通过 UCSI data_role 请求一次 host，不强制电源角色。')
         while self.clock() < deadline:
             state = self.snapshot()
-            emit(json.dumps(state, ensure_ascii=False, sort_keys=True))
+            now = self.clock()
+            emit(json.dumps({'t': round(now - start, 3), 'monotonic': round(now, 6), **state},
+                            ensure_ascii=False, sort_keys=True))
             if not state['ucsi_bound']:
                 raise RuntimeError('测试中 UCSI 被解绑；停止请求角色。')
+            generation = self.partner_generation()
+            if state['partner'] != (generation is not None):
+                raise RuntimeError('Type-C 连接正在变化；停止本次测试。')
+            if partner_generation is not None and generation != partner_generation:
+                raise RuntimeError('Type-C 连接发生变化；停止本次测试，不向新连接请求角色。')
+            if generation is not None:
+                partner_generation = generation
             if state['partner']:
-                if state['data_role'] != 'host' and not requested:
+                if state['data_role'] not in ('host', 'device'):
+                    raise RuntimeError('无法确认 Type-C 数据角色；未请求切换。')
+                if state['data_role'] == 'device' and not requested:
+                    # Conditions may change during the insertion wait. Recheck immediately before IO.
+                    self.preflight_host()
+                    current = self.snapshot()
+                    if not current['ucsi_bound'] or self.partner_generation() != partner_generation or not current['partner']:
+                        raise RuntimeError('角色写入前 Type-C 连接发生变化；未请求切换。')
+                    if current['data_role'] not in ('host', 'device'):
+                        raise RuntimeError('角色写入前无法确认数据角色；未请求切换。')
+                    if self.clock() >= deadline:
+                        break
                     # Set the guard before IO: a rejected DR_SWAP must not be retried in a loop.
                     requested = True
-                    (self.sys / PORT / 'data_role').write_text('host\n')
+                    if current['data_role'] == 'device':
+                        (self.sys / PORT / 'data_role').write_text('host\n')
                 if state['data_role'] == 'host' and state['role'] == 'host':
-                    if state['usb']:
-                        host_since = self.clock() if host_since is None else host_since
+                    usb_generation = self.usb_generation(target)
+                    if usb_generation and any(dev['vid_pid'] == target for dev in state['usb']):
+                        if usb_generation != stable_generation:
+                            stable_generation = usb_generation
+                            host_since = now
                     else:
                         host_since = None
-                    enumerated = bool(state['usb'])
-                    if enumerated and host_since is not None and self.clock() - host_since >= 3:
-                        emit('观察到下游 USB 枚举与 host 持续至少 3 秒；仍须人工核对 SSD、挂载与读文件。')
+                        stable_generation = None
+                    if host_since is not None and now - host_since >= 3:
+                        emit(f'观察到目标 {target} 的同一次枚举与 host 持续至少 3 秒；仍须人工核对容量、挂载与读文件。')
                         return 0
                 else:
                     host_since = None
-                    enumerated = False
+                    stable_generation = None
             else:
                 host_since = None
-                enumerated = False
+                stable_generation = None
             self.sleep(0.1)
-        emit('未解决：没有在时间窗内观察到稳定 host 与下游枚举。不能据此判定 PPM 根因。')
+        emit(f'未解决：没有在时间窗内观察到稳定 host 与目标 {target} 的同一次枚举。不能据此判定 PPM 根因。')
         return 3
 
     def watch(self, seconds, emit=print):
         start = self.clock()
         while self.clock() - start < seconds:
-            emit(json.dumps({'t': round(self.clock() - start, 3), **self.snapshot()},
+            now = self.clock()
+            emit(json.dumps({'t': round(now - start, 3), 'monotonic': round(now, 6), **self.snapshot()},
                             sort_keys=True, ensure_ascii=False))
             self.sleep(0.1)
         return 0
@@ -154,6 +215,9 @@ class Trace:
         self.created = True
         try:
             (self.instance / 'tracing_on').write_text('0\n')
+            (self.instance / 'current_tracer').write_text('nop\n')
+            (self.instance / 'events/enable').write_text('0\n')
+            (self.instance / 'trace_clock').write_text('mono\n')
             (self.instance / 'buffer_size_kb').write_text('256\n')
             for name in self.EVENTS:
                 (self.instance / 'events/ucsi' / name / 'enable').write_text('1\n')
@@ -187,6 +251,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action', choices=['check', 'watch', 'host', 'trace'], nargs='?', default='check')
     parser.add_argument('--seconds', type=int, choices=range(5, 121), default=30, metavar='5..120')
+    parser.add_argument('--target', type=target_id, default='152d:0562', metavar='VID:PID',
+                        help='host 成功判据的目标，默认 issue #19 的 152d:0562；不影响只读动作。')
     args = parser.parse_args()
     probe = Probe()
     probe.validate()
@@ -198,19 +264,20 @@ def main():
         return probe.watch(args.seconds)
     if os.geteuid() != 0:
         raise RuntimeError('host / trace 需要管理员权限。')
+    if args.action == 'trace':
+        # Independent instances must be usable alongside the host trial.
+        with Trace() as trace:
+            try:
+                return probe.watch(args.seconds)
+            finally:
+                trace.report()
     # Lock in a root-owned directory, never follow an attacker-created lock symlink.
     fd = os.open('/run/lock/tb710fu-usb-c-test.lock', os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
     try:
         if os.fstat(fd).st_uid != 0:
             raise RuntimeError('锁文件不属于 root。')
         fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        if args.action == 'trace':
-            with Trace() as trace:
-                try:
-                    return probe.watch(args.seconds)
-                finally:
-                    trace.report()
-        return probe.host(args.seconds)
+        return probe.host(args.seconds, target=args.target)
     finally:
         os.close(fd)
 
