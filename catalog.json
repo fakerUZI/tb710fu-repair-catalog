@@ -4,7 +4,7 @@
     {
       "id": "kernel-offline-upgrade",
       "title": "TB710FU 日期内核升级（20261117）",
-      "description": "完整离线升级至 7.2.6-tb710fu-20261117，Linux 基础版本为 7.2.6。已在 Ubuntu 26.04.1 ARM64 的 TB710FU 上通过 snap1 → 日期版实际安装、完整 boot 回读、重启和自动收尾。新 Image/完整模块包含 Snap/AppArmor、IPv4/IPv6 legacy/xt NAT、ARP/security 表及 ath12k 两枚计数修复，保留已工作的麦克风、前后摄、对焦与 USB 配套。\n\n本次版本条件接受所有合法、不带日期的旧内核（包括原版、snap1、其他自定义版本），没有 snap1 白名单；机型、当前固件/GPT、boot、overlay 和配套文件仍须匹配已审核指纹，未知系统会停止。后续更新只接受日期版本，目标日期必须严格晚于设备当前日期，拒绝同日、倒退、非法日期和未来目标日期。已运行目标时 check 可报告无需升级，install 不重复刷入。\n\n新载荷约 53 MiB，分为七个最多 8 MiB 的附件；客户端须核验并下载全部附件，通过 TB710FU_ATTACHMENTS_DIR 传给唯一 Bash 入口。默认 check 只读预检；TB710FU_KERNEL_ACTION=install 备份现场 boot/GPT/文件、安装匹配模块、写 boot_a 并完整回读，不自动重启。status/finish/rollback 查询、收尾或回退；validate 仅校验/重组载荷，不访问设备。支持旧客户端的 TB710FU_SNAP_KERNEL_ACTION。\n\n需要 Python 3.11+、完整 Ubuntu ARM64/systemd、gdisk/fdisk/kmod/util-linux，电量至少 30%，/var/tmp 至少 512 MiB、根分区至少 1 GiB 可用空间。已启用前摄的设备必须预先具备新版本私有模块，其哈希/vermagic/依赖均受校验；包内不发布私有前摄表数据，缺少配套会在刷写前停止。\n\n实机验证 Snap strict/full、USB、前摄 30 帧 RGB/后摄三帧 RAW、对焦和四种 netfilter 后端的真实 NAT 流量，security 表查询与 ARP 模块加载通过。旧原版/其他无日期版本尚未逐一实机刷写，Wi-Fi 实测 10 次重连、301.67 秒、160 次查询，最长 8.49ms，统计超时为 0；全天 Wi-Fi、AP 信道切换及 aTrust 业务验收仍有边界；详见 VALIDATION.md。\n\n20261117 同版本可选补充：flash-check / flash-install / flash-rollback 在已审核日期内核上提供 PM8550 手电筒模块、动态覆盖、受限 D-Bus 开关、60 秒自动熄灭和 GNOME 快捷设置扩展，同时把现有相机应用更新为前后摄切换。该补充不更换 Image、不刷写启动/固件分区，原日期版分片保持原样。相机已完成后→前→后→前四次实机预览/全幅 JPEG 测试；手电筒实际定时关闭、SSH 权限拒绝及光学亮度对照通过。图形会话磁贴点击、长时间温升和 GNOME Snapshot 同步闪光尚未完成，详见 flash-camera/README.md；issue #18 不自动关闭。\n\n同日相机质量补充：camera-check / camera-install / camera-rollback 提供 OV13B10 主摄对比度自动对焦、点击对焦、十二帧拍照预热与真实数字裁切尺寸；接入 GC02M1 固定焦点微距，支持主后摄/前摄/微距三路切换，JPEG 分别为 4200×3120、4200×3120、1592×1200。匹配的 libcamera 0.7.0-1ubuntu2+tb710fu20261117.3 修正增益换算和曝光阈值。新增同 ABI 微距模块，不重刷 Image 或分区，原日期版分片保持原样。暗场噪声和未校准 SoftISP 色彩仍有边界，详见 flash-camera/CAMERA-QUALITY.md。\n\n原厂相机风格界面更新：参考本机 com.zui.camera 18.0.1 的静态布局，提供黑色拍摄页、白色圆形快门、黄色模式选中、相册缩略图、横竖屏排列、补光/九宫格/倒计时，以及设置面板。三路传感器和拍摄算法沿用已验证配套；已安装设备仅变更界面时采用原子更新，六项相机/手电筒服务保持运行。原始 APK、厂商资源/原生库和现场截图不发布，详见 flash-camera/STOCK-UI.md。",
+      "description": "完整离线升级至 7.2.6-tb710fu-20261117，Linux 基础版本为 7.2.6。已在 Ubuntu 26.04.1 ARM64 的 TB710FU 上通过 snap1 → 日期版实际安装、完整 boot 回读、重启和自动收尾。新 Image/完整模块包含 Snap/AppArmor、IPv4/IPv6 legacy/xt NAT、ARP/security 表及 ath12k 两枚计数修复，保留已工作的麦克风、前后摄、对焦与 USB 配套。\n\n本次版本条件接受所有合法、不带日期的旧内核（包括原版、snap1、其他自定义版本），没有 snap1 白名单；机型、当前固件/GPT、boot、overlay 和配套文件仍须匹配已审核指纹，未知系统会停止。后续更新只接受日期版本，目标日期必须严格晚于设备当前日期，拒绝同日、倒退、非法日期和未来目标日期。已运行目标时 check 可报告无需升级，install 不重复刷入。\n\n新载荷约 53 MiB，分为七个最多 8 MiB 的附件；客户端须核验并下载全部附件，通过 TB710FU_ATTACHMENTS_DIR 传给唯一 Bash 入口。默认 check 只读预检；TB710FU_KERNEL_ACTION=install 备份现场 boot/GPT/文件、安装匹配模块、写 boot_a 并完整回读，不自动重启。status/finish/rollback 查询、收尾或回退；validate 仅校验/重组载荷，不访问设备。支持旧客户端的 TB710FU_SNAP_KERNEL_ACTION。\n\n需要 Python 3.11+、完整 Ubuntu ARM64/systemd、gdisk/fdisk/kmod/util-linux，电量至少 30%，/var/tmp 至少 512 MiB、根分区至少 1 GiB 可用空间。已启用前摄的设备必须预先具备新版本私有模块，其哈希/vermagic/依赖均受校验；包内不发布私有前摄表数据，缺少配套会在刷写前停止。\n\n实机验证 Snap strict/full、USB、前摄 30 帧 RGB/后摄三帧 RAW、对焦和四种 netfilter 后端的真实 NAT 流量，security 表查询与 ARP 模块加载通过。旧原版/其他无日期版本尚未逐一实机刷写，Wi-Fi 实测 10 次重连、301.67 秒、160 次查询，最长 8.49ms，统计超时为 0；全天 Wi-Fi、AP 信道切换及 aTrust 业务验收仍有边界；详见 VALIDATION.md。\n\n20261117 同版本可选补充：flash-check / flash-install / flash-rollback 在已审核日期内核上提供 PM8550 手电筒模块、动态覆盖、受限 D-Bus 开关、60 秒自动熄灭和 GNOME 快捷设置扩展，同时把现有相机应用更新为前后摄切换。该补充不更换 Image、不刷写启动/固件分区，原日期版分片保持原样。相机已完成后→前→后→前四次实机预览/全幅 JPEG 测试；手电筒实际定时关闭、SSH 权限拒绝及光学亮度对照通过。图形会话磁贴点击、长时间温升和 GNOME Snapshot 同步闪光尚未完成，详见 flash-camera/README.md；issue #18 不自动关闭。\n\n同日相机质量补充：camera-check / camera-install / camera-rollback 提供 OV13B10 主摄对比度自动对焦、点击对焦、十二帧拍照预热与真实数字裁切尺寸；接入 GC02M1 固定焦点微距，支持主后摄/前摄/微距三路切换，JPEG 分别为 4200×3120、4200×3120、1592×1200。匹配的 libcamera 0.7.0-1ubuntu2+tb710fu20261117.3 修正增益换算和曝光阈值。新增同 ABI 微距模块，不重刷 Image 或分区，原日期版分片保持原样。暗场噪声和未校准 SoftISP 色彩仍有边界，详见 flash-camera/CAMERA-QUALITY.md。\n\n原厂相机风格界面更新：参考本机 com.zui.camera 18.0.1 的静态布局，提供黑色拍摄页、白色圆形快门、黄色模式选中、相册缩略图、横竖屏排列、补光/九宫格/倒计时，以及设置面板。三路传感器和拍摄算法沿用已验证配套；已安装设备仅变更界面时采用原子更新，六项相机/手电筒服务保持运行。原始 APK、厂商资源/原生库和现场截图不发布，详见 flash-camera/STOCK-UI.md。\n\n目录归并：当前日期版启动镜像已包含内置麦克风 WCD/SoundWire DAI 1 采集链路，ath12k 模块已包含 vdev 计数修复；旧 microphone-snap1 刷写包及 ath12k-stats-timeout-recovery 临时重载入口已移除。麦克风现有 ALSA 初始化服务和 WirePlumber 路由配置继续沿用，完整内核安装器不新建这些用户态文件。输入法、电源键、窗口触控、DroidLoom 按需启动及容器音频属于独立用户态修复，不由内核升级安装。相机/手电筒补充仍须显式运行 camera-install / flash-install，普通 install 不自动执行。",
       "device": "TB710FU",
       "status": "community-review",
       "risk": "高风险：install 写 boot_a、更新启动尝试/成功属性，并安装新模块及摄像头/USB 配套文件。掉电、UFS 故障、系统差异或写入中断仍可能导致无法启动；先展示风险并确认授权，准备本机备份和外部恢复方式。默认 check，不自动重启。当前固件/GPT 每次重新检查，不沿用历史分区坐标；不改分区布局，不删除旧内核及私有前摄模块。\n备份位于 /var/backups/tb710fu-kernel-upgrade/7.2.6-tb710fu-20261117/，kernel-upgrade-active 指向本次记录，保存 boot、六份 GPT、文件和状态；这些含本机身份，不可上传。写入失败会尝试恢复本次状态；硬件故障/掉电不保证自动恢复。\n回退：同一入口 TB710FU_KERNEL_ACTION=rollback，或 sudo python3 /var/backups/tb710fu-kernel-upgrade/7.2.6-tb710fu-20261117/kernel-upgrade-active/payload/upgrade-ubuntu-kernel.py --rollback，然后手动重启。回退前核验全部备份、当前固件/GPT和目标文件，拒绝覆盖其他操作改动。若完全无法启动，需外部救援使用本机备份。源码回退不等于启动分区回退。\n可选 flash-install 会加载 LED/媒体模块和运行态覆盖，控制 PM8550 LED，并更新相机 UI、两项 systemd 服务、D-Bus 策略及用户快捷设置扩展。仅接受当前审核的 kernel/config/boot/firmware/GPT 和原应用指纹；默认关灯、约 100mA torch、60 秒熄灭，但仍须确认实际出光与温升。该补充回退快照为 /var/backups/tb710fu-flash-camera-20261117/，其 payload 内保留独立恢复程序；回退不会刷写启动/固件分区或删除照片。\n可选 camera-install 还会安装五个匹配的 libcamera 用户态包、GC02M1 微距模块/运行态覆盖及对焦权限配置，短暂停止并恢复当前媒体服务；包内提供原 Ubuntu 包和五分钟验证失败回退。使用首次文件快照，不覆盖未知用户修改，不读取或上传 EEPROM/现场照片。camera-rollback 恢复硬件/应用补充及原 Ubuntu libcamera；不刷启动分区或删除照片。",
@@ -20,7 +20,7 @@
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/KERNEL-README.md",
-          "sha256": "5869b7e85a34295fd14e56a1be41916b9c8f66fdc719566592dfa0f4d5e3b36e"
+          "sha256": "a886969333591e24d6c6cf08d59168858e3b2d52110262239fe06ca22dd06f68"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/KERNEL-VERSIONING.md",
@@ -541,84 +541,6 @@
         {
           "path": "contributions/droidloom-on-demand-launch/attachments/droidloom-watch-launchers.service",
           "sha256": "403e6488dbdf987a922ab3ee38556556528ba9a3759a29dc6421e1353e5dddce"
-        }
-      ]
-    },
-    {
-      "id": "ath12k-stats-timeout-recovery",
-      "title": "Wi-Fi 固件统计超时恢复（运行态重置）",
-      "description": "适用于 TB710FU Ubuntu ARM64、7.2.6-tb710fu 系列内核，使用 ath12k/ath12k_wifi7、已连接 Wi-Fi 且保留 tb_poll_off=1 和 tb_hw_dedup=1 的设备。处理内核反复出现“time out while waiting for fw stats done”、NetworkManager 的 Wi-Fi 信号统计查询阻塞的情况。需要管理员权限、systemd journal、NetworkManager、iproute2、iw、kmod、util-linux 和 Bash。命令行默认只读 check；TB710FU_FIX_ACTION=check 只读且不创建运行状态文件，apply 才允许恢复。修复助手当前默认显式传入 apply，获用户确认后可能重载驱动；兼容旧接口 TB710FU_WIFI_ACTION=repair。先核对设备、内核、模块及参数，最近 90 秒少于两次对应超时则直接退出；检测到重复超时才重新加载 Wi-Fi 模块并检查参数、重连及统计查询。任何触发重置的执行均要求 USB 救援网络已连接；如果通过 SSH 执行，请先从 USB 救援地址登录。桌面远程连接期间运行会短暂中断。\n\n实机证据：Ubuntu 26.04.1、7.2.6-tb710fu 上曾手动卸载并重新加载相同的 Wi-Fi 模块，Wi-Fi 自动重连、参数保持、信号查询从约 3 秒降至 2～6 毫秒，HTTPS 测试成功；约两分半钟没有再次出现同类超时。此新封装脚本的 check 分支在本机连续两次通过，未在本机触发实际卸载分支。隔离模拟覆盖正常重复执行、检查、异常恢复、重复修复及不安全条件拒绝。本条目是临时恢复，不能保证不再复发；相关永久驱动补丁未经该设备验证，不包含在此条目。",
-      "device": "TB710FU",
-      "status": "community-review",
-      "risk": "风险：检测到连续超时才会卸载并重新加载 ath12k_wifi7 和 ath12k，Wi-Fi、远程桌面和网络任务可能中断；驱动重新加载或自动重连可能失败。执行必须有可用 USB NCM 救援网络，SSH 操作请先通过 USB 连接；sudo 可能清除 SSH 环境信息，因此脚本不能在所有情况下识别 SSH 所经接口。图形桌面中的远程执行也可能掉线；请先保存工作并准备现场操作。不能保证处理根因或所有无线故障，不修改 boot、GPT、固件或 Wi-Fi 配置。\n回退：脚本在可捕获的错误或终止时会尝试重新加载原有 ath12k_wifi7 模块；脚本不更换模块文件，也不改变持久配置。如果未恢复，在平板本机终端或 USB 救援会话检查日志并运行 sudo modprobe ath12k_wifi7，必要时手动重新连接或重启。/run 下的本次开机标记只用于避免重复重置，重启后自动消失。\n维护者审核：统一 check/apply 参数，check 不创建状态目录或锁文件；没有持久安装可 rollback，收到 rollback 会拒绝且不修改系统。修改后的 12 项 ARM64 Linux 隔离测试通过，实际重载分支未在平板重跑。USB 检查验证载波和已知 IPv4，不等于保证救援会话可用。",
-      "script": {
-        "path": "contributions/ath12k-stats-timeout-recovery/script.sh",
-        "sha256": "8b86540e8e808c04523c44dd81f9a37c5b4d7a094c0e979c5ee0a250466ff18b",
-        "requires_admin": true
-      },
-      "attachments": [
-        {
-          "path": "contributions/ath12k-stats-timeout-recovery/attachments/test-script.py",
-          "sha256": "08d447452ac45ec8294958b9e1070b12ca19b5759d1b1810d3ea21cf2daa2ccb"
-        }
-      ]
-    },
-    {
-      "id": "microphone-snap1",
-      "title": "snap1 内置麦克风修复（SoundWire 采集接口）",
-      "description": "修复 Ubuntu ARM64 / 7.2.6-tb710fu-snap1 上内置麦克风持续全零的问题：从精确匹配的原 snap1 启动镜像重建采集链路，使用 TX SoundWire 采集 DAI 1，保存双 AMIC 开机路由及 WirePlumber 麦克风名称。仅支持附件中匹配的引导固件、GPT 布局和原始 WCD 模块；其他版本拒绝。命令行未设置动作时只读 check；当前修复助手会显式传入动作（默认 apply），运行前须确认写 boot 风险；应用后自行重启，在声音设置选择“TB710FU 内置麦克风”；rollback 恢复本包最近备份。2026-11-16 核心修复已在 Ubuntu 单系统 TB710FU 上通过双麦克风声学 880 Hz 响应、PipeWire 录音和重启验证。差异补丁重建的完整启动镜像与实机版本 SHA256 一致。新安装包装完整 apply/rollback 尚未重新部署，状态待审核；依赖、使用和验证边界见附件 README.md。",
-      "device": "TB710FU",
-      "status": "community-review",
-      "risk": "apply 会写 boot_a 并安装三个麦克风配置文件；执行前保存工作并准备自己的独立恢复方式。脚本先检查当前固件、动态解析 boot_a、验证六个 GPT 和已知镜像/模块，保存本机私有备份后再写入并完整回读，不写 GPT、不改分区、不自动重启。断电、强制终止或存储故障仍可能导致不能启动；脚本异常恢复不能代替独立恢复。默认 check 不修改系统；明确设置 apply 才应用，成功后自行重启。rollback 只恢复本安装器最近一次备份，设备身份或此后配置改变则拒绝覆盖；启动失败须用自己的恢复环境从本机私有备份恢复。保留后摄和原 WCD 模块，不恢复退役前摄实验。数字增益 +12 dB，响声可能削波，可降低输入音量。核心实机验证已通过，新安装包装完整 apply/rollback 尚未在实机重跑。备份包含本机 GPT 身份信息，仅保留在 root 私有目录，禁止上传。\n维护者审核：修复助手显式传入 apply 时会写启动分区，不能把“运行脚本”当默认只读检查。已补齐回退写入失败后的预回退镜像/配置恢复、短写处理、恢复前设备重新核对与活动状态保留；21 项隔离测试通过，完整镜像重建和音频 DTB 差异核对通过。断电、强制结束或再次中断仍不能保证恢复。",
-      "script": {
-        "path": "contributions/microphone-snap1/script.sh",
-        "sha256": "d1c836b76c8965a3e135607f2f26376fbab91188a662e4670a6f9c6e72a00365",
-        "requires_admin": true
-      },
-      "attachments": [
-        {
-          "path": "contributions/microphone-snap1/attachments/repair.py",
-          "sha256": "4c441d83779fb92ecd189b75b7dd8b113e3433b8c3b8bdf22e4456cfe08596d0"
-        },
-        {
-          "path": "contributions/microphone-snap1/attachments/boot-delta.json",
-          "sha256": "20efdde7d4893b92f123c8d3e6fa5116bd6943ef60300359f900bb25a15e9df6"
-        },
-        {
-          "path": "contributions/microphone-snap1/attachments/compatibility.json",
-          "sha256": "f0ffd7f7050aa04ba94f4028027de921062c048f5f2b6f034f9522966117d28a"
-        },
-        {
-          "path": "contributions/microphone-snap1/attachments/tb-microphone-init",
-          "sha256": "143475fad61cdbaa9018ccd680a0022b2f4adc16f1a6308efd2c1f0ddf6ec6e5"
-        },
-        {
-          "path": "contributions/microphone-snap1/attachments/tb-microphone-init.service",
-          "sha256": "43b20f7ba81684d011ded18491dbb0d0b6dfa7acdc54d2ca4eac4213b756ee7b"
-        },
-        {
-          "path": "contributions/microphone-snap1/attachments/60-tb710fu-microphone.conf",
-          "sha256": "3d5d55d67a51aea46f812c8eebfe16c94df8c61e5fe40d6c3a8f1b6ee0519657"
-        },
-        {
-          "path": "contributions/microphone-snap1/attachments/payload-sha256.json",
-          "sha256": "1279f6b06b3ef1d3bb0c6731f9c5048ca8a77d4793e48f81f96ed80d646c7df4"
-        },
-        {
-          "path": "contributions/microphone-snap1/attachments/README.md",
-          "sha256": "83f9180646152e299bb43eee42c1f1fc44f19619a0a5ee55ef5f9c7a24bebc29"
-        },
-        {
-          "path": "contributions/microphone-snap1/attachments/VALIDATION.md",
-          "sha256": "fb3f22f282f84af4525ac3f1de0a763985a525b2051b9d831f924bb73f380aa5"
-        },
-        {
-          "path": "contributions/microphone-snap1/attachments/test-repair.py",
-          "sha256": "d05580a1f9c2728cd8a91c58318c22ebcfa4f724d209a747c3df723746de14ba"
-        },
-        {
-          "path": "contributions/microphone-snap1/attachments/DTB-CHANGE.patch",
-          "sha256": "9c064de1ee13140d539a284153a484d803a79ac14bba38b05858f3fcd00e483a"
         }
       ]
     },

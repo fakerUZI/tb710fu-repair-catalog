@@ -6,6 +6,14 @@
 
 本次版本条件接受所有合法、不带日期的旧内核，不限制 snap1 白名单。仍须匹配已审核的固件、GPT、boot、后摄 overlay 和配套文件；未知定制系统会在写入前停止。后续更新仅接受标准日期版本，目标日期必须严格晚于设备当前内核日期，不允许同日覆盖、倒退或虚构未来日期。规则见 [KERNEL-VERSIONING.md](KERNEL-VERSIONING.md)。
 
+## 已包含的修复与独立补充
+
+发布的 boot 设备树已包含内置麦克风 WCD/SoundWire DAI 1 采集链路，ath12k 模块已含 vdev 计数补丁。旧 `microphone-snap1` 刷写入口及 `ath12k-stats-timeout-recovery` 临时重载入口已从目录和当前仓库删除；历史记录保留在 Git 中。
+
+现有麦克风 ALSA 初始化服务和 WirePlumber 路由继续沿用，完整内核安装器不会新建这些用户态文件。输入法、电源键、窗口触控、DroidLoom 按需启动与容器音频为独立用户态配置，仍保留各自目录入口。
+
+`install` 只执行完整内核升级。相机、微距、自动对焦、原厂风格界面和手电筒的新增配套仍需显式执行本文末尾的 `camera-install` / `flash-install`，不能仅凭附件存在就视为已安装。
+
 ## 使用
 
 修复助手必须下载本条目全部附件，核验 catalog.json 中所有 SHA256，再将附件目录交给唯一 Bash 入口。每个分片最多 8 MiB，小于应用单附件 10 MiB 限制。

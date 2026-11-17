@@ -25,9 +25,20 @@
 
 [PR #12、#14 的代码修正、测试及恢复边界](docs/REVIEW-20261116-network-microphone.md)。
 
-## snap1 内置麦克风修复
+## 当前内核覆盖范围与目录归并
 
-`microphone-snap1`：[说明与回退](contributions/microphone-snap1/attachments/README.md)。仅允许匹配的内核、固件、GPT 与启动镜像。命令行不设动作时为只读 check；修复助手会显式传入动作，当前默认 apply，会写 boot_a，运行前须确认风险。核心实机声学验证已完成，本轮修改的完整 apply/rollback 仍未在真实块设备上重跑，详见[验证记录](contributions/microphone-snap1/attachments/VALIDATION.md)。
+已对照发布的七个分片重组包、启动镜像设备树、ath12k 模块、安装器文件清单及各独立脚本核对。以下旧入口及其 contributions 文件已从当前仓库删除，历史版本仍可通过 Git 记录查看：
+
+| 已删除的旧入口 | 当前处理方式 |
+| --- | --- |
+| `microphone-snap1`（原第 7 项） | 当前日期版 boot 已含 WCD/SoundWire DAI 1 采集链路；不再提供旧 snap1 镜像刷写入口。 |
+| `ath12k-stats-timeout-recovery`（原第 6 项） | 当前内核已含对应 vdev 计数补丁；移除旧版临时驱动重载入口，避免与正式内核修复重复。短期实测不等于全部 Wi-Fi 故障已解决。 |
+
+内核升级会保留现有麦克风 ALSA 初始化服务及 WirePlumber 路由，不新建这些用户态文件；不能把“镜像已含采集链路”理解为在任意原始系统上自动完成全部音频配置。
+
+目录现有 6 项，顺序为：日期内核升级、中文候选区与退格、电源键、窗口触控、DroidLoom 按需启动、DroidLoom 扬声器音频。后五项修改用户配置、应用或会话服务，未包含在完整内核安装器中，继续保留。
+
+相机和手电筒仍作为第一项的补充动作保留；普通 `install` 不自动执行 `camera-install` / `flash-install`。本次仅整理目录、说明及过时脚本，不改变日期内核版本、七个发布分片或设备状态。
 
 [内核日期命名与升级版本检查](contributions/kernel-offline-upgrade/attachments/KERNEL-VERSIONING.md)：本次接受无日期旧内核，后续要求目标日期严格晚于设备当前日期版本。当前平板已运行 `7.2.6-tb710fu-20261117`；后续目标日期必须严格晚于 20261117。
 
