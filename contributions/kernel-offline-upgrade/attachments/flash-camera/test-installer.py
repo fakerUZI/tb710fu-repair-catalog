@@ -34,6 +34,24 @@ class Install(unittest.TestCase):
   self.apply();dest=self.root/'unknown';dest.write_bytes(b'unknown');self.mapping['helper.py']=str(dest);(self.source/'helper.py').write_bytes(b'helper');self.manifest['files']['helper.py']=digest(b'helper')
   with self.assertRaises(RuntimeError):self.apply()
   self.assertEqual(dest.read_bytes(),b'unknown');self.assertEqual(self.target.read_bytes(),b'new')
+ def test_ui_only_revision_keeps_media_services_running(self):
+  self.apply();self.calls=[];(self.source/'app.py').write_bytes(b'ui2');self.manifest['files']['app.py']=digest(b'ui2')
+  with patch.object(m,'UI_DESTS',{str(self.target)}):self.apply()
+  self.assertEqual(self.target.read_bytes(),b'ui2');self.assertEqual((self.state/'before-0').read_bytes(),b'original')
+  self.assertFalse(any(c[:2] in [('systemctl','stop'),('systemctl','start')] for c in self.calls))
+ def test_ui_only_failure_restores_previous_revision(self):
+  self.apply();(self.source/'app.py').write_bytes(b'ui2');self.manifest['files']['app.py']=digest(b'ui2');original=m.atomic
+  def fail(p,data,mode):
+   if Path(p)==self.target and data==b'ui2':raise OSError('simulated write failure')
+   return original(p,data,mode)
+  with patch.object(m,'UI_DESTS',{str(self.target)}),patch.object(m,'atomic',fail):
+   with self.assertRaises(OSError):self.apply()
+  self.assertEqual(self.target.read_bytes(),b'new');state=json.loads((self.state/'state.json').read_text());self.assertEqual(state['phase'],'installed');self.assertEqual(state['files'][str(self.target)]['after'],digest(b'new'))
+ def test_ui_only_revision_checks_original_snapshot(self):
+  self.apply();(self.state/'before-0').write_bytes(b'corrupted');(self.source/'app.py').write_bytes(b'ui2');self.manifest['files']['app.py']=digest(b'ui2')
+  with patch.object(m,'UI_DESTS',{str(self.target)}):
+   with self.assertRaises(RuntimeError):self.apply()
+  self.assertEqual(self.target.read_bytes(),b'new')
  def test_reapply_after_rollback_keeps_first_snapshot(self):
   self.apply();m.rollback();self.apply();self.assertEqual((self.state/'before-0').read_bytes(),b'original');self.assertEqual(self.target.read_bytes(),b'new')
  def test_user_edit_blocks_upgrade_and_rollback(self):

@@ -4,7 +4,7 @@
     {
       "id": "kernel-offline-upgrade",
       "title": "TB710FU 日期内核升级（20261117）",
-      "description": "完整离线升级至 7.2.6-tb710fu-20261117，Linux 基础版本为 7.2.6。已在 Ubuntu 26.04.1 ARM64 的 TB710FU 上通过 snap1 → 日期版实际安装、完整 boot 回读、重启和自动收尾。新 Image/完整模块包含 Snap/AppArmor、IPv4/IPv6 legacy/xt NAT、ARP/security 表及 ath12k 两枚计数修复，保留已工作的麦克风、前后摄、对焦与 USB 配套。\n\n本次版本条件接受所有合法、不带日期的旧内核（包括原版、snap1、其他自定义版本），没有 snap1 白名单；机型、当前固件/GPT、boot、overlay 和配套文件仍须匹配已审核指纹，未知系统会停止。后续更新只接受日期版本，目标日期必须严格晚于设备当前日期，拒绝同日、倒退、非法日期和未来目标日期。已运行目标时 check 可报告无需升级，install 不重复刷入。\n\n新载荷约 53 MiB，分为七个最多 8 MiB 的附件；客户端须核验并下载全部附件，通过 TB710FU_ATTACHMENTS_DIR 传给唯一 Bash 入口。默认 check 只读预检；TB710FU_KERNEL_ACTION=install 备份现场 boot/GPT/文件、安装匹配模块、写 boot_a 并完整回读，不自动重启。status/finish/rollback 查询、收尾或回退；validate 仅校验/重组载荷，不访问设备。支持旧客户端的 TB710FU_SNAP_KERNEL_ACTION。\n\n需要 Python 3.11+、完整 Ubuntu ARM64/systemd、gdisk/fdisk/kmod/util-linux，电量至少 30%，/var/tmp 至少 512 MiB、根分区至少 1 GiB 可用空间。已启用前摄的设备必须预先具备新版本私有模块，其哈希/vermagic/依赖均受校验；包内不发布私有前摄表数据，缺少配套会在刷写前停止。\n\n实机验证 Snap strict/full、USB、前摄 30 帧 RGB/后摄三帧 RAW、对焦和四种 netfilter 后端的真实 NAT 流量，security 表查询与 ARP 模块加载通过。旧原版/其他无日期版本尚未逐一实机刷写，Wi-Fi 实测 10 次重连、301.67 秒、160 次查询，最长 8.49ms，统计超时为 0；全天 Wi-Fi、AP 信道切换及 aTrust 业务验收仍有边界；详见 VALIDATION.md。\n\n20261117 同版本可选补充：flash-check / flash-install / flash-rollback 在已审核日期内核上提供 PM8550 手电筒模块、动态覆盖、受限 D-Bus 开关、60 秒自动熄灭和 GNOME 快捷设置扩展，同时把现有相机应用更新为前后摄切换。该补充不更换 Image、不刷写启动/固件分区，原日期版分片保持原样。相机已完成后→前→后→前四次实机预览/全幅 JPEG 测试；手电筒实际定时关闭、SSH 权限拒绝及光学亮度对照通过。图形会话磁贴点击、长时间温升和 GNOME Snapshot 同步闪光尚未完成，详见 flash-camera/README.md；issue #18 不自动关闭。\n\n同日相机质量补充：camera-check / camera-install / camera-rollback 提供 OV13B10 主摄对比度自动对焦、点击对焦、十二帧拍照预热与真实数字裁切尺寸；接入 GC02M1 固定焦点微距，支持主后摄/前摄/微距三路切换，JPEG 分别为 4200×3120、4200×3120、1592×1200。匹配的 libcamera 0.7.0-1ubuntu2+tb710fu20261117.3 修正增益换算和曝光阈值。新增同 ABI 微距模块，不重刷 Image 或分区，原日期版分片保持原样。暗场噪声和未校准 SoftISP 色彩仍有边界，详见 flash-camera/CAMERA-QUALITY.md。",
+      "description": "完整离线升级至 7.2.6-tb710fu-20261117，Linux 基础版本为 7.2.6。已在 Ubuntu 26.04.1 ARM64 的 TB710FU 上通过 snap1 → 日期版实际安装、完整 boot 回读、重启和自动收尾。新 Image/完整模块包含 Snap/AppArmor、IPv4/IPv6 legacy/xt NAT、ARP/security 表及 ath12k 两枚计数修复，保留已工作的麦克风、前后摄、对焦与 USB 配套。\n\n本次版本条件接受所有合法、不带日期的旧内核（包括原版、snap1、其他自定义版本），没有 snap1 白名单；机型、当前固件/GPT、boot、overlay 和配套文件仍须匹配已审核指纹，未知系统会停止。后续更新只接受日期版本，目标日期必须严格晚于设备当前日期，拒绝同日、倒退、非法日期和未来目标日期。已运行目标时 check 可报告无需升级，install 不重复刷入。\n\n新载荷约 53 MiB，分为七个最多 8 MiB 的附件；客户端须核验并下载全部附件，通过 TB710FU_ATTACHMENTS_DIR 传给唯一 Bash 入口。默认 check 只读预检；TB710FU_KERNEL_ACTION=install 备份现场 boot/GPT/文件、安装匹配模块、写 boot_a 并完整回读，不自动重启。status/finish/rollback 查询、收尾或回退；validate 仅校验/重组载荷，不访问设备。支持旧客户端的 TB710FU_SNAP_KERNEL_ACTION。\n\n需要 Python 3.11+、完整 Ubuntu ARM64/systemd、gdisk/fdisk/kmod/util-linux，电量至少 30%，/var/tmp 至少 512 MiB、根分区至少 1 GiB 可用空间。已启用前摄的设备必须预先具备新版本私有模块，其哈希/vermagic/依赖均受校验；包内不发布私有前摄表数据，缺少配套会在刷写前停止。\n\n实机验证 Snap strict/full、USB、前摄 30 帧 RGB/后摄三帧 RAW、对焦和四种 netfilter 后端的真实 NAT 流量，security 表查询与 ARP 模块加载通过。旧原版/其他无日期版本尚未逐一实机刷写，Wi-Fi 实测 10 次重连、301.67 秒、160 次查询，最长 8.49ms，统计超时为 0；全天 Wi-Fi、AP 信道切换及 aTrust 业务验收仍有边界；详见 VALIDATION.md。\n\n20261117 同版本可选补充：flash-check / flash-install / flash-rollback 在已审核日期内核上提供 PM8550 手电筒模块、动态覆盖、受限 D-Bus 开关、60 秒自动熄灭和 GNOME 快捷设置扩展，同时把现有相机应用更新为前后摄切换。该补充不更换 Image、不刷写启动/固件分区，原日期版分片保持原样。相机已完成后→前→后→前四次实机预览/全幅 JPEG 测试；手电筒实际定时关闭、SSH 权限拒绝及光学亮度对照通过。图形会话磁贴点击、长时间温升和 GNOME Snapshot 同步闪光尚未完成，详见 flash-camera/README.md；issue #18 不自动关闭。\n\n同日相机质量补充：camera-check / camera-install / camera-rollback 提供 OV13B10 主摄对比度自动对焦、点击对焦、十二帧拍照预热与真实数字裁切尺寸；接入 GC02M1 固定焦点微距，支持主后摄/前摄/微距三路切换，JPEG 分别为 4200×3120、4200×3120、1592×1200。匹配的 libcamera 0.7.0-1ubuntu2+tb710fu20261117.3 修正增益换算和曝光阈值。新增同 ABI 微距模块，不重刷 Image 或分区，原日期版分片保持原样。暗场噪声和未校准 SoftISP 色彩仍有边界，详见 flash-camera/CAMERA-QUALITY.md。\n\n原厂相机风格界面更新：参考本机 com.zui.camera 18.0.1 的静态布局，提供黑色拍摄页、白色圆形快门、黄色模式选中、相册缩略图、横竖屏排列、补光/九宫格/倒计时，以及设置面板。三路传感器和拍摄算法沿用已验证配套；已安装设备仅变更界面时采用原子更新，六项相机/手电筒服务保持运行。原始 APK、厂商资源/原生库和现场截图不发布，详见 flash-camera/STOCK-UI.md。",
       "device": "TB710FU",
       "status": "community-review",
       "risk": "高风险：install 写 boot_a、更新启动尝试/成功属性，并安装新模块及摄像头/USB 配套文件。掉电、UFS 故障、系统差异或写入中断仍可能导致无法启动；先展示风险并确认授权，准备本机备份和外部恢复方式。默认 check，不自动重启。当前固件/GPT 每次重新检查，不沿用历史分区坐标；不改分区布局，不删除旧内核及私有前摄模块。\n备份位于 /var/backups/tb710fu-kernel-upgrade/7.2.6-tb710fu-20261117/，kernel-upgrade-active 指向本次记录，保存 boot、六份 GPT、文件和状态；这些含本机身份，不可上传。写入失败会尝试恢复本次状态；硬件故障/掉电不保证自动恢复。\n回退：同一入口 TB710FU_KERNEL_ACTION=rollback，或 sudo python3 /var/backups/tb710fu-kernel-upgrade/7.2.6-tb710fu-20261117/kernel-upgrade-active/payload/upgrade-ubuntu-kernel.py --rollback，然后手动重启。回退前核验全部备份、当前固件/GPT和目标文件，拒绝覆盖其他操作改动。若完全无法启动，需外部救援使用本机备份。源码回退不等于启动分区回退。\n可选 flash-install 会加载 LED/媒体模块和运行态覆盖，控制 PM8550 LED，并更新相机 UI、两项 systemd 服务、D-Bus 策略及用户快捷设置扩展。仅接受当前审核的 kernel/config/boot/firmware/GPT 和原应用指纹；默认关灯、约 100mA torch、60 秒熄灭，但仍须确认实际出光与温升。该补充回退快照为 /var/backups/tb710fu-flash-camera-20261117/，其 payload 内保留独立恢复程序；回退不会刷写启动/固件分区或删除照片。\n可选 camera-install 还会安装五个匹配的 libcamera 用户态包、GC02M1 微距模块/运行态覆盖及对焦权限配置，短暂停止并恢复当前媒体服务；包内提供原 Ubuntu 包和五分钟验证失败回退。使用首次文件快照，不覆盖未知用户修改，不读取或上传 EEPROM/现场照片。camera-rollback 恢复硬件/应用补充及原 Ubuntu libcamera；不刷启动分区或删除照片。",
@@ -60,7 +60,7 @@
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/README.md",
-          "sha256": "2e3745f93722ffba791cac150824a56613115f2747b7e534789c643a7d3d68f5"
+          "sha256": "75314c54030e172cce7fcd73615c750f3ad88a6dd5c25b7f83a691494323c037"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/extension.js",
@@ -68,7 +68,7 @@
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/install-flash-camera.py",
-          "sha256": "b8bb00340926ca28b01c5977c39b7aaeda2443f68766393292b082aa4d4dd3a5"
+          "sha256": "b894a16284cc17b362fd51f6ec2a397de0dc13b89c9974480fb8cd6a6292dfa6"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/leds-qcom-flash.c",
@@ -96,11 +96,11 @@
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/package.json",
-          "sha256": "4deae51b46894b44f9d7058d0a9345a1f4fec2359909282a3eb08b17a7feaf1c"
+          "sha256": "34cedaaedadff6fe04a4aa85cd23b2eeebbc06ab55714340313cbc641e3fe53b"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/tb-camera.py",
-          "sha256": "749836ccfb067e09c96264e3ad14e2c5b322719575df6463770f14947fd2b063"
+          "sha256": "d626c86f355e246f5f72e3c56d542f2890e58fc46929790802b8e8293e89909e"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/tb-flash-hardware.py",
@@ -152,7 +152,7 @@
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/test-installer.py",
-          "sha256": "18524d5cf2ecec1e270b2b9df259d6ad9b761c5fe1ef84b0b4a456cb16ebf716"
+          "sha256": "9a2d66968514a32d6aeeb506f5ea04c190a036f269fee7e9b95a7563ad156a2c"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/test-torch-optical.py",
@@ -385,6 +385,10 @@
         {
           "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/0006-tb710fu-raw-q10-gain.patch",
           "sha256": "9cbd134dcc971c0fce9d5f8943995cd1fbeb98e8226238ee52f5872c76533311"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/STOCK-UI.md",
+          "sha256": "86946860fd7d6e356a179c7e736391b872e7df00b37a5db15215bf181c0f9cf3"
         }
       ]
     },

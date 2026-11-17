@@ -1,14 +1,15 @@
 #!/usr/bin/python3
 """Version-pinned flashlight and camera UI add-on. Never writes boot/GPT/firmware partitions."""
-import argparse,ast,hashlib,importlib.util,json,os,pwd,shutil,stat,subprocess,sys,tempfile
+import argparse,ast,copy,hashlib,importlib.util,json,os,pwd,shutil,stat,subprocess,sys,tempfile
 from pathlib import Path
 
-PACKAGE_SHA256='4deae51b46894b44f9d7058d0a9345a1f4fec2359909282a3eb08b17a7feaf1c'
+PACKAGE_SHA256='34cedaaedadff6fe04a4aa85cd23b2eeebbc06ab55714340313cbc641e3fe53b'
 VERSION='7.2.6-tb710fu-20261117'
 BASE=Path('/var/backups/tb710fu-flash-camera-20261117')
 DEST=Path('/opt/tb710fu-flash')/VERSION
 UNITS=['tb710fu-macro-camera.service','tb710fu-flash-hardware.service','tb710fu-torch.service']
 EXT='tb-torch@tb710fu'
+UI_DESTS={'/usr/local/bin/tb-rear-camera','/usr/local/bin/tb-front-camera-preview','/usr/share/applications/tb710fu-rear-camera.desktop','/usr/share/applications/tb710fu-front-camera.desktop'}
 MAP={
  'tb-camera-focus-permission.py':'/usr/local/libexec/tb-camera-focus-permission.py',
  '50-camera-focus-owner.conf':'/etc/systemd/system/tb710fu-camera-focus.service.d/50-camera-focus-owner.conf',
@@ -82,6 +83,32 @@ def save_payload(source):
  require(sha(dest/'install-flash-camera.py')==sha(source/'install-flash-camera.py'),'持久化安装器不一致')
  link=BASE/'.payload-new';link.unlink(missing_ok=True);link.symlink_to(dest.name,target_is_directory=True);os.replace(link,BASE/'payload')
 
+def ui_only_update(source,m,s):
+ if s['phase']!='installed' or not all(dest in s['files'] for dest in MAP.values()):return False
+ changed=[(name,dest) for name,dest in MAP.items() if s['files'][dest]['after']!=m['files'][name]]
+ if not changed or any(dest not in UI_DESTS for _,dest in changed):return False
+ for dest,r in s['files'].items():
+  if r['existed']:require(sha(BASE/r['saved'])==r['sha256'],'原始快照已损坏，拒绝更新界面：'+dest)
+ before=copy.deepcopy(s)
+ previous={dest:(Path(dest).read_bytes(),stat.S_IMODE(Path(dest).stat().st_mode)) for _,dest in changed}
+ revised=copy.deepcopy(s)
+ for name,dest in changed:
+  record=revised['files'][dest]
+  record['previous_after']=list(set(record.get('previous_after',[]))|{record['after']})
+  record['after']=m['files'][name]
+ revised['phase']='prepared-ui';state_save(revised)
+ try:
+  for name,dest in changed:atomic(dest,(source/name).read_bytes(),0o755 if dest.startswith('/usr/local/') else 0o644)
+  save_payload(source)
+  revised['phase']='installed';state_save(revised)
+ except BaseException:
+  for dest,(data,mode) in previous.items():atomic(dest,data,mode)
+  state_save(before)
+  raise
+ print('相机界面已更新，原始快照保留；拍摄驱动和媒体服务保持运行。')
+ return True
+
+
 def apply(source,m,user):
  hardware_check(source)
  if (BASE/'state.json').exists():
@@ -93,6 +120,7 @@ def apply(source,m,user):
     require(not Path(dest).is_symlink(),'目标变成了符号链接')
     require((Path(dest).is_file() and sha(dest)==r['sha256']) if r['existed'] else not Path(dest).exists(),'回退后文件有未知修改')
     if r['existed']:require(sha(BASE/r['saved'])==r['sha256'],'原始备份已损坏')
+  if ui_only_update(source,m,s):return
   if s['phase']=='installed' and all(dest in s['files'] and s['files'][dest]['after']==m['files'][name] for name,dest in MAP.items()):
    save_payload(source)
    print('已安装，原始快照保留');return

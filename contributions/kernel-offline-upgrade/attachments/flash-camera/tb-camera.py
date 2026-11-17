@@ -292,6 +292,59 @@ def smoke_test():
 def run_app(test=False, camera='rear', switch_test=False):
     Gtk, Gdk, Graphene, Gst, GLib, Gio = load_gi()
 
+    import gi
+    gi.require_version('GdkPixbuf','2.0')
+    from gi.repository import GdkPixbuf
+    def camera_icon(name,size=28,color='#ffffff'):
+        paths={
+            'close':'<path d="M15 5l-7 7 7 7"/>',
+            'flash':'<path d="M13 2L5 14h6l-1 8 9-13h-6z"/>',
+            'timer':'<circle cx="12" cy="14" r="8"/><path d="M9 2h6m-3 4v-4m0 8v5l3 2M18 6l2-2"/>',
+            'grid':'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/>',
+            'flip':'<path d="M5 7H3V3m0 4a10 10 0 0 1 17-1M19 17h2v4m0-4a10 10 0 0 1-17 1"/><rect x="7" y="8" width="10" height="8" rx="2"/><circle cx="12" cy="12" r="2"/>',
+            'gallery':'<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="9" cy="9" r="1.5"/><path d="M4 17l5-5 4 4 3-3 5 5"/>',
+            'settings':'<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
+        }
+        svg=('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><g fill="none" stroke="'+color+'" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">'+paths[name]+'</g></svg>').encode()
+        loader=GdkPixbuf.PixbufLoader.new_with_type('svg');loader.write(svg);loader.close()
+        image=Gtk.Image.new_from_paintable(Gdk.Texture.new_for_pixbuf(loader.get_pixbuf()));image.set_pixel_size(size);return image
+    css=Gtk.CssProvider()
+    css.load_from_data(b"""
+    window.camera-window { background:#000; color:#fff; }
+    .camera-window button { background-image:none; box-shadow:none; text-shadow:none; background:transparent; border:none; color:#fff; }
+    .camera-window .icon-button { min-width:48px; min-height:48px; padding:4px; border-radius:28px; }
+    .camera-window .icon-button:hover { background:rgba(255,255,255,.10); }
+    .camera-window .selected { color:#e8bc05; }
+    .tool-rail { padding:10px 6px; background:#000; }
+    .mode-rail { padding:8px 0; background:#000; }
+    .camera-window .mode-button { font-size:16px; font-weight:500; padding:14px 4px; min-height:24px; }
+    .camera-window .mode-button.selected { color:#e8bc05; font-weight:700; }
+    .capture-rail { margin:0 8px 0 2px; background:#000; }
+    .camera-window .shutter { min-width:84px; min-height:84px; padding:3px; border:2px solid #fff; border-radius:999px; }
+    .shutter-inner { min-width:68px; min-height:68px; border-radius:999px; background:#fff; }
+    .camera-window .shutter:active .shutter-inner { background:#ddd; }
+    .capture-spinner { color:#e8bc05; }
+    .camera-window .gallery-button { min-width:56px; min-height:56px; border:2px solid #666; border-radius:999px; padding:0; }
+    .gallery-button picture { border-radius:999px; }
+    .viewfinder { background:#000; }
+    .camera-window .zoom-chip { background:rgba(20,20,20,.75); color:#e8bc05; border-radius:999px; min-width:44px; min-height:44px; padding:0; font-size:14px; font-weight:600; }
+    .camera-name { color:rgba(255,255,255,.65); font-size:12px; }
+    .camera-toast { color:#fff; background:rgba(0,0,0,.50); border-radius:16px; padding:6px 12px; font-size:12px; }
+    .countdown { color:#fff; font-size:88px; font-weight:300; text-shadow:0 2px 4px #000; }
+    .focus-ring { border:2px solid #e8bc05; border-radius:5px; }
+    .grid-right { border-right:1px solid rgba(255,255,255,.35); }
+    .grid-bottom { border-bottom:1px solid rgba(255,255,255,.35); }
+    .camera-settings contents { background:#191919; color:#eee; border:1px solid #333; border-radius:20px; }
+    .camera-settings button { color:#eee; }
+    .camera-settings dropdown { color:#eee; }
+    .camera-settings scale highlight { background:#e8bc05; }
+    .camera-settings checkbutton check:checked { background:#e8bc05; border-color:#e8bc05; color:#111; }
+    .settings-title { font-size:20px; font-weight:600; }
+    .muted { color:#aaa; font-size:12px; }
+    """)
+    Gtk.init()
+    Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(),css,Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+
     class View(Gtk.Widget):
         def __init__(self):
             super().__init__(hexpand=True, vexpand=True)
@@ -350,81 +403,258 @@ def run_app(test=False, camera='rear', switch_test=False):
             self.preview_last_frame = time.monotonic()
             self.preview_timer = None
             self.frames = 0
-            root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-            self.set_child(root)
-            header = Gtk.HeaderBar()
-            self.set_titlebar(header)
-            self.camera_keys = available_cameras()
-            self.camera_selector = Gtk.DropDown.new_from_strings([profile(k)['name'] for k in self.camera_keys])
+            self.timer_seconds=0
+            self.countdown_source=None
+            self.countdown_deadline=0
+            self.focus_ring_source=None
+            self.last_rear='rear'
+            self.gallery_path=None
+            self.torch_owned=False
+            self.torch_enabled=False
+            self.torch_proxy=None
+            self.portrait=None
+            self.set_decorated(False)
+            self.set_default_size(1280,900)
+            self.add_css_class('camera-window')
+            self.camera_keys=available_cameras()
+            self.camera_selector=Gtk.DropDown.new_from_strings([profile(k)['name'] for k in self.camera_keys])
             self.camera_selector.set_selected(self.camera_keys.index(self.camera_key))
-            self.camera_selector.connect('notify::selected', self.camera_changed)
-            header.pack_start(self.camera_selector)
-            self.quality = Gtk.DropDown.new_from_strings(preview_labels(self.camera_key))
-            header.pack_start(self.quality)
-            self.quality.connect('notify::selected', self.quality_changed)
-            self.view = View()
-            root.append(self.view)
-            toolbar = Gtk.Box(spacing=10, margin_start=16, margin_end=16)
-            toolbar.append(Gtk.Label(label='放大'))
-            self.zoom_slider = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 1, 4, .05)
-            self.zoom_slider.set_hexpand(True)
-            self.zoom_slider.set_draw_value(False)
-            self.zoom_slider.connect('value-changed', self.zoom_changed)
-            toolbar.append(self.zoom_slider)
-            self.zoom_label = Gtk.Label(label='1.0×', width_chars=5)
-            toolbar.append(self.zoom_label)
-            for z in (1, 2, 4):
-                button = Gtk.Button(label=str(z)+'×')
-                button.connect('clicked', lambda button, z=z: self.zoom_slider.set_value(z))
-                toolbar.append(button)
-            root.append(toolbar)
-            pinch = Gtk.GestureZoom.new()
-            pinch.connect('begin', lambda gesture, seq: setattr(self, 'zoom_start', self.view.zoom))
-            pinch.connect('scale-changed', lambda gesture, scale: self.zoom_slider.set_value(self.zoom_start*scale))
-            self.view.add_controller(pinch)
-            drag = Gtk.GestureDrag.new()
-            drag.connect('drag-begin', lambda gesture, x, y: setattr(self, 'drag_start', list(self.view.center)))
-            drag.connect('drag-update', self.pan)
-            self.view.add_controller(drag)
-            pinch.group(drag)
-            scroll = Gtk.EventControllerScroll.new(Gtk.EventControllerScrollFlags.VERTICAL)
-            scroll.connect('scroll', self.scroll_zoom)
-            self.view.add_controller(scroll)
-            focus_row = Gtk.Box(spacing=10, margin_start=16, margin_end=16)
-            focus_row.append(Gtk.Label(label='手动对焦'))
-            self.focus = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 1023, 1)
-            self.focus.set_hexpand(True)
-            self.focus.set_draw_value(True)
-            try:
-                self.focus.set_value(int(FOCUS.read_text()))
-            except (OSError, ValueError):
-                self.focus.set_value(700)
-            self.focus.set_sensitive(os.access(FOCUS, os.W_OK))
-            self.focus.connect('value-changed', self.focus_changed)
-            focus_row.append(self.focus)
-            self.af_button = Gtk.Button(label='自动对焦')
-            self.af_button.connect('clicked', lambda *_: self.start_af())
-            self.af_button.set_sensitive(os.access(FOCUS, os.W_OK))
-            focus_row.append(self.af_button)
-            self.auto_focus = Gtk.CheckButton(label='拍照前自动对焦', active=True)
-            focus_row.append(self.auto_focus)
-            tap = Gtk.GestureClick.new()
-            tap.connect('released', self.tap_focus)
-            self.view.add_controller(tap)
-            self.focus_row = focus_row
-            self.focus_row.set_visible(profile(self.camera_key)['focus'])
-            root.append(focus_row)
-            bottom = Gtk.Box(spacing=12, margin_start=16, margin_end=16, margin_bottom=12)
-            self.status = Gtk.Label(label='正在启动相机…', xalign=0, hexpand=True, wrap=True)
-            bottom.append(self.status)
-            self.shutter = Gtk.Button(label='拍照 · %d×%d' % profile(self.camera_key)['full'])
-            self.shutter.add_css_class('suggested-action')
-            self.shutter.connect('clicked', self.capture)
-            bottom.append(self.shutter)
-            root.append(bottom)
-            self.connect('close-request', self.close_camera)
+            self.camera_selector.connect('notify::selected',self.camera_changed)
+            self.shell=Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+            self.set_child(self.shell)
+            self.left_rail=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=8)
+            self.left_rail.set_hexpand(False);self.left_rail.set_vexpand(False)
+            self.left_rail.add_css_class('tool-rail')
+            self.close_button=self.icon_button('close','关闭相机',lambda *_:self.close())
+            self.left_rail.append(self.close_button)
+            self.tools=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=14,vexpand=True,hexpand=True,halign=Gtk.Align.CENTER,valign=Gtk.Align.CENTER)
+            self.torch_button=self.icon_button('flash','常亮补光',self.toggle_torch)
+            self.timer_button=self.icon_button('timer','定时拍摄：关闭',self.cycle_timer)
+            self.grid_button=self.icon_button('grid','九宫格',self.toggle_grid)
+            self.tools.append(self.torch_button);self.tools.append(self.timer_button);self.tools.append(self.grid_button)
+            self.settings_button=Gtk.MenuButton()
+            self.settings_button.add_css_class('icon-button')
+            self.settings_button.set_child(camera_icon('settings'))
+            self.settings_button.set_tooltip_text('相机设置')
+            self.tools.append(self.settings_button)
+            self.left_rail.append(self.tools)
+            self.balance=Gtk.Box();self.balance.set_size_request(56,56);self.left_rail.append(self.balance)
+            self.shell.append(self.left_rail)
+            self.preview_page=Gtk.Overlay(hexpand=True,vexpand=True)
+            self.preview_page.add_css_class('viewfinder')
+            self.view=View();self.preview_page.set_child(self.view)
+            self.shell.append(self.preview_page)
+            self.grid=Gtk.Grid(row_homogeneous=True,column_homogeneous=True,can_target=False)
+            for row in range(3):
+                for col in range(3):
+                    cell=Gtk.Box(hexpand=True,vexpand=True,can_target=False)
+                    if col<2:cell.add_css_class('grid-right')
+                    if row<2:cell.add_css_class('grid-bottom')
+                    self.grid.attach(cell,col,row,1,1)
+            self.grid.set_visible(False);self.preview_page.add_overlay(self.grid)
+            self.focus_layer=Gtk.Fixed(can_target=False)
+            self.focus_ring=Gtk.Box(can_target=False);self.focus_ring.set_size_request(62,62);self.focus_ring.add_css_class('focus-ring');self.focus_ring.set_visible(False)
+            self.focus_layer.put(self.focus_ring,0,0);self.preview_page.add_overlay(self.focus_layer)
+            self.zoom_slider=Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL,1,4,.05)
+            self.zoom_slider.connect('value-changed',self.zoom_changed)
+            self.zoom_label=Gtk.Label(label='1×')
+            self.zoom_button=Gtk.Button(child=self.zoom_label)
+            self.zoom_button.add_css_class('zoom-chip');self.zoom_button.set_tooltip_text('切换数字变焦；也可双指缩放')
+            self.zoom_button.connect('clicked',lambda *_:self.zoom_slider.set_value(2 if self.view.zoom<1.5 else 4 if self.view.zoom<3 else 1))
+            self.zoom_group=Gtk.Box(halign=Gtk.Align.END,valign=Gtk.Align.CENTER,margin_end=18)
+            self.zoom_group.append(self.zoom_button);self.preview_page.add_overlay(self.zoom_group)
+            self.camera_label=Gtk.Label(label=profile(self.camera_key)['name'],halign=Gtk.Align.END,valign=Gtk.Align.START,margin_top=20,margin_end=20,can_target=False)
+            self.camera_label.add_css_class('camera-name');self.preview_page.add_overlay(self.camera_label)
+            self.status=Gtk.Label(label='正在打开相机',halign=Gtk.Align.CENTER,valign=Gtk.Align.END,margin_bottom=20,wrap=True,can_target=False)
+            self.status.add_css_class('camera-toast');self.preview_page.add_overlay(self.status)
+            self.countdown_label=Gtk.Label(label='',halign=Gtk.Align.CENTER,valign=Gtk.Align.CENTER,can_target=False)
+            self.countdown_label.add_css_class('countdown');self.countdown_label.set_visible(False);self.preview_page.add_overlay(self.countdown_label)
+            self.modes=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=20,halign=Gtk.Align.CENTER,valign=Gtk.Align.CENTER)
+            self.modes.set_hexpand(False);self.modes.set_vexpand(False)
+            self.modes.add_css_class('mode-rail')
+            self.photo_mode=Gtk.Button(label='拍照');self.photo_mode.add_css_class('mode-button');self.photo_mode.connect('clicked',lambda *_:self.select_camera('front' if self.camera_key=='front' else 'rear'))
+            self.modes.append(self.photo_mode)
+            self.macro_mode=Gtk.Button(label='微距');self.macro_mode.add_css_class('mode-button');self.macro_mode.set_visible('macro' in self.camera_keys);self.macro_mode.connect('clicked',lambda *_:self.select_camera('macro'))
+            self.modes.append(self.macro_mode);self.shell.append(self.modes)
+            self.capture_controls=Gtk.CenterBox(orientation=Gtk.Orientation.VERTICAL,valign=Gtk.Align.CENTER,halign=Gtk.Align.CENTER)
+            self.capture_controls.set_hexpand(False);self.capture_controls.set_vexpand(False)
+            self.capture_controls.add_css_class('capture-rail')
+            self.flip_button=self.icon_button('flip','切换前后摄像头',self.flip_camera)
+            self.capture_controls.set_start_widget(self.flip_button)
+            self.shutter=Gtk.Button(halign=Gtk.Align.CENTER,valign=Gtk.Align.CENTER)
+            self.shutter.add_css_class('shutter');self.shutter.set_tooltip_text('拍照')
+            self.shutter_inner=Gtk.Box(halign=Gtk.Align.CENTER,valign=Gtk.Align.CENTER)
+            self.shutter_inner.add_css_class('shutter-inner');self.shutter.set_child(self.shutter_inner)
+            self.shutter.connect('clicked',self.request_capture)
+            self.shutter_overlay=Gtk.Overlay();self.shutter_overlay.set_child(self.shutter)
+            self.capture_spinner=Gtk.Spinner(halign=Gtk.Align.CENTER,valign=Gtk.Align.CENTER,can_target=False)
+            self.capture_spinner.set_size_request(42,42);self.capture_spinner.add_css_class('capture-spinner');self.capture_spinner.set_visible(False);self.shutter_overlay.add_overlay(self.capture_spinner)
+            self.capture_controls.set_center_widget(self.shutter_overlay)
+            self.thumbnail=Gtk.Picture(can_shrink=True,content_fit=Gtk.ContentFit.COVER)
+            self.thumbnail.set_size_request(56,56)
+            self.gallery_button=Gtk.Button(halign=Gtk.Align.CENTER,valign=Gtk.Align.CENTER)
+            self.gallery_button.add_css_class('gallery-button');self.gallery_button.set_overflow(Gtk.Overflow.HIDDEN);self.gallery_button.set_child(camera_icon('gallery',30));self.gallery_button.set_tooltip_text('查看照片');self.gallery_button.connect('clicked',self.open_gallery)
+            self.capture_controls.set_end_widget(self.gallery_button)
+            self.shell.append(self.capture_controls)
+            panel=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=14,margin_top=20,margin_bottom=20,margin_start=20,margin_end=20)
+            panel.set_size_request(310,-1)
+            title=Gtk.Label(label='相机设置',xalign=0);title.add_css_class('settings-title');panel.append(title)
+            panel.append(Gtk.Label(label='预览清晰度',xalign=0))
+            self.quality=Gtk.DropDown.new_from_strings(preview_labels(self.camera_key));self.quality.connect('notify::selected',self.quality_changed);panel.append(self.quality)
+            self.resolution_label=Gtk.Label(label='保存尺寸 %d×%d'%profile(self.camera_key)['full'],xalign=0);self.resolution_label.add_css_class('muted');panel.append(self.resolution_label)
+            self.focus_row=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=12)
+            self.auto_focus=Gtk.CheckButton(label='拍照前自动对焦',active=True);self.focus_row.append(self.auto_focus)
+            self.focus_row.append(Gtk.Label(label='手动对焦',xalign=0))
+            self.focus=Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL,0,1023,1)
+            self.focus.set_hexpand(True);self.focus.set_draw_value(False)
+            try:self.focus.set_value(int(FOCUS.read_text()))
+            except (OSError,ValueError):self.focus.set_value(700)
+            self.focus.set_sensitive(os.access(FOCUS,os.W_OK));self.focus.connect('value-changed',self.focus_changed);self.focus_row.append(self.focus)
+            self.af_button=Gtk.Button(label='自动对焦');self.af_button.connect('clicked',lambda *_:self.start_af());self.af_button.set_sensitive(os.access(FOCUS,os.W_OK));self.focus_row.append(self.af_button)
+            self.focus_row.set_visible(profile(self.camera_key)['focus']);panel.append(self.focus_row)
+            self.settings_popover=Gtk.Popover(child=panel);self.settings_popover.add_css_class('camera-settings');self.settings_button.set_popover(self.settings_popover)
+            pinch=Gtk.GestureZoom.new();pinch.connect('begin',lambda gesture,seq:setattr(self,'zoom_start',self.view.zoom));pinch.connect('scale-changed',lambda gesture,scale:self.zoom_slider.set_value(self.zoom_start*scale));self.view.add_controller(pinch)
+            drag=Gtk.GestureDrag.new();drag.connect('drag-begin',lambda gesture,x,y:setattr(self,'drag_start',list(self.view.center)));drag.connect('drag-update',self.pan);self.view.add_controller(drag);pinch.group(drag)
+            tap=Gtk.GestureClick.new();tap.connect('released',self.tap_focus);self.view.add_controller(tap)
+            scroll=Gtk.EventControllerScroll.new(Gtk.EventControllerScrollFlags.VERTICAL);scroll.connect('scroll',self.scroll_zoom);self.view.add_controller(scroll)
+            keys=Gtk.EventControllerKey.new();keys.connect('key-pressed',self.key_pressed);self.add_controller(keys)
+            self.connect('close-request',self.close_camera)
+            self.add_tick_callback(self.relayout)
+            self.setup_torch()
             GLib.idle_add(self.start_preview)
             GLib.timeout_add_seconds(1,self.preview_health)
+            GLib.timeout_add(200,self.sync_chrome)
+
+        def icon_button(self,name,tooltip,callback):
+            button=Gtk.Button(child=camera_icon(name));button.add_css_class('icon-button');button.set_tooltip_text(tooltip);button.connect('clicked',callback);return button
+
+        def relayout(self,*_):
+            if self.closing:return False
+            width,height=self.get_width(),self.get_height()
+            portrait=height>width*1.08
+            if width>0 and height>0 and portrait!=self.portrait:
+                self.portrait=portrait
+                self.shell.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
+                orientation=Gtk.Orientation.HORIZONTAL if portrait else Gtk.Orientation.VERTICAL
+                for box in (self.left_rail,self.tools,self.modes,self.capture_controls):box.set_orientation(orientation)
+                self.left_rail.set_size_request(-1,68) if portrait else self.left_rail.set_size_request(76,-1)
+                self.modes.set_size_request(-1,52) if portrait else self.modes.set_size_request(62,-1)
+                self.capture_controls.set_size_request(max(320,width-60),126) if portrait else self.capture_controls.set_size_request(132,min(560,max(350,height-120)))
+                self.capture_controls.set_start_widget(None);self.capture_controls.set_end_widget(None)
+                self.capture_controls.set_start_widget(self.gallery_button if portrait else self.flip_button)
+                self.capture_controls.set_end_widget(self.flip_button if portrait else self.gallery_button)
+                self.zoom_group.set_halign(Gtk.Align.CENTER if portrait else Gtk.Align.END);self.zoom_group.set_valign(Gtk.Align.END if portrait else Gtk.Align.CENTER)
+                self.zoom_group.set_margin_bottom(70 if portrait else 0);self.zoom_group.set_margin_end(0 if portrait else 18)
+                self.settings_popover.set_position(Gtk.PositionType.BOTTOM if portrait else Gtk.PositionType.RIGHT)
+                self.balance.set_visible(not portrait)
+                print('CAMERA_LAYOUT','portrait' if portrait else 'landscape',width,height,flush=True)
+            texture=self.view.texture
+            if texture:
+                ww,wh=self.view.get_width(),self.view.get_height();scale=min(ww/texture.get_width(),wh/texture.get_height());x=max(0,round((ww-texture.get_width()*scale)/2));y=max(0,round((wh-texture.get_height()*scale)/2))
+                if self.portrait:self.zoom_group.set_margin_bottom(y+18)
+                self.grid.set_margin_start(x);self.grid.set_margin_end(x);self.grid.set_margin_top(y);self.grid.set_margin_bottom(y)
+            return True
+
+        def sync_chrome(self):
+            if self.closing:return False
+            waiting=self.busy or self.af_pending_photo or self.countdown_source is not None
+            self.capture_spinner.set_visible(self.busy or self.af_pending_photo);self.capture_spinner.set_spinning(self.busy or self.af_pending_photo)
+            self.shutter_inner.set_opacity(.3 if self.busy or self.af_pending_photo else 1)
+            self.shutter.set_sensitive(not waiting)
+            for button in (self.flip_button,self.photo_mode,self.macro_mode):button.set_sensitive(not self.busy)
+            self.torch_button.set_sensitive(self.camera_key!='front' and not self.busy and self.torch_proxy is not None)
+            self.camera_label.set_text(profile(self.camera_key)['name'])
+            for button,active in ((self.photo_mode,self.camera_key!='macro'),(self.macro_mode,self.camera_key=='macro')):
+                if active:button.add_css_class('selected')
+                else:button.remove_css_class('selected')
+            return True
+
+        def key_pressed(self,controller,keyval,keycode,state):
+            if keyval==Gdk.KEY_Escape:
+                if self.settings_popover.get_visible():self.settings_popover.popdown()
+                else:self.close()
+                return True
+            if keyval==Gdk.KEY_space and not self.settings_popover.get_visible():self.request_capture();return True
+            return False
+
+        def toggle_grid(self,*_):
+            visible=not self.grid.get_visible();self.grid.set_visible(visible)
+            if visible:self.grid_button.add_css_class('selected')
+            else:self.grid_button.remove_css_class('selected')
+
+        def cycle_timer(self,*_):
+            self.timer_seconds={0:3,3:10,10:0}[self.timer_seconds]
+            self.timer_button.set_child(Gtk.Label(label=str(self.timer_seconds)+'s') if self.timer_seconds else camera_icon('timer'))
+            self.timer_button.set_tooltip_text('定时拍摄：'+(str(self.timer_seconds)+'秒' if self.timer_seconds else '关闭'))
+            if self.timer_seconds:self.timer_button.add_css_class('selected')
+            else:self.timer_button.remove_css_class('selected')
+
+        def request_capture(self,*_):
+            if self.busy or self.af_pending_photo or self.countdown_source:return
+            if not self.timer_seconds:self.capture();return
+            self.countdown_deadline=time.monotonic()+self.timer_seconds
+            self.countdown_label.set_visible(True);self.countdown_source=GLib.timeout_add(80,self.countdown_tick)
+            self.countdown_tick()
+
+        def countdown_tick(self):
+            left=math.ceil(self.countdown_deadline-time.monotonic())
+            if self.closing:return False
+            if left<=0:
+                self.countdown_source=None;self.countdown_label.set_visible(False);self.capture();return False
+            self.countdown_label.set_text(str(left));return True
+
+        def cancel_countdown(self):
+            if self.countdown_source:GLib.source_remove(self.countdown_source);self.countdown_source=None
+            self.countdown_label.set_visible(False)
+
+        def flip_camera(self,*_):
+            if self.camera_key=='front':self.select_camera(self.last_rear)
+            else:self.last_rear=self.camera_key;self.select_camera('front')
+
+        def show_focus_ring(self,x,y):
+            if self.focus_ring_source:GLib.source_remove(self.focus_ring_source)
+            self.focus_layer.move(self.focus_ring,max(0,x-31),max(0,y-31));self.focus_ring.set_visible(True)
+            self.focus_ring_source=GLib.timeout_add(1500,self.hide_focus_ring)
+
+        def hide_focus_ring(self):
+            self.focus_ring.set_visible(False);self.focus_ring_source=None;return False
+
+        def setup_torch(self):
+            try:
+                self.torch_proxy=Gio.DBusProxy.new_for_bus_sync(Gio.BusType.SYSTEM,Gio.DBusProxyFlags.DO_NOT_AUTO_START,None,'org.tb710fu.Torch1','/org/tb710fu/Torch1','org.tb710fu.Torch1',None)
+                if not self.torch_proxy.get_name_owner():self.torch_proxy=None;return
+                self.torch_proxy.connect('g-signal',self.torch_signal)
+                state=self.torch_proxy.call_sync('GetState',None,Gio.DBusCallFlags.NONE,3000,None).unpack();self.update_torch_icon(state[0])
+            except GLib.Error:self.torch_proxy=None
+
+        def torch_signal(self,proxy,sender,signal,params):
+            if signal=='Changed':self.update_torch_icon(params.unpack()[0])
+
+        def update_torch_icon(self,enabled):
+            self.torch_enabled=bool(enabled);self.torch_button.set_child(camera_icon('flash',color='#e8bc05' if enabled else '#ffffff'))
+            if enabled:self.torch_button.add_css_class('selected')
+            else:self.torch_button.remove_css_class('selected')
+
+        def toggle_torch(self,*_):
+            if self.camera_key=='front' or not self.torch_proxy:return
+            try:
+                enabled=not self.torch_enabled
+                self.torch_proxy.call_sync('SetEnabled',GLib.Variant('(b)',(enabled,)),Gio.DBusCallFlags.NONE,3000,None)
+                self.torch_owned=enabled;self.update_torch_icon(enabled)
+            except GLib.Error as exc:print('TORCH_UI_ERROR',str(exc),flush=True);self.status.set_text('补光灯暂时不可用')
+
+        def release_torch(self):
+            if self.torch_owned and self.torch_proxy:
+                try:self.torch_proxy.call_sync('SetEnabled',GLib.Variant('(b)',(False,)),Gio.DBusCallFlags.NONE,3000,None)
+                except GLib.Error:pass
+            self.torch_owned=False
+
+        def open_gallery(self,*_):
+            target=self.gallery_path
+            if not target or not target.exists():
+                target=Path(GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_PICTURES) or Path.home()/'Pictures')/'Camera';target.mkdir(parents=True,exist_ok=True)
+            try:Gio.AppInfo.launch_default_for_uri(target.as_uri(),None)
+            except GLib.Error:self.status.set_text('暂时无法打开相册')
 
         def pan(self, gesture, dx, dy):
             if self.view.zoom <= 1:
@@ -444,7 +674,7 @@ def run_app(test=False, camera='rear', switch_test=False):
                 self.view.center = [.5,.5]
             self.zoom_label.set_text('%.1f×' % self.view.zoom)
             w,h = crop_bounds(*profile(self.camera_key)['full'], self.view.zoom)[2:]
-            self.shutter.set_label(f'拍照 · {w}×{h}'+('（数字裁切）' if self.view.zoom > 1 else ''))
+            self.resolution_label.set_text(f'保存尺寸 {w}×{h}'+(' · 数字裁切' if self.view.zoom>1 else ''))
             self.view.queue_draw()
 
         def quality_changed(self, *_):
@@ -473,6 +703,8 @@ def run_app(test=False, camera='rear', switch_test=False):
                 return False
             if requested == self.camera_key:
                 return True
+            self.cancel_countdown()
+            if requested=='front':self.release_torch()
             self.changing_camera = True
             self.stop_preview()
             if self.focus_timer:
@@ -486,7 +718,7 @@ def run_app(test=False, camera='rear', switch_test=False):
             self.quality.set_model(Gtk.StringList.new(preview_labels(requested)))
             self.quality.set_selected(0)
             self.focus_row.set_visible(profile(requested)['focus'])
-            self.shutter.set_label('拍照 · %d×%d' % profile(requested)['full'])
+            self.resolution_label.set_text('保存尺寸 %d×%d'%profile(requested)['full'])
             self.view.texture = None
             self.view.queue_draw()
             self.zoom_slider.set_value(1)
@@ -529,6 +761,7 @@ def run_app(test=False, camera='rear', switch_test=False):
             dw,dh = tw*scale,th*scale
             if not (abs(x-ww/2)<=dw/2 and abs(y-wh/2)<=dh/2):
                 return
+            self.show_focus_ring(x,y)
             self.af_roi = (self.view.center[0]+(x-ww/2)/(dw*self.view.zoom),
                            self.view.center[1]+(y-wh/2)/(dh*self.view.zoom))
             self.start_af()
@@ -579,7 +812,7 @@ def run_app(test=False, camera='rear', switch_test=False):
             self.af_sync_slider = False
             self.focus.set_sensitive(os.access(FOCUS,os.W_OK))
             self.af_button.set_sensitive(os.access(FOCUS,os.W_OK))
-            self.status.set_text(message+f'（位置 {position}）')
+            self.status.set_text('对焦完成' if ok else '未找到清晰焦点，可轻触画面重试')
             print('AUTOFOCUS', 'PASS' if ok else 'RESTORED', position, message,
                   'scores', [(p,round(v,6)) for p,v in records],flush=True)
             pending = self.af_pending_photo
@@ -603,8 +836,7 @@ def run_app(test=False, camera='rear', switch_test=False):
             self.preview.get_bus().connect('message::error', self.preview_error)
             self.preview.set_state(Gst.State.PLAYING)
             self.preview_timer = GLib.timeout_add(66, self.draw_frame)
-            suffix = (' · 已保存：'+self.last_photo_name) if self.last_photo_name else ' · 双指缩放，放大后可拖动画面'
-            self.status.set_text(f"{selected['name']}预览 {width}×{height}"+(' · 微距固定焦点，请靠近被摄物' if self.camera_key == 'macro' else '')+suffix)
+            self.status.set_text('靠近被摄物拍摄' if self.camera_key=='macro' else '轻触画面对焦' if self.camera_key=='rear' else '前置相机')
             return False
 
         def stop_preview(self):
@@ -721,9 +953,12 @@ def run_app(test=False, camera='rear', switch_test=False):
         def photo_done(self, *_):
             name = self.photo_path.name
             self.last_photo_name = name
+            self.gallery_path=self.photo_path
+            pixbuf=GdkPixbuf.Pixbuf.new_from_file_at_scale(str(self.photo_path),56,56,True)
+            self.thumbnail.set_paintable(Gdk.Texture.new_for_pixbuf(pixbuf));self.gallery_button.set_child(self.thumbnail)
             width, height = self.photo_dimensions
             self.finish_photo()
-            self.status.set_text(f'已保存：{name}（{width}×{height}，数字缩放裁切）')
+            self.status.set_text('照片已保存')
 
         def photo_error(self, bus, message):
             error, details = message.parse_error()
@@ -759,6 +994,8 @@ def run_app(test=False, camera='rear', switch_test=False):
 
         def close_camera(self, *_):
             self.closing = True
+            self.cancel_countdown();self.release_torch()
+            if self.focus_ring_source:GLib.source_remove(self.focus_ring_source);self.focus_ring_source=None
             self.stop_preview()
             if self.photo:
                 self.finish_photo(failed=True)
@@ -775,6 +1012,7 @@ def run_app(test=False, camera='rear', switch_test=False):
         if not window:
             window = Window(app)
         window.present()
+        if not (test or switch_test):window.fullscreen()
         if test:
             temporary_photos = tempfile.TemporaryDirectory(prefix='tb-camera-ui-check-')
             window.capture_folder = Path(temporary_photos.name)
