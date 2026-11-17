@@ -1,0 +1,19 @@
+/dts-v1/;
+/plugin/;
+/ {
+ fragment@0 { target-path = "/soc@0/pinctrl@f100000"; __overlay__ {
+   macro_mclk3: tb-macro-mclk3 { pins = "gpio103"; function = "cam_mclk"; drive-strength = <2>; bias-disable; };
+ }; };
+ fragment@1 { target-path = "/soc@0/cci@ac16000"; __overlay__ { status = "okay"; }; };
+ fragment@2 { target-path = "/soc@0/cci@ac16000/i2c-bus@0"; __overlay__ {
+  #address-cells = <1>; #size-cells = <0>; clock-frequency = <400000>;
+  camera@37 { compatible = "tb710fu,gc02m1-raw-20261117"; reg = <0x37>;
+   clocks = <0xe1 102>; assigned-clocks = <0xe1 102>; assigned-clock-rates = <24000000>; power-domains = <0xe1 0>; reset-gpios = <0x75 109 1>;
+   pinctrl-names = "default"; pinctrl-0 = <&macro_mclk3>;
+   port { macro_ep: endpoint { remote-endpoint = <&macro_csi>; data-lanes = <1>; link-frequencies = /bits/ 64 <336000000>; }; };
+  };
+ }; };
+ fragment@3 { target-path = "/soc@0/isp@acb6000/ports/port@3"; __overlay__ {
+   macro_csi: endpoint { remote-endpoint = <&macro_ep>; data-lanes = <0>; link-frequencies = /bits/ 64 <336000000>; };
+ }; };
+};

@@ -44,4 +44,4 @@ sudo reboot
 
 ## 手电筒与相机切换可选补充
 
-[flash-camera/README.md](flash-camera/README.md) 提供 flash-check / flash-install / flash-rollback 动作，仅在当前已审核日期内核上加载模块和运行态覆盖并更新相机应用，不更换七个原 Image 分片，也不新增内核升级入口。GNOME Snapshot 同步硬件闪光仍未完成。
+[flash-camera/README.md](flash-camera/README.md) 提供 flash-check / flash-install / flash-rollback 动作，仅在当前已审核日期内核上加载模块和运行态覆盖并更新相机应用，不更换七个原 Image 分片，也不新增内核升级入口。新增 `camera-check / camera-install / camera-rollback` 动作提供[主摄自动对焦、第二后摄与增益适配](flash-camera/CAMERA-QUALITY.md)。同日仅补充 ABI 匹配模块与用户态包，不替换原 Image。GNOME Snapshot 同步硬件闪光仍未完成。

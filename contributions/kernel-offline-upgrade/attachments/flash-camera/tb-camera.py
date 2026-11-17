@@ -3,6 +3,7 @@
 import datetime
 import math
 import os
+import statistics
 from pathlib import Path
 import sys
 import tempfile
@@ -13,6 +14,8 @@ FULL = (4200, 3120)
 PROFILES = {
     'rear': {'name': '后摄', 'path': CAMERA, 'full': FULL,
              'previews': [(2560,1920), (1920,1440), FULL], 'focus': True},
+    'macro': {'name': '后摄微距', 'path': '/base/soc@0/cci@ac16000/i2c-bus@0/camera@37',
+              'full': (1592,1200), 'previews': [(1280,960),(1592,1200)], 'focus': False},
     'front': {'name': '前摄', 'path': '/base/soc@0/cci@ac15000/i2c-bus@0/camera@39',
               'full': (4200,3120), 'previews': [(1280,720), (1920,1080), (4200,3120)], 'focus': False},
 }
@@ -24,12 +27,138 @@ def profile(name):
     return PROFILES[name]
 
 
+def available_cameras():
+    keys = ['rear','front']
+    if Path('/sys/firmware/devicetree/base/soc@0/cci@ac16000/i2c-bus@0/camera@37').exists():
+        keys.append('macro')
+    return keys
+
+
 def preview_labels(name):
     return [f'{width}×{height}' for width, height in profile(name)['previews']]
 
-PHOTO_WARMUP_FRAMES = 3
+PHOTO_WARMUP_FRAMES = 12
 FOCUS = Path('/sys/module/tb_focus_manual/parameters/position')
 
+
+
+def focus_metric(data, width, height, stride, center=(.5, .5)):
+    """Sparse native-pixel gradients in a central/tapped ROI; no image storage.
+
+    Normalize for brightness, reject clipped/dark/textureless frames. Sampling
+    neighboring native pixels (rather than resizing) keeps defocus measurable.
+    """
+    cx = max(.15, min(.85, center[0])) * width
+    cy = max(.15, min(.85, center[1])) * height
+    rw, rh = max(8, int(width*.28)), max(8, int(height*.28))
+    x0, y0 = max(2, int(cx-rw/2)), max(2, int(cy-rh/2))
+    x1, y1 = min(width-3, x0+rw), min(height-3, y0+rh)
+    step = max(1, (x1-x0)//80)
+    count = total = squares = edges = clipped = 0
+    def luma(x, y):
+        i = y*stride+x*4
+        return (int(data[i])+2*int(data[i+1])+int(data[i+2]))/4
+    for y in range(y0, y1, step):
+        for x in range(x0, x1, step):
+            v = luma(x,y)
+            gx = luma(x+2,y)-luma(x-2,y)
+            gy = luma(x,y+2)-luma(x,y-2)
+            total += v; squares += v*v; edges += gx*gx+gy*gy
+            clipped += v < 3 or v > 252
+            count += 1
+    if not count:
+        return None
+    mean = total/count
+    variance = max(0., squares/count-mean*mean)
+    if mean < 5 or mean > 245 or variance < 4 or clipped/count > .7:
+        return None
+    return edges/count/max(16.,mean*mean)
+
+
+class ContrastFocus:
+    """Bounded single AF sweep using the existing ramped GT9772B interface.
+
+    Ignore queued frames after every move, wait 200 ms, median three frames,
+    coarse/fine search, then confirm the peak. Flat/unstable scenes restore the
+    original position. No continuous sweep and no writes outside 0..1023.
+    """
+    def __init__(self, initial, write, done, now=None):
+        self.initial = int(initial)
+        if not 0 <= self.initial <= 1023:
+            raise ValueError('Invalid initial lens position')
+        self.write, self.done = write, done
+        self.records = []
+        self.phase = 'baseline'
+        self.pending = []
+        self.active = True
+        self.deadline = (time.monotonic() if now is None else now)+24
+        self.position = self.initial
+        self._wait(time.monotonic() if now is None else now)
+
+    def _wait(self, now):
+        self.ready_at = now+.2
+        self.skip = 3
+        self.samples = []
+
+    def move(self, position, now):
+        self.position = int(position)
+        self.write(self.position)
+        self._wait(now)
+
+    def cancel(self, reason='对焦已取消'):
+        if self.active:
+            try:
+                self.write(self.initial)
+                position = self.initial
+            except OSError:
+                position = self.position
+                reason = '对焦接口故障，恢复焦点未确认'
+            self.active = False
+            self.done(False, position, reason, self.records)
+
+    def frame(self, score, now=None):
+        if not self.active:
+            return
+        now = time.monotonic() if now is None else now
+        if now > self.deadline:
+            self.cancel('对焦超时，已恢复原焦点'); return
+        if self.skip:
+            self.skip -= 1; return
+        if now < self.ready_at:
+            return
+        self.samples.append(score)
+        if len(self.samples) < 3:
+            return
+        good = [v for v in self.samples if v is not None and math.isfinite(v)]
+        if len(good) != 3:
+            self.cancel('光线或纹理不足，已恢复原焦点'); return
+        score = statistics.median(good)
+        if self.phase == 'verify':
+            # A moving scene or changing exposure must not select a false peak.
+            if score < self.peak*.72 or score > self.peak*1.4:
+                self.cancel('画面变化较大，已恢复原焦点'); return
+            self.active = False
+            self.done(True, self.position, '自动对焦完成', self.records)
+            return
+        self.records.append((self.position,score))
+        if self.phase == 'baseline':
+            self.baseline = score
+            self.phase = 'coarse'
+            self.pending = [v for v in list(range(0,1024,64))+[1023] if v != self.initial]
+        elif not self.pending and self.phase == 'coarse':
+            best, _ = max(self.records, key=lambda v:v[1])
+            self.phase = 'fine'
+            self.pending = [v for v in range(max(0,best-64),min(1023,best+64)+1,16)
+                            if v not in {p for p,_ in self.records}]
+        if not self.pending and self.phase == 'fine':
+            best,self.peak = max(self.records,key=lambda v:v[1])
+            floor = min(v for _,v in self.records)
+            if self.peak < .0005 or self.peak < max(.00001,floor)*1.12:
+                self.cancel('焦点变化不明显，已保留原焦点'); return
+            self.phase = 'verify'
+            self.move(best,now)
+        elif self.pending:
+            self.move(self.pending.pop(0),now)
 
 def crop_bounds(width, height, zoom, center=(.5, .5)):
     zoom = max(1., min(4., float(zoom)))
@@ -210,14 +339,24 @@ def run_app(test=False, camera='rear', switch_test=False):
             self.zoom_start = 1.
             self.drag_start = [.5, .5]
             self.focus_timer = None
+            self.af = None
+            self.af_pending_photo = False
+            self.af_roi = (.5,.5)
+            self.af_auto_started = False
+            self.af_watchdog = None
+            self.af_sync_slider = False
+            self.preview_frames = 0
+            self.preview_retries = 0
+            self.preview_last_frame = time.monotonic()
             self.preview_timer = None
             self.frames = 0
             root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
             self.set_child(root)
             header = Gtk.HeaderBar()
             self.set_titlebar(header)
-            self.camera_selector = Gtk.DropDown.new_from_strings(['后摄', '前摄'])
-            self.camera_selector.set_selected(0 if self.camera_key == 'rear' else 1)
+            self.camera_keys = available_cameras()
+            self.camera_selector = Gtk.DropDown.new_from_strings([profile(k)['name'] for k in self.camera_keys])
+            self.camera_selector.set_selected(self.camera_keys.index(self.camera_key))
             self.camera_selector.connect('notify::selected', self.camera_changed)
             header.pack_start(self.camera_selector)
             self.quality = Gtk.DropDown.new_from_strings(preview_labels(self.camera_key))
@@ -263,19 +402,29 @@ def run_app(test=False, camera='rear', switch_test=False):
             self.focus.set_sensitive(os.access(FOCUS, os.W_OK))
             self.focus.connect('value-changed', self.focus_changed)
             focus_row.append(self.focus)
+            self.af_button = Gtk.Button(label='自动对焦')
+            self.af_button.connect('clicked', lambda *_: self.start_af())
+            self.af_button.set_sensitive(os.access(FOCUS, os.W_OK))
+            focus_row.append(self.af_button)
+            self.auto_focus = Gtk.CheckButton(label='拍照前自动对焦', active=True)
+            focus_row.append(self.auto_focus)
+            tap = Gtk.GestureClick.new()
+            tap.connect('released', self.tap_focus)
+            self.view.add_controller(tap)
             self.focus_row = focus_row
             self.focus_row.set_visible(profile(self.camera_key)['focus'])
             root.append(focus_row)
             bottom = Gtk.Box(spacing=12, margin_start=16, margin_end=16, margin_bottom=12)
             self.status = Gtk.Label(label='正在启动相机…', xalign=0, hexpand=True, wrap=True)
             bottom.append(self.status)
-            self.shutter = Gtk.Button(label='拍照 · 最高约1300万像素')
+            self.shutter = Gtk.Button(label='拍照 · %d×%d' % profile(self.camera_key)['full'])
             self.shutter.add_css_class('suggested-action')
             self.shutter.connect('clicked', self.capture)
             bottom.append(self.shutter)
             root.append(bottom)
             self.connect('close-request', self.close_camera)
             GLib.idle_add(self.start_preview)
+            GLib.timeout_add_seconds(1,self.preview_health)
 
         def pan(self, gesture, dx, dy):
             if self.view.zoom <= 1:
@@ -294,25 +443,31 @@ def run_app(test=False, camera='rear', switch_test=False):
             if self.view.zoom == 1:
                 self.view.center = [.5,.5]
             self.zoom_label.set_text('%.1f×' % self.view.zoom)
+            w,h = crop_bounds(*profile(self.camera_key)['full'], self.view.zoom)[2:]
+            self.shutter.set_label(f'拍照 · {w}×{h}'+('（数字裁切）' if self.view.zoom > 1 else ''))
             self.view.queue_draw()
 
         def quality_changed(self, *_):
             if self.busy or self.changing_camera:
                 return
+            self.preview_retries = 0
             self.stop_preview()
             self.start_preview()
 
         def camera_changed(self, *_):
             if self.changing_camera:
                 return
-            requested = 'rear' if self.camera_selector.get_selected() == 0 else 'front'
+            requested = self.camera_keys[self.camera_selector.get_selected()]
             self.select_camera(requested)
 
         def select_camera(self, requested):
             profile(requested)
+            if requested not in self.camera_keys:
+                self.status.set_text('当前设备没有接入所选相机')
+                return False
             if self.busy:
                 self.changing_camera = True
-                self.camera_selector.set_selected(0 if self.camera_key == 'rear' else 1)
+                self.camera_selector.set_selected(self.camera_keys.index(self.camera_key))
                 self.changing_camera = False
                 self.status.set_text('拍照尚未完成，请稍后切换相机')
                 return False
@@ -324,10 +479,14 @@ def run_app(test=False, camera='rear', switch_test=False):
                 GLib.source_remove(self.focus_timer)
                 self.focus_timer = None
             self.camera_key = requested
-            self.camera_selector.set_selected(0 if requested == 'rear' else 1)
+            self.af_auto_started = False
+            self.preview_retries = 0
+            self.af_roi = (.5,.5)
+            self.camera_selector.set_selected(self.camera_keys.index(requested))
             self.quality.set_model(Gtk.StringList.new(preview_labels(requested)))
             self.quality.set_selected(0)
             self.focus_row.set_visible(profile(requested)['focus'])
+            self.shutter.set_label('拍照 · %d×%d' % profile(requested)['full'])
             self.view.texture = None
             self.view.queue_draw()
             self.zoom_slider.set_value(1)
@@ -337,8 +496,10 @@ def run_app(test=False, camera='rear', switch_test=False):
             return True
 
         def focus_changed(self, scale):
-            if not profile(self.camera_key)['focus']:
+            if self.af_sync_slider or not profile(self.camera_key)['focus']:
                 return
+            self.cancel_af()
+            self.auto_focus.set_active(False)
             if self.focus_timer:
                 GLib.source_remove(self.focus_timer)
             self.focus_timer = GLib.timeout_add(180, self.write_focus)
@@ -353,12 +514,87 @@ def run_app(test=False, camera='rear', switch_test=False):
                 self.status.set_text('对焦调整失败：'+str(exc))
             return False
 
+        def cancel_af(self):
+            self.af_pending_photo = False
+            if self.af and self.af.active:
+                self.af.cancel()
+            self.af = None
+
+        def tap_focus(self, gesture, presses, x, y):
+            if self.busy or not profile(self.camera_key)['focus'] or not self.view.texture:
+                return
+            tw, th = self.view.texture.get_width(), self.view.texture.get_height()
+            ww, wh = self.view.get_width(), self.view.get_height()
+            scale = min(ww/tw, wh/th)
+            dw,dh = tw*scale,th*scale
+            if not (abs(x-ww/2)<=dw/2 and abs(y-wh/2)<=dh/2):
+                return
+            self.af_roi = (self.view.center[0]+(x-ww/2)/(dw*self.view.zoom),
+                           self.view.center[1]+(y-wh/2)/(dh*self.view.zoom))
+            self.start_af()
+
+        def start_af(self, photo=False):
+            if self.busy or not self.preview or not profile(self.camera_key)['focus']:
+                return False
+            if self.af and self.af.active:
+                self.af_pending_photo |= photo
+                return True
+            if not os.access(FOCUS,os.W_OK):
+                self.status.set_text('对焦接口不可写，请检查相机对焦服务')
+                return False
+            if self.focus_timer:
+                GLib.source_remove(self.focus_timer); self.focus_timer = None
+                self.write_focus()
+            try:
+                self.af_auto_started = True
+                initial = int(FOCUS.read_text())
+                self.af_pending_photo = photo
+                self.af = ContrastFocus(initial,lambda v: FOCUS.write_text(str(v)),self.af_done)
+                self.af_watchdog = GLib.timeout_add(250,self.af_check_deadline)
+                self.focus.set_sensitive(False)
+                self.af_button.set_sensitive(False)
+                self.status.set_text('正在自动对焦，请保持画面稳定…')
+                return True
+            except (OSError,ValueError) as exc:
+                self.af_pending_photo = False
+                self.status.set_text('自动对焦无法启动：'+str(exc))
+                return False
+
+        def af_check_deadline(self):
+            if not self.af or not self.af.active:
+                self.af_watchdog = None
+                return False
+            if time.monotonic() > self.af.deadline:
+                self.af_watchdog = None
+                self.af.cancel('对焦超时，已恢复原焦点')
+                return False
+            return True
+
+        def af_done(self, ok, position, message, records):
+            if self.af_watchdog:
+                GLib.source_remove(self.af_watchdog)
+                self.af_watchdog = None
+            self.af_sync_slider = True
+            self.focus.set_value(position)
+            self.af_sync_slider = False
+            self.focus.set_sensitive(os.access(FOCUS,os.W_OK))
+            self.af_button.set_sensitive(os.access(FOCUS,os.W_OK))
+            self.status.set_text(message+f'（位置 {position}）')
+            print('AUTOFOCUS', 'PASS' if ok else 'RESTORED', position, message,
+                  'scores', [(p,round(v,6)) for p,v in records],flush=True)
+            pending = self.af_pending_photo
+            self.af_pending_photo = False
+            if pending and not self.closing:
+                GLib.idle_add(lambda: (self.capture(focused=True),False)[1])
+
         def start_preview(self):
             if self.closing or self.busy or self.preview:
                 return False
             selected = profile(self.camera_key)
             width, height = selected['previews'][self.quality.get_selected()]
             self.set_title('相机 · '+selected['name'])
+            self.preview_frames = 0
+            self.preview_last_frame = time.monotonic()
             self.preview = Gst.parse_launch(f'libcamerasrc name=camera ! video/x-raw,format=RGBA,width={width},height={height} ! appsink name=view sync=false max-buffers=1 drop=true')
             source = self.preview.get_by_name('camera')
             source.set_property('camera-name', selected['path'])
@@ -368,10 +604,11 @@ def run_app(test=False, camera='rear', switch_test=False):
             self.preview.set_state(Gst.State.PLAYING)
             self.preview_timer = GLib.timeout_add(66, self.draw_frame)
             suffix = (' · 已保存：'+self.last_photo_name) if self.last_photo_name else ' · 双指缩放，放大后可拖动画面'
-            self.status.set_text(f"{selected['name']}预览 {width}×{height}"+suffix)
+            self.status.set_text(f"{selected['name']}预览 {width}×{height}"+(' · 微距固定焦点，请靠近被摄物' if self.camera_key == 'macro' else '')+suffix)
             return False
 
         def stop_preview(self):
+            self.cancel_af()
             if self.preview_timer:
                 GLib.source_remove(self.preview_timer)
                 self.preview_timer = None
@@ -380,6 +617,21 @@ def run_app(test=False, camera='rear', switch_test=False):
                 self.preview.get_state(3*Gst.SECOND)
                 self.preview.get_bus().remove_signal_watch()
                 self.preview = None
+
+        def preview_health(self):
+            if self.closing:
+                return False
+            if self.preview and not self.busy and time.monotonic()-self.preview_last_frame > 6:
+                self.preview_retries += 1
+                print('PREVIEW_RECOVERY',self.camera_key,self.preview_retries,
+                      'frames',self.preview_frames,'state',self.preview.get_state(0),flush=True)
+                self.stop_preview()
+                if self.preview_retries <= 2:
+                    self.start_preview()
+                    self.status.set_text('预览暂时无画面，正在重新连接相机…')
+                else:
+                    self.status.set_text('相机没有返回画面，请切换相机或重新打开应用')
+            return True
 
         def draw_frame(self):
             if not self.preview:
@@ -390,7 +642,20 @@ def run_app(test=False, camera='rear', switch_test=False):
                 width, height = structure.get_value('width'), structure.get_value('height')
                 buffer = sample.get_buffer()
                 stride = buffer.get_size()//height
-                data = GLib.Bytes.new(buffer.extract_dup(0, buffer.get_size()))
+                raw = buffer.extract_dup(0, buffer.get_size())
+                self.preview_frames += 1
+                self.preview_last_frame = time.monotonic()
+                if self.af and self.af.active:
+                    try:
+                        self.af.frame(focus_metric(raw,width,height,stride,self.af_roi))
+                    except OSError as exc:
+                        self.cancel_af()
+                        self.status.set_text('对焦接口写入失败：'+str(exc))
+                elif (not self.af_auto_started and self.preview_frames >= 10
+                      and profile(self.camera_key)['focus'] and self.auto_focus.get_active()):
+                    self.af_auto_started = True
+                    self.start_af()
+                data = GLib.Bytes.new(raw)
                 self.view.texture = Gdk.MemoryTexture.new(width, height, Gdk.MemoryFormat.R8G8B8A8, data, stride)
                 self.frames += 1
                 self.view.queue_draw()
@@ -404,9 +669,12 @@ def run_app(test=False, camera='rear', switch_test=False):
             print('Preview error:', error.message, details, flush=True)
             GLib.idle_add(self.stop_preview)
 
-        def capture(self, *_):
+        def capture(self, *_, focused=False):
             if self.busy:
                 return
+            if not focused and profile(self.camera_key)['focus'] and self.auto_focus.get_active():
+                if self.start_af(photo=True):
+                    return
             self.busy = True
             self.shutter.set_sensitive(False)
             self.quality.set_sensitive(False)
@@ -510,6 +778,7 @@ def run_app(test=False, camera='rear', switch_test=False):
         if test:
             temporary_photos = tempfile.TemporaryDirectory(prefix='tb-camera-ui-check-')
             window.capture_folder = Path(temporary_photos.name)
+            window.auto_focus.set_active(False)
             actions = [(1, lambda: window.zoom_slider.set_value(2)),
                        (2, lambda: window.zoom_slider.set_value(4)),
                        (3, lambda: window.zoom_slider.set_value(1)),
@@ -523,7 +792,7 @@ def run_app(test=False, camera='rear', switch_test=False):
                 photo_ok = bool(window.last_photo_name) and not window.busy
                 if photo_ok:
                     data = (window.capture_folder/window.last_photo_name).read_bytes()
-                    photo_ok = jpeg_dimensions(data) == FULL and jpeg_has_image(data)
+                    photo_ok = jpeg_dimensions(data) == profile(window.camera_key)['full'] and jpeg_has_image(data)
                 ok = texture is not None and window.frames >= 4 and window.view.zoom == 1 and photo_ok
                 app.test_ok = ok
                 print('UI_TEST', 'PASS' if ok else 'FAIL', 'frames', window.frames,
@@ -537,8 +806,8 @@ def run_app(test=False, camera='rear', switch_test=False):
         if switch_test:
             temporary_photos = tempfile.TemporaryDirectory(prefix='tb-camera-switch-ui-')
             window.capture_folder = Path(temporary_photos.name)
-            stages = ['rear', 'front', 'rear', 'front']
-            progress = {'index': 0, 'frames': 0, 'captured': False, 'deadline': time.monotonic()+90}
+            stages = ['rear', 'front', 'macro', 'rear', 'front', 'macro'] if 'macro' in available_cameras() else ['rear','front','rear','front']
+            progress = {'index': 0, 'frames': 0, 'captured': False, 'deadline': time.monotonic()+240}
             def advance():
                 if time.monotonic() > progress['deadline']:
                     print('SWITCH_UI_TEST FAIL timeout', progress, flush=True)
@@ -594,7 +863,7 @@ if __name__ == '__main__':
     else:
         import argparse
         parser = argparse.ArgumentParser()
-        parser.add_argument('--camera', choices=['rear','front'], default='rear')
+        parser.add_argument('--camera', choices=['rear','front','macro'], default='rear')
         parser.add_argument('--ui-test', action='store_true')
         parser.add_argument('--switch-test', action='store_true')
         args = parser.parse_args()

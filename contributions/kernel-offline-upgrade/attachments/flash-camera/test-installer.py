@@ -27,6 +27,13 @@ class Install(unittest.TestCase):
   self.apply();before=(self.state/'before-0').read_bytes();self.apply();self.assertEqual((self.state/'before-0').read_bytes(),before)
  def test_reviewed_revision_preserves_first_snapshot(self):
   self.apply();(self.source/'app.py').write_bytes(b'revision2');self.manifest['files']['app.py']=digest(b'revision2');self.apply();self.assertEqual((self.state/'before-0').read_bytes(),b'original');m.rollback();self.assertEqual(self.target.read_bytes(),b'original')
+ def test_revision_adds_files_and_restores_absence(self):
+  self.apply();dest=self.root/'new-helper';self.mapping['helper.py']=str(dest);(self.source/'helper.py').write_bytes(b'helper');self.manifest['files']['helper.py']=digest(b'helper');self.apply()
+  self.assertEqual(dest.read_bytes(),b'helper');self.assertEqual((self.state/'before-0').read_bytes(),b'original');m.rollback();self.assertFalse(dest.exists());self.assertEqual(self.target.read_bytes(),b'original')
+ def test_revision_new_unknown_file_rejected(self):
+  self.apply();dest=self.root/'unknown';dest.write_bytes(b'unknown');self.mapping['helper.py']=str(dest);(self.source/'helper.py').write_bytes(b'helper');self.manifest['files']['helper.py']=digest(b'helper')
+  with self.assertRaises(RuntimeError):self.apply()
+  self.assertEqual(dest.read_bytes(),b'unknown');self.assertEqual(self.target.read_bytes(),b'new')
  def test_reapply_after_rollback_keeps_first_snapshot(self):
   self.apply();m.rollback();self.apply();self.assertEqual((self.state/'before-0').read_bytes(),b'original');self.assertEqual(self.target.read_bytes(),b'new')
  def test_user_edit_blocks_upgrade_and_rollback(self):

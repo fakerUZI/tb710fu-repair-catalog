@@ -1,0 +1,26 @@
+Description: Gain multipliers for TB710FU RAW sensor module interfaces
+Author: TB710FU local adaptation
+Forwarded: no
+--- a/src/ipa/libipa/camera_sensor_helper.cpp
++++ b/src/ipa/libipa/camera_sensor_helper.cpp
+@@ -799,6 +799,20 @@
+ };
+ REGISTER_CAMERA_SENSOR_HELPER("ov13b10", CameraSensorHelperOv13b10)
+ 
++class CameraSensorHelperGc02m1Raw : public CameraSensorHelper
++{
++public:
++ CameraSensorHelperGc02m1Raw() { gain_ = AnalogueGainLinear{ 1, 0, 0, 1024 }; }
++};
++REGISTER_CAMERA_SENSOR_HELPER("gc02m1_raw", CameraSensorHelperGc02m1Raw)
++
++class CameraSensorHelperGc13a2Raw : public CameraSensorHelper
++{
++public:
++ CameraSensorHelperGc13a2Raw() { gain_ = AnalogueGainLinear{ 1, 0, 0, 1024 }; }
++};
++REGISTER_CAMERA_SENSOR_HELPER("gc13a2_raw", CameraSensorHelperGc13a2Raw)
++
+ class CameraSensorHelperVd55g1 : public CameraSensorHelper
+ {
+ public:

@@ -3,13 +3,18 @@
 import argparse,ast,hashlib,importlib.util,json,os,pwd,shutil,stat,subprocess,sys,tempfile
 from pathlib import Path
 
-PACKAGE_SHA256='3f0460aed2ef456092e8e6a780c1b5c557ef022474684359e12fbd053a54e810'
+PACKAGE_SHA256='4deae51b46894b44f9d7058d0a9345a1f4fec2359909282a3eb08b17a7feaf1c'
 VERSION='7.2.6-tb710fu-20261117'
 BASE=Path('/var/backups/tb710fu-flash-camera-20261117')
 DEST=Path('/opt/tb710fu-flash')/VERSION
-UNITS=['tb710fu-flash-hardware.service','tb710fu-torch.service']
+UNITS=['tb710fu-macro-camera.service','tb710fu-flash-hardware.service','tb710fu-torch.service']
 EXT='tb-torch@tb710fu'
 MAP={
+ 'tb-camera-focus-permission.py':'/usr/local/libexec/tb-camera-focus-permission.py',
+ '50-camera-focus-owner.conf':'/etc/systemd/system/tb710fu-camera-focus.service.d/50-camera-focus-owner.conf',
+ 'tb-macro-hardware.py':'/usr/local/libexec/tb-macro-hardware.py',
+ 'tb710fu-macro-camera.service':'/etc/systemd/system/tb710fu-macro-camera.service',
+ 'tb-macro-raw.dtbo':'/lib/firmware/tb-macro-raw.dtbo',
  'tb-camera.py':'/usr/local/bin/tb-rear-camera',
  'tb-front-camera-preview':'/usr/local/bin/tb-front-camera-preview',
  'tb710fu-rear-camera.desktop':'/usr/share/applications/tb710fu-rear-camera.desktop',
@@ -26,6 +31,9 @@ MAP={
 }
 for name in ['leds-qcom-flash.ko','v4l2-flash-led-class.ko','tb_flash_overlay.ko','tb-flash.dtbo','manifest.json']:
  MAP['local-'+name if name=='tb-flash.dtbo' else name]=str(DEST/name)
+
+for name in ('gc02m1_raw.ko','tb_macro_registration.ko','macro-manifest.json','local-tb-macro-raw.dtbo'):
+ MAP[name]=str(Path('/opt/tb710fu-macro')/VERSION/('tb-macro-raw.dtbo' if name=='local-tb-macro-raw.dtbo' else name))
 
 
 def sha(p):
@@ -77,7 +85,7 @@ def save_payload(source):
 def apply(source,m,user):
  hardware_check(source)
  if (BASE/'state.json').exists():
-  s=json.loads((BASE/'state.json').read_text());require(s['phase'] in ('installed','rolled-back'),'有未完成安装记录，请先 rollback')
+  s=json.loads((BASE/'state.json').read_text());require(s['user']==user,'桌面用户与现有安装记录不同');require(s['phase'] in ('installed','rolled-back'),'有未完成安装记录，请先 rollback')
   if s['phase']=='installed':
    require(all(Path(p).is_file() and sha(p)==r['after'] for p,r in s['files'].items()),'安装后文件已变更')
   else:
@@ -85,11 +93,21 @@ def apply(source,m,user):
     require(not Path(dest).is_symlink(),'目标变成了符号链接')
     require((Path(dest).is_file() and sha(dest)==r['sha256']) if r['existed'] else not Path(dest).exists(),'回退后文件有未知修改')
     if r['existed']:require(sha(BASE/r['saved'])==r['sha256'],'原始备份已损坏')
-  if s['phase']=='installed' and all(s['files'][dest]['after']==m['files'][name] for name,dest in MAP.items()):
+  if s['phase']=='installed' and all(dest in s['files'] and s['files'][dest]['after']==m['files'][name] for name,dest in MAP.items()):
    save_payload(source)
    print('已安装，原始快照保留');return
   before_ext=extensions(user)
   for name,dest in MAP.items():
+   if dest not in s['files']:
+    p=Path(dest);require(not p.is_symlink(),'新增目标不能是符号链接')
+    record={'existed':p.exists(),'after':m['files'][name]}
+    if p.exists():
+     require(p.is_file() and p.stat().st_uid==0 and sha(p) in set(m['accepted'].get(dest,[]))|{m['files'][name]},'新增目标有未知内容：'+dest)
+     saved=BASE/('before-added-'+hashlib.sha256(dest.encode()).hexdigest()[:16])
+     require(not saved.exists(),'新增目标快照已存在，请检查恢复状态')
+     shutil.copyfile(p,saved);saved.chmod(0o600)
+     record.update(saved=saved.name,sha256=sha(saved),mode=stat.S_IMODE(p.stat().st_mode))
+    s['files'][dest]=record
    record=s['files'][dest]
    record['previous_after']=list(set(record.get('previous_after',[]))|{record['after']})
    record['after']=m['files'][name]
@@ -104,6 +122,11 @@ def apply(source,m,user):
     saved=BASE/('before-'+str(index));shutil.copyfile(p,saved);saved.chmod(0o600)
     record.update(saved=saved.name,sha256=sha(saved),mode=stat.S_IMODE(p.stat().st_mode))
    s['files'][dest]=record
+ for unit in UNITS:
+  if unit not in s['services']:s['services'][unit]={'active':run('systemctl','is-active',unit,check=False).returncode==0,'enabled':run('systemctl','is-enabled',unit,check=False).returncode==0}
+ focus=Path('/sys/module/tb_focus_manual/parameters/position')
+ if 'focus_access' not in s and focus.exists():
+  st=focus.stat();s['focus_access']={'uid':st.st_uid,'gid':st.st_gid,'mode':stat.S_IMODE(st.st_mode)}
  state_save(s)
  try:
   save_payload(source)
@@ -115,12 +138,13 @@ def apply(source,m,user):
    atomic(dest,(source/name).read_bytes(),0o755 if executable else 0o644)
   reload_bus();run('systemctl','daemon-reload')
   for unit in UNITS:run('systemctl','enable',unit)
-  run('systemctl','start','tb710fu-torch.service')
+  run('systemctl','start',*UNITS)
+  run('python3','/usr/local/libexec/tb-camera-focus-permission.py')
   if EXT not in before_ext:settings(user,'set','org.gnome.shell','enabled-extensions',repr(before_ext+[EXT]))
   s['phase']='installed';state_save(s)
  except BaseException:
   rollback(s);raise
- print('手电筒与前后摄相机已安装；快捷设置扩展将在正常桌面会话启用。')
+ print('手电筒、主摄自动对焦及前摄/微距相机已安装；快捷设置扩展将在正常桌面会话启用。')
 
 def rollback(s=None):
  require((BASE/'state.json').exists(),'没有本机安装快照')
@@ -139,6 +163,9 @@ def rollback(s=None):
  if not s['extension_was_enabled']:
   current=extensions(s['user'])
   if EXT in current:settings(s['user'],'set','org.gnome.shell','enabled-extensions',repr([x for x in current if x!=EXT]))
+ focus=Path('/sys/module/tb_focus_manual/parameters/position')
+ if os.uname().release==VERSION and focus.exists() and s.get('focus_access'):
+  f=s['focus_access'];os.chown(focus,f['uid'],f['gid']);os.chmod(focus,f['mode'])
  reload_bus();run('systemctl','daemon-reload')
  for unit,before in s['services'].items():
   if before['enabled']:run('systemctl','enable',unit)

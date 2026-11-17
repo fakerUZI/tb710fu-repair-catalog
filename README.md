@@ -31,4 +31,4 @@
 
 [内核日期命名与升级版本检查](contributions/kernel-offline-upgrade/attachments/KERNEL-VERSIONING.md)：本次接受无日期旧内核，后续要求目标日期严格晚于设备当前日期版本。当前平板已运行 `7.2.6-tb710fu-20261117`；后续目标日期必须严格晚于 20261117。
 
-当前日期内核入口另提供[手电筒与相机前后切换补充](contributions/kernel-offline-upgrade/attachments/flash-camera/README.md)：通过 flash-install 加载匹配模块/动态覆盖并更新应用，不刷设备分区；新内核升级仍只使用第一项入口。
+当前日期内核入口另提供[手电筒与三路相机补充](contributions/kernel-offline-upgrade/attachments/flash-camera/README.md)：`camera-install` 包含主摄自动对焦、前摄/微距切换与匹配的 libcamera 增益修复；`flash-install` 提供硬件/应用部分。均不刷设备分区，完整内核升级仍只使用第一项入口。

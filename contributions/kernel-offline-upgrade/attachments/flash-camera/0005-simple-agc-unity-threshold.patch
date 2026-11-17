@@ -1,0 +1,17 @@
+Description: Keep software ISP unity-gain threshold in real gain units
+ CameraSensorHelper::gain takes a register code. Passing 1 interpreted a code
+ of 1 as unity (1/128 for OV13B10), so an overexposed scene could remain stuck
+ at minimum gain and never reduce exposure. Use the real unity/lower bound.
+Author: TB710FU local adaptation
+Forwarded: no
+--- a/src/ipa/simple/soft_simple.cpp
++++ b/src/ipa/simple/soft_simple.cpp
+@@ -227,7 +227,7 @@
+ 	if (camHelper_) {
+ 		context_.configuration.agc.againMin = camHelper_->gain(againMin);
+ 		context_.configuration.agc.againMax = camHelper_->gain(againMax);
+-		context_.configuration.agc.again10 = camHelper_->gain(1.0);
++		context_.configuration.agc.again10 = std::max(1.0, context_.configuration.agc.againMin);
+ 		context_.configuration.agc.againMinStep =
+ 			(context_.configuration.agc.againMax -
+ 			 context_.configuration.agc.againMin) /
