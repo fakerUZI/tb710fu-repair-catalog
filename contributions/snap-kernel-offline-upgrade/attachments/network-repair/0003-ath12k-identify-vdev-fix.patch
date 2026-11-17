@@ -1,0 +1,17 @@
+Subject: wifi: ath12k: identify the tested TB710FU vdev accounting backports
+
+Read-only diagnostic marker; does not change polling or firmware behaviour.
+
+--- a/drivers/net/wireless/ath/ath12k/core.c
++++ b/drivers/net/wireless/ath/ath12k/core.c
+@@ -1173,6 +1173,10 @@
+  * same SRNGs concurrently with NAPI. */
+ static unsigned int tb710fu_poll_off;
+ module_param_named(tb_poll_off, tb710fu_poll_off, uint, 0444);
++static unsigned int tb710fu_vdev_count_fix = 1;
++module_param_named(tb_vdev_count_fix, tb710fu_vdev_count_fix, uint, 0444);
++MODULE_PARM_DESC(tb_vdev_count_fix,
++	"TB710FU restart and station vdev accounting backports, revision 1");
+ module_param_named(tb_poll_ticks, tb710fu_poll_ticks, uint, 0444);
+ module_param_named(tb_poll_rx, tb710fu_poll_rx, uint, 0444);
+ module_param_named(tb_poll_max_gap_ms, tb710fu_poll_max_gap_ms, uint, 0444);

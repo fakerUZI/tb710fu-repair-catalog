@@ -31,7 +31,7 @@
     {
       "id": "snap-kernel-offline-upgrade",
       "title": "Snap 内核完整升级（旧 Ubuntu 内执行）",
-      "description": "TB710FU 旧 Ubuntu 内执行的完整离线 Snap 内核升级。适用于 Ubuntu ARM64/systemd、内核 7.2.6-tb710fu、已验证 A 槽 Ubuntu boot 基线，及匹配的 ABL/XBL 固件、GPT 几何、ext4 arch 根分区、后摄/USB 服务。目标为已实机启动验证的 7.2.6-tb710fu-snap1，补齐 AppArmor、SquashFS xattrs、LZO/LZ4，并安装完整匹配模块。不同固件、布局、启动镜像或未知残留目录会停止，不能强制通用刷写。\n\n完整升级载荷约 56 MiB，按 8 MiB 分片以满足单附件 10 MiB 限制。修复助手需下载本条目的全部附件；入口从 TB710FU_ATTACHMENTS_DIR 读取并逐项验证分片、压缩包、升级器及载荷，拒绝越界路径、链接和特殊文件。需要 Python 3.11+、gdisk、fdisk、kmod、util-linux、管理员权限、电量至少 30%、解包分区至少 512 MiB 及安装时根分区至少 1 GiB 可用空间。内核安装本身离线；重启后的用户态依赖/hello-world 首次下载需要网络。\n\n确认并执行本条目即备份当前 boot/GPT、安装模块和配套文件、写入 boot_a、完整回读校验，并安装重启后自动收尾服务；不自动重启，成功后请保存工作并手动 sudo reboot。重启后完成 Snap strict/full 与普通用户隔离验证。可设置 TB710FU_SNAP_KERNEL_ACTION=check 只读检查，validate 仅解包校验，status/finish/rollback 查看、重试收尾或回退。普通桌面用户默认 sudo 原用户或 ubuntu，可由 TB710FU_SNAP_USER 指定。\n\n验证边界：目标内核/模块已实机启动，Snap 实际隔离通过；新升级器在实机通过只读预检及“已经是目标内核”的无写入路径，boot 和六份 GPT 保持不变。7 项隔离环境测试覆盖完整安装/收尾、主动回退、部分写入中断恢复、网络失败重试、归档拒绝和 GPT/写前校验。未为了测试新升级器将当前平板降级重刷，因此不能声称自动旧到新流程已完成实机端到端测试。",
+      "description": "TB710FU 旧 Ubuntu 内执行的完整离线 Snap 内核升级。适用于 Ubuntu ARM64/systemd、内核 7.2.6-tb710fu、已验证 A 槽 Ubuntu boot 基线，及匹配的 ABL/XBL 固件、GPT 几何、ext4 arch 根分区、后摄/USB 服务。目标为已实机启动验证的 7.2.6-tb710fu-snap1，补齐 AppArmor、SquashFS xattrs、LZO/LZ4，并安装完整匹配模块。不同固件、布局、启动镜像或未知残留目录会停止，不能强制通用刷写。\n\n完整升级载荷约 56 MiB，按 8 MiB 分片以满足单附件 10 MiB 限制。修复助手需下载本条目的全部附件；入口从 TB710FU_ATTACHMENTS_DIR 读取并逐项验证分片、压缩包、升级器及载荷，拒绝越界路径、链接和特殊文件。需要 Python 3.11+、gdisk、fdisk、kmod、util-linux、管理员权限、电量至少 30%、解包分区至少 512 MiB 及安装时根分区至少 1 GiB 可用空间。内核安装本身离线；重启后的用户态依赖/hello-world 首次下载需要网络。\n\n确认并执行本条目即备份当前 boot/GPT、安装模块和配套文件、写入 boot_a、完整回读校验，并安装重启后自动收尾服务；不自动重启，成功后请保存工作并手动 sudo reboot。重启后完成 Snap strict/full 与普通用户隔离验证。可设置 TB710FU_SNAP_KERNEL_ACTION=check 只读检查，validate 仅解包校验，status/finish/rollback 查看、重试收尾或回退。普通桌面用户默认 sudo 原用户或 ubuntu，可由 TB710FU_SNAP_USER 指定。\n\n验证边界：目标内核/模块已实机启动，Snap 实际隔离通过；新升级器在实机通过只读预检及“已经是目标内核”的无写入路径，boot 和六份 GPT 保持不变。7 项隔离环境测试覆盖完整安装/收尾、主动回退、部分写入中断恢复、网络失败重试、归档拒绝和 GPT/写前校验。未为了测试新升级器将当前平板降级重刷，因此不能声称自动旧到新流程已完成实机端到端测试。\n\n2026-11-17：附带构建源码已补齐 IPv4/IPv6 legacy/xt NAT 配置及 ath12k 两枚计数补丁，并增加模块完整性断言。既有已验证升级分片保持原样；已运行旧 snap1 的用户请使用独立“snap1 内核网络修复”条目获得网络模块修复。",
       "device": "TB710FU",
       "status": "community-review",
       "risk": "高风险：本条目会写启动分区和 boot_a 启动重试/成功属性，并安装内核模块及后摄/USB 兼容文件。保留分区布局和用户数据，但掉电、UFS 故障、误判的系统差异或写入中断仍可能使设备无法启动。执行前务必阅读完整说明、确认电量和备份并准备外部救援方式。不会进行已停止的前摄实验、修改桌面输入法、安装 IDEA 或解除更新保护。\n备份：/var/backups/tb710fu-snap-support-20261116/kernel-upgrade-时间-随机后缀/ 保存现场 boot、全部 UFS LUN GPT、配套文件和状态；kernel-upgrade-active 链接指向活动记录。写入错误会尝试恢复本次备份及属性，不能保证在硬件故障/掉电后自动恢复。进入新内核后只有本地服务和 Snap strict/full 检查通过才标记启动成功；网络验证失败可联网后 finish 重试，不重复刷写。\n回退：若 Ubuntu 仍可启动，使用 TB710FU_SNAP_KERNEL_ACTION=rollback 重新运行本条目，或 sudo python3 /var/backups/tb710fu-snap-support-20261116/kernel-upgrade-active/payload/upgrade-ubuntu-kernel.py --rollback，然后手动重启。回退仍核验当前固件/GPT，拒绝覆盖其他操作改动的镜像。完全无法启动时需外部救援并使用保留的本机备份；源码回退不等于启动分区回退。不要上传升级生成的设备备份或私有 USB 身份文件。",
@@ -59,7 +59,7 @@
         },
         {
           "path": "contributions/snap-kernel-offline-upgrade/attachments/build-kernel.sh",
-          "sha256": "7e1f65f39eff929a3fb9b8901fe9b4f2de5bd42ded36468e81ee7966692e953f"
+          "sha256": "9ec6e3b6ae28c6006cc4dbff6abc7753df92ef889c7055607c0a9eba5994094c"
         },
         {
           "path": "contributions/snap-kernel-offline-upgrade/attachments/0001-apparmor-preserve-network-feature-abi.patch",
@@ -92,6 +92,73 @@
         {
           "path": "contributions/snap-kernel-offline-upgrade/attachments/kernel-upgrade.part07",
           "sha256": "a20dfbbccc73ca1942e76616f03fc41111702775e5f0846542f3886a1704ea90"
+        },
+        {
+          "path": "contributions/snap-kernel-offline-upgrade/attachments/network-repair/0001-ath12k-vdev-restart-count.patch",
+          "sha256": "0da9f01b96dec2560a9c7417f6723a577fdf0a9a924168e5f27c63d08fb6cd97"
+        },
+        {
+          "path": "contributions/snap-kernel-offline-upgrade/attachments/network-repair/0002-ath12k-station-start-once.patch",
+          "sha256": "2f49b747adaab4e2f5b5e73849b33aa538f91aa57ba5e18e971a1f4b30a49335"
+        },
+        {
+          "path": "contributions/snap-kernel-offline-upgrade/attachments/network-repair/0003-ath12k-identify-vdev-fix.patch",
+          "sha256": "45fe2d9dacf51d2f2beeb083cee1c96aca8b0c4a0af5d959b4e511e7081c6df8"
+        },
+        {
+          "path": "contributions/snap-kernel-offline-upgrade/attachments/network-repair/assert-modules.sh",
+          "sha256": "32b7cedfdd48e0620ab00acef83f030c9c9d4edd368c3c62ac21475fb692de1a"
+        },
+        {
+          "path": "contributions/snap-kernel-offline-upgrade/attachments/network-repair/configure-build.sh",
+          "sha256": "30393e372c263be5e455d0731a1d3d665677912053e5313fc77d3a07dda6c389"
+        },
+        {
+          "path": "contributions/snap-kernel-offline-upgrade/attachments/network-repair/netfilter.config",
+          "sha256": "6e487696e606e675f9b42d00bdc214c54e6e282af590973ecb3811432acf3ad4"
+        }
+      ]
+    },
+    {
+      "id": "network-repair-snap1",
+      "title": "snap1 内核网络修复（iptables/NAT 与 ath12k）",
+      "device": "TB710FU",
+      "status": "community-review",
+      "description": "仅适用于 TB710FU Ubuntu ARM64、已知配置和原模块指纹的 7.2.6-tb710fu-snap1。修复 IPv4/IPv6 legacy filter/mangle/raw/nat 表与 DNAT/SNAT/REDIRECT/REJECT/NETMAP，并回移 ath12k restart 计数、station 重复 start 两枚上游补丁。保留 tb_poll_off、硬件去重、节电参数；只读 tb_vdev_count_fix=1 标识已加载的修复驱动。\n\n离线压缩包小于 1 MiB，更换/新增 19 个网络模块及模块预载配置；不写 boot/GPT/DT/固件，不替换前后摄、USB 或 Snap/AppArmor 配置。安装前验证设备、运行配置、原模块、清单和每个新模块 SHA256、vermagic、依赖。不是所有同名内核均适用。\n\n默认 check 只读；TB710FU_FIX_ACTION=apply 安装后须保存工作并手动重启，再用 verify 在隔离 netns 测试真实 UDP NAT/拒绝投递；rollback 恢复首次备份后也须重启。入口不自动重启、不切换 iptables alternatives、不在宿主防火墙添加规则。现场 Wi-Fi 压力测试工具会断开网络，须单独显式运行且要求 USB 救援正常。\n\n不增加会改变内核结构布局的 ARP 支持，不包括 security 表。现有原内核的 /proc/config.gz 保持不变，能力应以模块与流量测试判断。原 7.2.6-tb710fu 用户需先完成已有 Snap 内核升级。详见 README 与 VALIDATION。",
+      "risk": "管理员操作会更换 Wi-Fi 与 netfilter 模块文件；生效/回退均需重启，Wi-Fi、VPN 与连接会中断。不写启动分区，但模块错误仍可能导致网络不可用或内核异常；请保留 USB SSH 与离线附件。\n首次原模块与预载配置备份在 /var/backups/tb710fu-network-repair-20261117/；后续已审核修订不覆盖最初快照。安装可捕获错误时尝试恢复，不能保证掉电或内核崩溃后自动恢复。未知原文件/备份损坏会拒绝覆盖；回退请用同一离线附件的 rollback 并重启。备份不得公开上传。",
+      "script": {
+        "path": "contributions/network-repair-snap1/script.sh",
+        "sha256": "b81fe10453c4f10581cf26d55a680c689dd27824c8f8c02fd8340a2d0d1249a2",
+        "requires_admin": true
+      },
+      "attachments": [
+        {
+          "path": "contributions/network-repair-snap1/attachments/README.md",
+          "sha256": "758850b6bc805668f5970492b1e5e3ad0a515ba9ba241f24ad12fe0162a36a99"
+        },
+        {
+          "path": "contributions/network-repair-snap1/attachments/VALIDATION.md",
+          "sha256": "b5c61e1f5487150f6de9263aadab8eb027b3aff2ea5d866beb9cf3a88bac2b87"
+        },
+        {
+          "path": "contributions/network-repair-snap1/attachments/install-network-repair.py",
+          "sha256": "ff4e4d66392c129be53b4b4df4d8ee3aca9eb617e9035c6ea69cf9898f775e59"
+        },
+        {
+          "path": "contributions/network-repair-snap1/attachments/network-repair-snap1-v2.tar.gz",
+          "sha256": "12fb64b5b12e7c0b9b8c7ee117de960abd5862de322fc9daf7a3e32815440a18"
+        },
+        {
+          "path": "contributions/network-repair-snap1/attachments/test-installer.py",
+          "sha256": "0a869f47ae8a5f3dc63aab01de90e61a28f1e44c34649b5c3f22666b8c89c6ac"
+        },
+        {
+          "path": "contributions/network-repair-snap1/attachments/verify-netfilter.py",
+          "sha256": "aa0cf0d8ccae46efdeda201cc78cb65dda4beb03628c51c226dc3d58cf04e139"
+        },
+        {
+          "path": "contributions/network-repair-snap1/attachments/verify-wifi.py",
+          "sha256": "98fcf2844b4d1186bc0bd5510d1afa89eb7d736af45f76cd0fe27832f24b1a29"
         }
       ]
     },

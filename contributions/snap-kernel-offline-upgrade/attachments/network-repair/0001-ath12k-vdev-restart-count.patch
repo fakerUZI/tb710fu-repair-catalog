@@ -1,0 +1,19 @@
+From: Birk Skyum
+Subject: [PATCH] wifi: ath12k: don't count a vdev restart as a started vdev
+
+Upstream proposed patch: https://lkml.iu.edu/hypermail/linux/kernel/2610.2/11945.html
+This addresses one possible source of an inflated vdev count. It does not
+establish that the user's actual timeout has that cause.
+
+--- a/drivers/net/wireless/ath/ath12k/mac.c
++++ b/drivers/net/wireless/ath/ath12k/mac.c
+@@ -11953,7 +11953,8 @@ ath12k_mac_vdev_start_restart(struct ath12k_link_vif *arvif,
+ 						   &arvif->reg_tpc_info);
+ 	}
+ 
+-	ar->num_started_vdevs++;
++	if (!restart)
++		ar->num_started_vdevs++;
+ 	ath12k_dbg(ab, ATH12K_DBG_MAC,  "vdev %pM started, vdev_id %d\n",
+ 		   ahvif->vif->addr, arvif->vdev_id);
+ 

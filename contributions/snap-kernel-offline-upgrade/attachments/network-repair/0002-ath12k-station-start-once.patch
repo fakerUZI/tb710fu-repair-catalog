@@ -1,0 +1,88 @@
+From: Christopher Griffin <christophergriffin05@gmail.com>
+Subject: wifi: ath12k: stop a running station vdev before starting it again
+
+Source: https://lore.kernel.org/all/20261111-ath12k-sta-vdev-start-once-v1-1-a01ed78d5460@gmail.com/
+Signed-off-by: Christopher Griffin <christophergriffin05@gmail.com>
+
+diff --git a/drivers/net/wireless/ath/ath12k/core.h b/drivers/net/wireless/ath/ath12k/core.h
+index 3a92a4b033599..1c0cdf75a22bb 100644
+--- a/drivers/net/wireless/ath/ath12k/core.h
++++ b/drivers/net/wireless/ath/ath12k/core.h
+@@ -330,6 +330,8 @@ struct ath12k_link_vif {
+ 
+ 	bool is_created;
+ 	bool is_started;
++	/* vdev is running in firmware and counted in ar->num_started_vdevs */
++	bool vdev_started;
+ 	bool is_up;
+ 	u8 bssid[ETH_ALEN];
+ 	struct cfg80211_bitrate_mask bitrate_mask;
+diff --git a/drivers/net/wireless/ath/ath12k/mac.c b/drivers/net/wireless/ath/ath12k/mac.c
+index 4cb41b8b1d3be..65486383ea9f1 100644
+--- a/drivers/net/wireless/ath/ath12k/mac.c
++++ b/drivers/net/wireless/ath/ath12k/mac.c
+@@ -1565,9 +1565,12 @@ int ath12k_mac_vdev_stop(struct ath12k_link_vif *arvif)
+ 		goto err;
+ 	}
+ 
+-	WARN_ON(ar->num_started_vdevs == 0);
++	if (arvif->vdev_started) {
++		arvif->vdev_started = false;
++		WARN_ON(ar->num_started_vdevs == 0);
++		ar->num_started_vdevs--;
++	}
+ 
+-	ar->num_started_vdevs--;
+ 	ath12k_dbg(ar->ab, ATH12K_DBG_MAC, "vdev %pM stopped, vdev_id %d\n",
+ 		   ahvif->vif->addr, arvif->vdev_id);
+ 
+@@ -10722,6 +10725,7 @@ int ath12k_mac_vdev_create(struct ath12k *ar, struct ath12k_link_vif *arvif)
+ 
+ err:
+ 	arvif->is_created = false;
++	arvif->vdev_started = false;
+ 	arvif->ar = NULL;
+ 	return ret;
+ }
+@@ -11032,6 +11036,7 @@ static int ath12k_mac_vdev_delete(struct ath12k *ar, struct ath12k_link_vif *arv
+ 
+ 	/* TODO: recal traffic pause state based on the available vdevs */
+ 	arvif->is_created = false;
++	arvif->vdev_started = false;
+ 	arvif->ar = NULL;
+ 
+ 	return ret;
+@@ -11544,7 +11549,30 @@ ath12k_mac_vdev_start_restart(struct ath12k_link_vif *arvif,
+ static int ath12k_mac_vdev_start(struct ath12k_link_vif *arvif,
+ 				 struct ieee80211_chanctx_conf *ctx)
+ {
+-	return ath12k_mac_vdev_start_restart(arvif, ctx, false);
++	int ret;
++
++	/* A station vdev is stopped when its BSS peer is removed, not when
++	 * its channel context is unassigned. If mac80211 moves the station
++	 * to another channel context while the peer exists, the vdev is
++	 * still running here: stop it before starting it again, so that
++	 * firmware does not get a second start and the vdev is counted once.
++	 */
++	if (arvif->vdev_started) {
++		ath12k_dbg(arvif->ar->ab, ATH12K_DBG_MAC,
++			   "vdev %d still running, stopping it before start\n",
++			   arvif->vdev_id);
++		ret = ath12k_mac_vdev_stop(arvif);
++		if (ret)
++			return ret;
++	}
++
++	ret = ath12k_mac_vdev_start_restart(arvif, ctx, false);
++	if (ret)
++		return ret;
++
++	arvif->vdev_started = true;
++
++	return 0;
+ }
+ 
+ static int ath12k_mac_vdev_restart(struct ath12k_link_vif *arvif,
+
+---

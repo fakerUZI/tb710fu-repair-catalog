@@ -4,6 +4,12 @@
 
 清单第一项为 Snap 用户态修复，其次为 Snap 离线内核升级；已移除系统信息与管理员权限检查两个演示条目及对应脚本。
 
+`network-repair-snap1`：[snap1 网络模块修复](contributions/network-repair-snap1/attachments/README.md)
+对应 issue #16/#17，补齐 IPv4/IPv6 legacy/xt NAT，并回移两枚 ath12k vdev
+计数补丁。仅接受已知 snap1 配置和模块指纹；默认只读 check，安装后手动
+重启，不写 boot/GPT/DT。已有 Snap 升级分片保持原样，网络修复作为独立
+条目提供。实机短时验证及回退边界见[验证记录](contributions/network-repair-snap1/attachments/VALIDATION.md)。
+
 Snap 社区条目分为已具备内核支持时的用户态修复，以及旧 Ubuntu 中执行的完整内核升级。后者包含校验分片，单个附件不超过 8 MiB；客户端必须下载并核验全部附件，将目录通过 `TB710FU_ATTACHMENTS_DIR` 传给 Bash 入口。内核升级会写 boot，必须先向用户展示风险并取得确认；默认不自动重启。旧到新的自动流程尚未完成实机端到端测试，不能将隔离环境测试视作实机刷写验证。
 
 客户端接入前应固定可信仓库及修订版本，对清单进行格式校验，限制相对路径，验证脚本哈希，展示完整脚本及风险，并在用户确认后执行。哈希仅保证与所取清单一致，不能证明清单本身可信；远程内容不得自动执行。

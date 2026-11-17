@@ -41,12 +41,13 @@ scripts/config --set-str LOCALVERSION '-tb710fu-snap1' --disable LOCALVERSION_AU
  --set-str LSM 'landlock,lockdown,yama,loadpin,safesetid,apparmor,ipe,bpf' \
  --enable SQUASHFS_XATTR --enable SQUASHFS_LZO --enable SQUASHFS_LZ4 \
  --module VIDEO_OV13B10 --module NETFILTER_XT_TARGET_MASQUERADE
-make -s LOCALVERSION= olddefconfig
+bash "$(dirname -- "${BASH_SOURCE[0]}")/network-repair/configure-build.sh"
 cp .config "$out/config"
 make -j8 LOCALVERSION= Image modules > "$out/build.log" 2>&1
 make -s LOCALVERSION= INSTALL_MOD_PATH=/build/modstage INSTALL_MOD_STRIP=1 modules_install >> "$out/build.log" 2>&1
 version=$(make -s LOCALVERSION= kernelrelease)
 [ "$version" = 7.2.6-tb710fu-snap1 ]
+bash "$(dirname -- "${BASH_SOURCE[0]}")/network-repair/assert-modules.sh" "/build/modstage/lib/modules/$version"
 # Rebuild only the four helpers used by the working rear camera and manual focus.
 mkdir -p /build/rear-helpers
 cp "$project"/offline-prep/camera-live-overlay/{tb_camera_overlay.c,tb_camera_alias.c,tb_camss_alias.c,tb_focus_manual.c} /build/rear-helpers/
