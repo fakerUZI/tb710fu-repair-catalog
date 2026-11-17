@@ -41,3 +41,7 @@ sudo reboot
 ```
 
 回退前核验所有备份、当前固件/GPT 和文件；发现损坏备份或其他操作改动会拒绝覆盖。正在运行的新内核模块不会被删除，旧内核及原私有前摄模块均保留。完全无法启动时需外部救援使用本机备份。源码回退不等于设备启动分区回退。
+
+## 手电筒与相机切换可选补充
+
+[flash-camera/README.md](flash-camera/README.md) 提供 flash-check / flash-install / flash-rollback 动作，仅在当前已审核日期内核上加载模块和运行态覆盖并更新相机应用，不更换七个原 Image 分片，也不新增内核升级入口。GNOME Snapshot 同步硬件闪光仍未完成。

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=相机（前后摄）
+Comment=前后摄切换、高清预览、缩放、手动对焦与拍照
+Exec=/usr/local/bin/tb-rear-camera
+Icon=camera-photo
+Terminal=false
+Categories=AudioVideo;Video;
+StartupNotify=true
+StartupWMClass=org.tb710fu.RearCamera

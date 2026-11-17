@@ -30,3 +30,5 @@
 `microphone-snap1`：[说明与回退](contributions/microphone-snap1/attachments/README.md)。仅允许匹配的内核、固件、GPT 与启动镜像。命令行不设动作时为只读 check；修复助手会显式传入动作，当前默认 apply，会写 boot_a，运行前须确认风险。核心实机声学验证已完成，本轮修改的完整 apply/rollback 仍未在真实块设备上重跑，详见[验证记录](contributions/microphone-snap1/attachments/VALIDATION.md)。
 
 [内核日期命名与升级版本检查](contributions/kernel-offline-upgrade/attachments/KERNEL-VERSIONING.md)：本次接受无日期旧内核，后续要求目标日期严格晚于设备当前日期版本。当前平板已运行 `7.2.6-tb710fu-20261117`；后续目标日期必须严格晚于 20261117。
+
+当前日期内核入口另提供[手电筒与相机前后切换补充](contributions/kernel-offline-upgrade/attachments/flash-camera/README.md)：通过 flash-install 加载匹配模块/动态覆盖并更新应用，不刷设备分区；新内核升级仍只使用第一项入口。

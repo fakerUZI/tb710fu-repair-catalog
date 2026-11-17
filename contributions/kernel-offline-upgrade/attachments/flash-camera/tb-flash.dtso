@@ -1,0 +1,20 @@
+/dts-v1/;
+/plugin/;
+/ {
+    fragment@0 {
+        target-path = "/soc@0/spmi@c400000/pmic@1/led-controller@ee00";
+        __overlay__ {
+            status = "okay";
+            led-0 {
+                label = "tb710fu:flash:rear";
+                function = "flash";
+                color = <0>;
+                led-sources = <1 4>;
+                led-max-microamp = <200000>;
+                flash-max-microamp = <1000000>;
+                flash-max-timeout-us = <500000>;
+                default-state = "off";
+            };
+        };
+    };
+};

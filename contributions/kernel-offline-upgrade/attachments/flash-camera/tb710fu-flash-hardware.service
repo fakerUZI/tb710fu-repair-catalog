@@ -1,0 +1,16 @@
+[Unit]
+ConditionKernelVersion=7.2.6-tb710fu-20261117
+Description=TB710FU PM8550 flash runtime adaptation
+After=local-fs.target systemd-modules-load.service tb710fu-camera-test.service tb710fu-front-camera.service
+Before=display-manager.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/python3 /usr/local/libexec/tb-flash-hardware.py start
+ExecStop=/usr/bin/python3 /usr/local/libexec/tb-flash-hardware.py stop
+TimeoutStartSec=40
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target

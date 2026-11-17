@@ -1,0 +1,4 @@
+#!/bin/sh
+set -eu
+p=/sys/class/leds/tb710fu:flash:rear
+[ ! -w "$p/brightness" ] || echo 0 > "$p/brightness"

@@ -1,0 +1,38 @@
+{
+  "accepted": {
+    "/usr/local/bin/tb-front-camera-preview": [
+      "239587d7e52f582ce0f098b71d26095b57f7f01533d9256f131b5565bb9397ad"
+    ],
+    "/usr/local/bin/tb-rear-camera": [
+      "9fc94fc1c2109708530907fbedd210b614974a0f5d545e43228b6201c3b227df"
+    ],
+    "/usr/share/applications/tb710fu-front-camera.desktop": [
+      "a9fc7c0f2c742b622cf06cfcdd8b72c707f922084d18840232609c18433a8d74"
+    ],
+    "/usr/share/applications/tb710fu-rear-camera.desktop": [
+      "5d1db156449dc92b578f66e0f997010c8cd4992177bb3e0dc49c6ede25c9eb69"
+    ]
+  },
+  "files": {
+    "extension.js": "7a5ed13170542a1e64e6f81be3f6009861d188e3f046e7ad4b8f2d9024f1bfd1",
+    "leds-qcom-flash.ko": "59162841490fab0ad78de83270de7123b31210d83309bd5b04ef40b218f79fc0",
+    "local-tb-flash.dtbo": "0b4491fda57f23d2668062911c0db073c589797e128b2a0b903f3e6757488635",
+    "manifest.json": "71ef29ef8f9ed187faf519bc88bb80f74b9185456f7cdc45dbcc630bc03a1157",
+    "metadata.json": "c089bf83605a2844e7b11987be03075d412b3ab806cfad7363f60025c53f7d91",
+    "org.tb710fu.Torch1.conf": "ff856df555959fb1d37a279263e9c987adce639b1e0fba9c8b424cb7fc94e43d",
+    "tb-camera.py": "338903db28a8bcdd164e1b24193c6abacaa7b764c7ddba42745b1f2a9d569962",
+    "tb-flash-hardware.py": "a11c4794bcd6ee6ee2dc91e507391cc262eca6482d07da7c6295d2c3f3d32287",
+    "tb-flash-off": "9878e128f69733b28bc70c5d595bc84d763b0c4722412d9432c797cf97b97185",
+    "tb-flash.dtbo": "0b4491fda57f23d2668062911c0db073c589797e128b2a0b903f3e6757488635",
+    "tb-front-camera-preview": "b5518bcd111e94e581712c3b6a690887139cc7bf10a37d0bc63d08469f63b583",
+    "tb-torch-daemon.py": "4471b4355fe313521633504bde2ce2972cf9150d957c5effda063024e976c8f9",
+    "tb710fu-flash-hardware.service": "fdc551426034ead3d7f850ab602de74c4ee63587338a59a2338ef890f62a524a",
+    "tb710fu-front-camera.desktop": "b9e7b1a393ee3e70a2f521f5b7976190590365dc1c76be972f79879d73c9b32a",
+    "tb710fu-rear-camera.desktop": "1efe47b6f16996b6cfcb3cf385f46e0ab4d539456d11918b0bccac932995b01e",
+    "tb710fu-torch.service": "8ede2d4f5744e2ab5484370550fcc44368b5503578a124fe64583a59003bdd40",
+    "tb_flash_overlay.ko": "b7a22014cbf2317e38cd341689da00e3e02959249f07445683ce5a6a70535143",
+    "v4l2-flash-led-class.ko": "10e619bfff8eaf4384ac5e0223afb91cb15eec1c31fa5e8b86aa7c1088009f6a"
+  },
+  "format": 1,
+  "version": "7.2.6-tb710fu-20261117"
+}

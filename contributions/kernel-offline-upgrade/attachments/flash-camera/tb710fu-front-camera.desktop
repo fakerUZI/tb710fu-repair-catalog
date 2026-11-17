@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=前置相机
+Comment=打开相机的前摄，支持切换和拍照；画质尚未校准
+Exec=/usr/local/bin/tb-front-camera-preview
+Icon=camera-web
+Terminal=false
+Categories=AudioVideo;Video;
+StartupNotify=true
+StartupWMClass=org.tb710fu.RearCamera
