@@ -40,5 +40,7 @@
       "size": 8012964,
       "sha256": "a20dfbbccc73ca1942e76616f03fc41111702775e5f0846542f3886a1704ea90"
     }
-  ]
+  ],
+  "source_version": "7.2.6-tb710fu",
+  "target_version": "7.2.6-tb710fu-snap1"
 }

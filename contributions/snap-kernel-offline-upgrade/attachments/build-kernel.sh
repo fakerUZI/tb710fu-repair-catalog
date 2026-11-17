@@ -1,9 +1,14 @@
 #!/bin/bash
 # Offline build in tb-snap-kernel-build:20261116. No device access.
 set -euo pipefail
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+plan=${TB710FU_KERNEL_RELEASE_PLAN:-$script_dir/kernel-release.json}
+version=$(python3 "$script_dir/kernel-release.py" --plan "$plan" --target-only)
+localversion=${version#7.2.6}
+[[ $version == 7.2.6-tb710fu-* ]] || { echo 'This source builder only supports Linux 7.2.6' >&2; exit 1; }
 project=/project
 input=$project/artifacts/snap-support-20261116
-out=$input/build-output
+out=$project/artifacts/kernel-$version/build-output
 mkdir -p "$out"
 cd /build
 sha256sum "$project/artifacts/linux-7.2.6.tar.xz" | grep -q '^039aef84f2b0994aeda3f4fcfc3d02ec9d7a9bbb9020ea264c43f446c860f606 '
@@ -33,7 +38,7 @@ patch -p1 --batch -F0 < "$project/offline-prep/snap-support/0001-apparmor-preser
 cp "$input/rear-ov13b10.c" drivers/media/i2c/ov13b10.c
 tar -xf "$input/rear-camss-source.tar" -C drivers/media/platform/qcom/camss
 cp "$input/live.config" .config
-scripts/config --set-str LOCALVERSION '-tb710fu-snap1' --disable LOCALVERSION_AUTO \
+scripts/config --set-str LOCALVERSION "$localversion" --disable LOCALVERSION_AUTO \
  --set-str INITRAMFS_SOURCE "$input/original-initramfs.cpio" \
  --enable SECURITY_APPARMOR --enable SECURITY_APPARMOR_INTROSPECT_POLICY \
  --enable SECURITY_APPARMOR_HASH --enable SECURITY_APPARMOR_HASH_DEFAULT \
@@ -45,8 +50,8 @@ bash "$(dirname -- "${BASH_SOURCE[0]}")/network-repair/configure-build.sh"
 cp .config "$out/config"
 make -j8 LOCALVERSION= Image modules > "$out/build.log" 2>&1
 make -s LOCALVERSION= INSTALL_MOD_PATH=/build/modstage INSTALL_MOD_STRIP=1 modules_install >> "$out/build.log" 2>&1
-version=$(make -s LOCALVERSION= kernelrelease)
-[ "$version" = 7.2.6-tb710fu-snap1 ]
+[ "$(make -s LOCALVERSION= kernelrelease)" = "$version" ]
+cp "$plan" "$out/kernel-release.json"
 bash "$(dirname -- "${BASH_SOURCE[0]}")/network-repair/assert-modules.sh" "/build/modstage/lib/modules/$version"
 # Rebuild only the four helpers used by the working rear camera and manual focus.
 mkdir -p /build/rear-helpers

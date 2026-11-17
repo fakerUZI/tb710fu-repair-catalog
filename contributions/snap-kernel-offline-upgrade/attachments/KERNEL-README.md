@@ -18,3 +18,5 @@ sudo env TB710FU_ATTACHMENTS_DIR=/path/to/downloaded-attachments \
 支持的 action：`validate` 仅校验/解包，不访问设备；`check` 现场只读预检；`install` 升级；`status` 查询；`finish` 重试收尾；`rollback` 回退，随后需要手动重启。不要把 action 设为其他命令，不支持传入任意 shell 参数。
 
 收尾/回退的完整说明见重建包内 UPGRADE-USAGE-zh.md。所有安装后代码和本机备份都保留在 root 私有备份目录，分片下载目录删除后不影响收尾。源码回退不等于设备启动分区回退。
+
+版本命名、精确旧版本要求与严格递增日期规则见 [KERNEL-VERSIONING.md](KERNEL-VERSIONING.md)。附带日期发布计划是构建示例；现有分片仍为历史 snap1，不是日期版载荷。

@@ -31,7 +31,7 @@
     {
       "id": "snap-kernel-offline-upgrade",
       "title": "Snap 内核完整升级（旧 Ubuntu 内执行）",
-      "description": "TB710FU 旧 Ubuntu 内执行的完整离线 Snap 内核升级。适用于 Ubuntu ARM64/systemd、内核 7.2.6-tb710fu、已验证 A 槽 Ubuntu boot 基线，及匹配的 ABL/XBL 固件、GPT 几何、ext4 arch 根分区、后摄/USB 服务。目标为已实机启动验证的 7.2.6-tb710fu-snap1，补齐 AppArmor、SquashFS xattrs、LZO/LZ4，并安装完整匹配模块。不同固件、布局、启动镜像或未知残留目录会停止，不能强制通用刷写。\n\n完整升级载荷约 56 MiB，按 8 MiB 分片以满足单附件 10 MiB 限制。修复助手需下载本条目的全部附件；入口从 TB710FU_ATTACHMENTS_DIR 读取并逐项验证分片、压缩包、升级器及载荷，拒绝越界路径、链接和特殊文件。需要 Python 3.11+、gdisk、fdisk、kmod、util-linux、管理员权限、电量至少 30%、解包分区至少 512 MiB 及安装时根分区至少 1 GiB 可用空间。内核安装本身离线；重启后的用户态依赖/hello-world 首次下载需要网络。\n\n确认并执行本条目即备份当前 boot/GPT、安装模块和配套文件、写入 boot_a、完整回读校验，并安装重启后自动收尾服务；不自动重启，成功后请保存工作并手动 sudo reboot。重启后完成 Snap strict/full 与普通用户隔离验证。可设置 TB710FU_SNAP_KERNEL_ACTION=check 只读检查，validate 仅解包校验，status/finish/rollback 查看、重试收尾或回退。普通桌面用户默认 sudo 原用户或 ubuntu，可由 TB710FU_SNAP_USER 指定。\n\n验证边界：目标内核/模块已实机启动，Snap 实际隔离通过；新升级器在实机通过只读预检及“已经是目标内核”的无写入路径，boot 和六份 GPT 保持不变。7 项隔离环境测试覆盖完整安装/收尾、主动回退、部分写入中断恢复、网络失败重试、归档拒绝和 GPT/写前校验。未为了测试新升级器将当前平板降级重刷，因此不能声称自动旧到新流程已完成实机端到端测试。\n\n2026-11-17：附带构建源码已补齐 IPv4/IPv6 legacy/xt NAT 配置及 ath12k 两枚计数补丁，并增加模块完整性断言。既有已验证升级分片保持原样；已运行旧 snap1 的用户请使用独立“snap1 内核网络修复”条目获得网络模块修复。",
+      "description": "TB710FU 旧 Ubuntu 内执行的完整离线 Snap 内核升级。适用于 Ubuntu ARM64/systemd、内核 7.2.6-tb710fu、已验证 A 槽 Ubuntu boot 基线，及匹配的 ABL/XBL 固件、GPT 几何、ext4 arch 根分区、后摄/USB 服务。目标为已实机启动验证的 7.2.6-tb710fu-snap1，补齐 AppArmor、SquashFS xattrs、LZO/LZ4，并安装完整匹配模块。不同固件、布局、启动镜像或未知残留目录会停止，不能强制通用刷写。\n\n完整升级载荷约 56 MiB，按 8 MiB 分片以满足单附件 10 MiB 限制。修复助手需下载本条目的全部附件；入口从 TB710FU_ATTACHMENTS_DIR 读取并逐项验证分片、压缩包、升级器及载荷，拒绝越界路径、链接和特殊文件。需要 Python 3.11+、gdisk、fdisk、kmod、util-linux、管理员权限、电量至少 30%、解包分区至少 512 MiB 及安装时根分区至少 1 GiB 可用空间。内核安装本身离线；重启后的用户态依赖/hello-world 首次下载需要网络。\n\n确认并执行本条目即备份当前 boot/GPT、安装模块和配套文件、写入 boot_a、完整回读校验，并安装重启后自动收尾服务；不自动重启，成功后请保存工作并手动 sudo reboot。重启后完成 Snap strict/full 与普通用户隔离验证。可设置 TB710FU_SNAP_KERNEL_ACTION=check 只读检查，validate 仅解包校验，status/finish/rollback 查看、重试收尾或回退。普通桌面用户默认 sudo 原用户或 ubuntu，可由 TB710FU_SNAP_USER 指定。\n\n验证边界：目标内核/模块已实机启动，Snap 实际隔离通过；新升级器在实机通过只读预检及“已经是目标内核”的无写入路径，boot 和六份 GPT 保持不变。7 项隔离环境测试覆盖完整安装/收尾、主动回退、部分写入中断恢复、网络失败重试、归档拒绝和 GPT/写前校验。未为了测试新升级器将当前平板降级重刷，因此不能声称自动旧到新流程已完成实机端到端测试。\n\n2026-11-17：附带构建源码已补齐 IPv4/IPv6 legacy/xt NAT 配置及 ath12k 两枚计数补丁，并增加模块完整性断言。既有已验证升级分片保持原样；已运行旧 snap1 的用户请使用独立“snap1 内核网络修复”条目获得网络模块修复。\n\n版本策略：新构建采用 Linux版本-tb710fu-YYYYMMDD；日期版升级包必须精确匹配 source_version，目标日期严格晚于旧内核，且不能使用未来日期。新增 kernel-release.json 是 snap1 → 20261117 的构建计划示例，尚未生成或实机验证日期版载荷；本条目当前分片仍仅提供原版 → snap1。详见 KERNEL-VERSIONING.md。",
       "device": "TB710FU",
       "status": "community-review",
       "risk": "高风险：本条目会写启动分区和 boot_a 启动重试/成功属性，并安装内核模块及后摄/USB 兼容文件。保留分区布局和用户数据，但掉电、UFS 故障、误判的系统差异或写入中断仍可能使设备无法启动。执行前务必阅读完整说明、确认电量和备份并准备外部救援方式。不会进行已停止的前摄实验、修改桌面输入法、安装 IDEA 或解除更新保护。\n备份：/var/backups/tb710fu-snap-support-20261116/kernel-upgrade-时间-随机后缀/ 保存现场 boot、全部 UFS LUN GPT、配套文件和状态；kernel-upgrade-active 链接指向活动记录。写入错误会尝试恢复本次备份及属性，不能保证在硬件故障/掉电后自动恢复。进入新内核后只有本地服务和 Snap strict/full 检查通过才标记启动成功；网络验证失败可联网后 finish 重试，不重复刷写。\n回退：若 Ubuntu 仍可启动，使用 TB710FU_SNAP_KERNEL_ACTION=rollback 重新运行本条目，或 sudo python3 /var/backups/tb710fu-snap-support-20261116/kernel-upgrade-active/payload/upgrade-ubuntu-kernel.py --rollback，然后手动重启。回退仍核验当前固件/GPT，拒绝覆盖其他操作改动的镜像。完全无法启动时需外部救援并使用保留的本机备份；源码回退不等于启动分区回退。不要上传升级生成的设备备份或私有 USB 身份文件。",
@@ -43,15 +43,15 @@
       "attachments": [
         {
           "path": "contributions/snap-kernel-offline-upgrade/attachments/assemble-kernel-bundle.py",
-          "sha256": "d0137b4f412399380ee20131847781b89f19f8a32b94a115e00f37e1ed94e808"
+          "sha256": "d8c6e4544073672d3ccce4f4835b7d304168189cd1e987910f5ced9e6a53fd3e"
         },
         {
           "path": "contributions/snap-kernel-offline-upgrade/attachments/bundle-parts.json",
-          "sha256": "26af8332652b6399323b1d70c4def7612e27d30aa852c0477791d4d1425362ce"
+          "sha256": "f9064f1b7ccbfeda2712fb1c00d9329699ef4762f67f4846f3602b6a8606c79d"
         },
         {
           "path": "contributions/snap-kernel-offline-upgrade/attachments/KERNEL-README.md",
-          "sha256": "4ce6214d4b896228584ad922397a0b242534582228d75e9db2393184df5f55b5"
+          "sha256": "cae06e08e54e26d1d6dac32cbc829ccc53439f84ff39dc5a74dcb72d29ffaef4"
         },
         {
           "path": "contributions/snap-kernel-offline-upgrade/attachments/VALIDATION.md",
@@ -59,7 +59,7 @@
         },
         {
           "path": "contributions/snap-kernel-offline-upgrade/attachments/build-kernel.sh",
-          "sha256": "9ec6e3b6ae28c6006cc4dbff6abc7753df92ef889c7055607c0a9eba5994094c"
+          "sha256": "0da21a86643a85c3dbcbdd70ced7f0672302690b0f31700cc050cb72ecfc8872"
         },
         {
           "path": "contributions/snap-kernel-offline-upgrade/attachments/0001-apparmor-preserve-network-feature-abi.patch",
@@ -116,6 +116,18 @@
         {
           "path": "contributions/snap-kernel-offline-upgrade/attachments/network-repair/netfilter.config",
           "sha256": "6e487696e606e675f9b42d00bdc214c54e6e282af590973ecb3811432acf3ad4"
+        },
+        {
+          "path": "contributions/snap-kernel-offline-upgrade/attachments/kernel-release.py",
+          "sha256": "2eadc0e90b64f937207f04fc7359608ac2a7ad26a24a37b81b5ff277eefe1c0e"
+        },
+        {
+          "path": "contributions/snap-kernel-offline-upgrade/attachments/kernel-release.json",
+          "sha256": "587a4bd95473f06cf0ac492871243af5cfb6a8fdf24cd53f23a6fbe8d2aaf6a4"
+        },
+        {
+          "path": "contributions/snap-kernel-offline-upgrade/attachments/KERNEL-VERSIONING.md",
+          "sha256": "7d84e4a83860a4b12cc721239d8a2c3438ae964004f02998038f734c814986e5"
         }
       ]
     },

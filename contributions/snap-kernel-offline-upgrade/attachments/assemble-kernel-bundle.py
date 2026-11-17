@@ -9,6 +9,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import platform
 from pathlib import Path, PurePosixPath
 import shutil
 import subprocess
@@ -52,6 +53,28 @@ def extract(archive, destination, expected_root):
                 target.chmod(0o600)
 
 
+def check_release(spec, module, action, current=None):
+    """Bind source/target metadata to the actual installer before device actions."""
+    source, target = spec['source_version'], spec['target_version']
+    require(source == module.OLD_VERSION and target == module.VERSION,
+            '分片清单的旧/新版本与已校验升级器不符。')
+    if spec['format'] == 1:
+        require((source, target) == ('7.2.6-tb710fu', '7.2.6-tb710fu-snap1'),
+                '历史格式仅允许已审核的原版到 snap1 升级。')
+    else:
+        loader = importlib.util.spec_from_file_location('tb_kernel_release', Path(__file__).with_name('kernel-release.py'))
+        policy = importlib.util.module_from_spec(loader)
+        loader.loader.exec_module(policy)
+        plan = {'format': 1, 'source_version': source, 'target_version': target}
+        policy.validate(plan)
+    if action in ('install', 'check'):
+        current = platform.release() if current is None else current
+        # The historical installer has an already-target read-only/no-op path.
+        if spec['format'] == 1 and current == target:
+            return
+        require(current == source, '本次更新要求旧内核 ' + source + '，实际为 ' + current + '。')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--attachments-dir', type=Path, required=True)
@@ -63,7 +86,7 @@ def main():
     os.umask(0o077)
     attachments = args.attachments_dir.resolve(strict=True)
     spec = json.loads((attachments / 'bundle-parts.json').read_text())
-    require(spec['format'] == 1 and len(spec['parts']) <= 20, '不支持的分片清单。')
+    require(spec['format'] in (1, 2) and 0 < len(spec['parts']) <= 20, '不支持的分片清单。')
     require(shutil.disk_usage('/var/tmp').free >= 512 * 1024 * 1024, '/var/tmp 至少需要 512 MiB 可用空间。')
     with tempfile.TemporaryDirectory(prefix='tb710fu-snap-bundle-', dir='/var/tmp') as temp:
         temp = Path(temp)
@@ -88,6 +111,7 @@ def main():
         loader = importlib.util.spec_from_file_location('reviewed_tb710fu_upgrade', installer)
         module = importlib.util.module_from_spec(loader)
         loader.loader.exec_module(module)
+        check_release(spec, module, args.action)
         module.bundle(root)
         module.validate_archive(root / 'modules.tar')
         if args.action == 'validate':
