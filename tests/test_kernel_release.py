@@ -117,17 +117,28 @@ class UpgradeGate(unittest.TestCase):
     def test_rollback_is_not_rejected_as_a_forward_upgrade(self):
         self.assembler.check_release(self.spec, self.installer, 'rollback', self.plan['target_version'])
 
+    def unbuilt(self, root):
+        path = Path(root)
+        (path/'kernel-release.json').write_text(json.dumps(self.plan))
+        (path/'bundle-parts.json').write_text(json.dumps({'format': 2, 'release': self.plan, 'payload_status': 'not-built', 'parts': []}))
+        return path
+
     def test_missing_payload_check_explicitly_reports_not_installable(self):
-        argv = ['assemble-kernel-bundle.py', '--attachments-dir', str(BASE), '--action', 'check']
-        with patch.object(sys, 'argv', argv), patch.object(self.assembler, 'environment'), patch.object(self.assembler.platform, 'release', return_value='7.2.6-tb710fu-snap2'):
-            self.assertEqual(self.assembler.main(), 0)
+        with tempfile.TemporaryDirectory() as root:
+            argv = ['assemble-kernel-bundle.py', '--attachments-dir', str(self.unbuilt(root)), '--action', 'check']
+            with patch.object(sys, 'argv', argv), patch.object(self.assembler, 'environment'), patch.object(self.assembler.platform, 'release', return_value='7.2.6-tb710fu-snap2'):
+                self.assertEqual(self.assembler.main(), 0)
 
     def test_install_without_payload_stops_before_staging(self):
-        argv = ['assemble-kernel-bundle.py', '--attachments-dir', str(BASE), '--action', 'install']
-        with patch.object(sys, 'argv', argv), patch.object(self.assembler, 'environment'), patch.object(self.assembler.os, 'geteuid', return_value=0), patch.object(self.assembler.platform, 'release', return_value='7.2.6-tb710fu-snap1'), patch.object(self.assembler.tempfile, 'TemporaryDirectory') as stage:
-            with self.assertRaisesRegex(ValueError, '尚未构建'):
-                self.assembler.main()
-            stage.assert_not_called()
+        with tempfile.TemporaryDirectory() as root:
+            argv = ['assemble-kernel-bundle.py', '--attachments-dir', str(self.unbuilt(root)), '--action', 'install']
+            with patch.object(sys, 'argv', argv), patch.object(self.assembler, 'environment'), patch.object(self.assembler.os, 'geteuid', return_value=0), patch.object(self.assembler.platform, 'release', return_value='7.2.6-tb710fu-snap1'), patch.object(self.assembler.tempfile, 'TemporaryDirectory') as stage:
+                with self.assertRaisesRegex(ValueError, '尚未构建'):
+                    self.assembler.main()
+                stage.assert_not_called()
+
+    def test_readonly_check_can_report_already_target(self):
+        self.assembler.check_release(self.spec, self.installer, 'check', self.plan['target_version'])
 
     def test_sole_kernel_entry_is_first_and_old_payloads_are_gone(self):
         catalog = json.loads((ROOT / 'catalog.json').read_text())
@@ -135,7 +146,12 @@ class UpgradeGate(unittest.TestCase):
         self.assertEqual(len(entries), 1)
         self.assertEqual(catalog['issues'][0]['id'], 'kernel-offline-upgrade')
         self.assertFalse((ROOT / 'contributions/snap-kernel-offline-upgrade').exists())
-        self.assertFalse(list(ROOT.glob('contributions/**/kernel-upgrade.part*')))
+        spec = json.loads((BASE/'bundle-parts.json').read_text())
+        self.assertEqual(spec['format'], 2)
+        self.assertEqual(spec['payload_status'], 'ready')
+        self.assertEqual(spec['release'], self.plan)
+        self.assertTrue(all(p.name.startswith('kernel-upgrade.part') for p in BASE.glob('kernel-upgrade.part*')))
+        self.assertEqual(len(list(BASE.glob('kernel-upgrade.part*'))), len(spec['parts']))
 
 
 if __name__ == '__main__':

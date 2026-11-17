@@ -47,13 +47,23 @@ scripts/config --set-str LOCALVERSION "$localversion" --disable LOCALVERSION_AUT
  --enable SQUASHFS_XATTR --enable SQUASHFS_LZO --enable SQUASHFS_LZ4 \
  --module VIDEO_OV13B10 --module NETFILTER_XT_TARGET_MASQUERADE
 bash "$(dirname -- "${BASH_SOURCE[0]}")/network-repair/configure-build.sh"
+# Full Image + all modules are rebuilt together, so ARP namespace layout may change.
+scripts/config --module IP_NF_SECURITY --module IP6_NF_SECURITY \
+ --module IP_NF_ARPTABLES --module IP_NF_ARPFILTER --module IP_NF_ARP_MANGLE
+make -s LOCALVERSION= olddefconfig
+for option in CONFIG_IP_NF_SECURITY=m CONFIG_IP6_NF_SECURITY=m CONFIG_IP_NF_ARPTABLES=m CONFIG_IP_NF_ARPFILTER=m CONFIG_IP_NF_ARP_MANGLE=m; do
+ grep -Fxq "$option" .config || { echo "Missing full-kernel option: $option" >&2; exit 1; }
+done
 cp .config "$out/config"
 make -j8 LOCALVERSION= Image modules > "$out/build.log" 2>&1
 make -s LOCALVERSION= INSTALL_MOD_PATH=/build/modstage INSTALL_MOD_STRIP=1 modules_install >> "$out/build.log" 2>&1
 [ "$(make -s LOCALVERSION= kernelrelease)" = "$version" ]
 cp "$plan" "$out/kernel-release.json"
 bash "$(dirname -- "${BASH_SOURCE[0]}")/network-repair/assert-modules.sh" "/build/modstage/lib/modules/$version"
-# Rebuild only the four helpers used by the working rear camera and manual focus.
+for module in arp_tables arptable_filter arpt_mangle iptable_security ip6table_security xt_MASQUERADE; do
+ [[ $(find "/build/modstage/lib/modules/$version/kernel" -name "$module.ko" | wc -l) -eq 1 ]] || exit 1
+done
+# Rebuild the four helpers used by the working rear camera and manual focus.
 mkdir -p /build/rear-helpers
 cp "$project"/offline-prep/camera-live-overlay/{tb_camera_overlay.c,tb_camera_alias.c,tb_camss_alias.c,tb_focus_manual.c} /build/rear-helpers/
 printf 'obj-m += tb_camera_overlay.o tb_camera_alias.o tb_camss_alias.o tb_focus_manual.o\n' > /build/rear-helpers/Makefile

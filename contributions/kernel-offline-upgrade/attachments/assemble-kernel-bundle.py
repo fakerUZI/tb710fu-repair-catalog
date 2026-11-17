@@ -69,7 +69,9 @@ def check_release(spec, module, action, current=None):
     require(module.RELEASE_PLAN == plan and module.VERSION == plan['target_version'],
             '升级器的版本策略与分片清单不符。')
     if action in ('install', 'check'):
-        policy.validate(plan, platform.release() if current is None else current)
+        current = platform.release() if current is None else current
+        if action != 'check' or current != plan['target_version']:
+            policy.validate(plan, current)
 
 
 def environment():
@@ -96,7 +98,8 @@ def main():
     policy_module().validate(plan)
     if args.action in ('install', 'check'):
         environment()
-        policy_module().validate(plan, platform.release())
+        if args.action != 'check' or platform.release() != plan['target_version']:
+            policy_module().validate(plan, platform.release())
     if spec.get('payload_status') == 'not-built':
         require(spec['parts'] == [], '未构建状态不能包含分片。')
         if args.action == 'check':
