@@ -1,0 +1,14 @@
+{
+  "inspected_on": "2026-11-17",
+  "running_kernel": "7.2.6-tb710fu-20261118",
+  "source_origin": "read-only current local kernel build volume; no retired front-camera sources",
+  "sha256": {
+    "drivers/usb/typec/ucsi/ucsi.c": "dd0cea744ad312a2ef34aca58e11d881971eb4a1572a842bab47b999621e031e",
+    "drivers/usb/typec/ucsi/ucsi_glink.c": "718318e9094dcc0f335a18e265d71b5afa043508828db685c8038de501a0e5b1",
+    "drivers/usb/dwc3/drd.c": "b383bd680b2808852b2236fac710fc7a5d61117a80d99e902e402a54ae5978e0",
+    "drivers/usb/typec/ucsi/trace.h": "e43ebf43ce96fd687f94afbf83531964da7c2ffff03a201f9a58eb1c07f51de1"
+  },
+  "issue_19_reproduced": false,
+  "target_ssd_available": false,
+  "candidate_changes_kernel": false
+}

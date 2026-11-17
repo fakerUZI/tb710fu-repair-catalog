@@ -1,0 +1,35 @@
+{
+  "id": "usb-c-ucsi-host-candidate",
+  "title": "USB-C UCSI 协商 host 候选与测试（issue #19，待实测）",
+  "description": "Issue #19 的 UCSI 协商 host 候选与测试包，待审核、待目标 SSD 实机验证，不宣称已解决 C-C 枚举失败。适用 TB710FU / Ubuntu 26.04 arm64 / 7.2.6-tb710fu 系列。默认只读 check；watch/trace 采集脱敏时间线，host（apply）在安全前置条件通过且 partner 出现后，最多通过 Type-C data_role 请求一次 host，保持 UCSI 绑定。无 partner 或无稳定下游枚举返回未解决。依赖 Bash、Python3，host 另需 systemd/root，trace 另需 tracefs。见附件的完整测试、风险与恢复说明。18 项隔离测试通过；目标 SSD 无法现场测试，不加入正式清单，保留 issue 开启。",
+  "risk": "host/apply 会请求 USB 数据角色切换，可中断救援网络、外设和存储。先卸载拔出所有 USB 存储，在平板本地或独立 Wi-Fi 会话断开 PC，停止 tb-ubuntu-usb-ncm.service 并释放 gadget UDC 后再测。脚本不自动停止服务或解绑 gadget/UCSI，不修改电源角色、boot/DT/固件/分区。退出后不会自动切回 device，以免突然断开已挂载 SSD；先安全卸载并拔出 SSD，再在本机确认 UCSI 绑定、恢复原 NCM 服务并连接 PC。trace 只修改自己的独立实例，正常退出和中断时清理。候选未获目标 SSD 实机验证，具体恢复步骤及硬杀清理见 README.md。",
+  "device": "TB710FU",
+  "status": "community-review",
+  "script": {
+    "path": "contributions/usb-c-ucsi-host-candidate/script.sh",
+    "sha256": "02879ce34d29cfa0c4712bd1a7691541b6b3489a4d7d41429434d0c8e4d98eb4",
+    "requires_admin": true
+  },
+  "attachments": [
+    {
+      "path": "contributions/usb-c-ucsi-host-candidate/attachments/usb-c-test.py",
+      "sha256": "a256b1e0d9f34d0b26c7220e917360c46deb25b3a2fcd297208a44e6278346e4"
+    },
+    {
+      "path": "contributions/usb-c-ucsi-host-candidate/attachments/test-usb-c.py",
+      "sha256": "dc526d066968d63c215966f0322ac915d939a90aeaf8117691c4eae3204f9786"
+    },
+    {
+      "path": "contributions/usb-c-ucsi-host-candidate/attachments/README.md",
+      "sha256": "3ecf6909a9bdaa509ffbfc29fe2f19ee14a1aa44e37c2151fac327e34406bac3"
+    },
+    {
+      "path": "contributions/usb-c-ucsi-host-candidate/attachments/VALIDATION.md",
+      "sha256": "488b86da2e0385074407dbd764de7b6c1d646149eec71d08cb53b0b5ce67e8b8"
+    },
+    {
+      "path": "contributions/usb-c-ucsi-host-candidate/attachments/source-evidence.json",
+      "sha256": "aebb852451b15913ec1fa8893d25c4d6ebabac290e01dad18720a6578cb76634"
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+host/apply 会请求 USB 数据角色切换，可中断救援网络、外设和存储。先卸载拔出所有 USB 存储，在平板本地或独立 Wi-Fi 会话断开 PC，停止 tb-ubuntu-usb-ncm.service 并释放 gadget UDC 后再测。脚本不自动停止服务或解绑 gadget/UCSI，不修改电源角色、boot/DT/固件/分区。退出后不会自动切回 device，以免突然断开已挂载 SSD；先安全卸载并拔出 SSD，再在本机确认 UCSI 绑定、恢复原 NCM 服务并连接 PC。trace 只修改自己的独立实例，正常退出和中断时清理。候选未获目标 SSD 实机验证，具体恢复步骤及硬杀清理见 README.md。

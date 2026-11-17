@@ -1,0 +1,1 @@
+Issue #19 的 UCSI 协商 host 候选与测试包，待审核、待目标 SSD 实机验证，不宣称已解决 C-C 枚举失败。适用 TB710FU / Ubuntu 26.04 arm64 / 7.2.6-tb710fu 系列。默认只读 check；watch/trace 采集脱敏时间线，host（apply）在安全前置条件通过且 partner 出现后，最多通过 Type-C data_role 请求一次 host，保持 UCSI 绑定。无 partner 或无稳定下游枚举返回未解决。依赖 Bash、Python3，host 另需 systemd/root，trace 另需 tracefs。见附件的完整测试、风险与恢复说明。18 项隔离测试通过；目标 SSD 无法现场测试，不加入正式清单，保留 issue 开启。
