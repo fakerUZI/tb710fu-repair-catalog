@@ -43,3 +43,9 @@
 [内核日期命名与升级版本检查](contributions/kernel-offline-upgrade/attachments/KERNEL-VERSIONING.md)：本次接受无日期旧内核，后续要求目标日期严格晚于设备当前日期版本。当前平板已运行 `7.2.6-tb710fu-20261117`；后续目标日期必须严格晚于 20261117。
 
 当前日期内核入口另提供[手电筒与三路相机补充](contributions/kernel-offline-upgrade/attachments/flash-camera/README.md)：`camera-install` 包含主摄自动对焦、前摄/微距切换与匹配的 libcamera 增益修复；`flash-install` 提供硬件/应用部分。均不刷设备分区，完整内核升级仍只使用第一项入口。
+
+## USB-C 直连 SSD 测试候选（目标 SSD 尚未实测）
+
+[Issue #19 的测试说明与恢复步骤](contributions/usb-c-ucsi-host-candidate/attachments/README.md)。提供保持 UCSI 绑定的单次 host 协商候选、只读采样和可并行的独立 UCSI tracing。已复核软件逻辑；macOS 与 Linux ARM64 隔离环境各 32 项测试、平板只读检查通过。**目标 SSD 尚未实测，真实 host/trace 管理员路径也未验证，不宣称故障已修复。**
+
+[预发布测试包 v20261117.1](https://github.com/fakerUZI/tb710fu-repair-catalog/releases/tag/usb-c-ucsi-host-test-20261117.1)、[仓库内可导入包](packages/usb-c-ucsi-host-candidate-20261117.tbfix)及[SHA-256](packages/usb-c-ucsi-host-candidate-20261117.tbfix.sha256)。本候选不加入正式 `catalog.json`，现有六个条目不变；issue #19 保持开启，待目标硬件验收。

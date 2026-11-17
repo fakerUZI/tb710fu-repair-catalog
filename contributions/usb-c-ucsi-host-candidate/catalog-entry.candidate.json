@@ -1,0 +1,35 @@
+{
+  "id": "usb-c-ucsi-host-candidate",
+  "title": "USB-C UCSI host 测试候选（目标 SSD 尚未实测）",
+  "description": "Issue #19 的 UCSI 协商 host 测试候选，目标 SSD 尚未实测，不宣称已解决 C-C 枚举失败。适用 TB710FU / Ubuntu 26.04 arm64 / 7.2.6-tb710fu 系列。默认只读 check；watch/trace 采集脱敏时间线，host（apply）从未连接状态开始，待 partner 出现并再次通过前置检查后，最多通过 Type-C data_role 请求一次 host，保持 UCSI 绑定。默认要求目标 152d:0562 的同一次枚举和 host 持续至少三秒，缺失或反复重枚举返回未解决；容量、挂载与读文件仍需人工核验。依赖 Bash、Python3，host 另需 systemd/root，trace 另需 tracefs，可与 host 并行。32 项隔离测试通过；未执行真实 host/trace 管理员路径，不加入正式清单，保留 issue #19 开启。完整风险、验证边界与恢复见附件。",
+  "risk": "host/apply 会请求 USB 数据角色切换，可中断救援网络、外设和存储。先卸载拔出所有 USB 存储，在平板本地或独立 Wi-Fi 会话断开 PC，停止 tb-ubuntu-usb-ncm.service 并释放 gadget UDC 后再测。脚本不自动停止服务或解绑 gadget/UCSI，不修改电源角色、boot/DT/固件/分区。退出后不会自动切回 device，以免突然断开已挂载 SSD；先安全卸载并拔出 SSD，再在本机确认 UCSI 绑定、恢复原 NCM 服务并连接 PC。trace 只修改自己的独立实例，正常退出和中断时清理。候选未获目标 SSD 实机验证，具体恢复步骤及硬杀清理见 README.md。",
+  "device": "TB710FU",
+  "status": "community-review",
+  "script": {
+    "path": "contributions/usb-c-ucsi-host-candidate/script.sh",
+    "sha256": "02879ce34d29cfa0c4712bd1a7691541b6b3489a4d7d41429434d0c8e4d98eb4",
+    "requires_admin": true
+  },
+  "attachments": [
+    {
+      "path": "contributions/usb-c-ucsi-host-candidate/attachments/usb-c-test.py",
+      "sha256": "d2c850e4cd6584ccbb93bb00273b891a5820ccad90d21e2e690161bc476dc857"
+    },
+    {
+      "path": "contributions/usb-c-ucsi-host-candidate/attachments/test-usb-c.py",
+      "sha256": "e14f7bea70f8cbe15df9eca83ba8d329b83eb42d3a2834b9411a075d21de140e"
+    },
+    {
+      "path": "contributions/usb-c-ucsi-host-candidate/attachments/README.md",
+      "sha256": "27dd23e4924ef58956591bc870b28244f4d931e0c3c2452fdde056b6e4e5b8fa"
+    },
+    {
+      "path": "contributions/usb-c-ucsi-host-candidate/attachments/VALIDATION.md",
+      "sha256": "15b595cf0d2b228963f190bbb840f283f9a1c0f0275cf21553dc7f3a228d8ad3"
+    },
+    {
+      "path": "contributions/usb-c-ucsi-host-candidate/attachments/source-evidence.json",
+      "sha256": "aebb852451b15913ec1fa8893d25c4d6ebabac290e01dad18720a6578cb76634"
+    }
+  ]
+}
