@@ -559,6 +559,29 @@
           "sha256": "11da1642d1c67d5d5ef82f4e814378e32ea79d38cb2c6e89288dcb261c0ce6a0"
         }
       ]
+    },
+    {
+      "id": "droidloom-r42-game-compat",
+      "title": "安装或升级 Droidloom 42 并修复《重返未来：1999》启动",
+      "description": "适用于 TB710FU Ubuntu 26.04 ARM64 / Wayland。未安装时下载并校验官方 ARM64 运行时和镜像，release 28 可升级，已装 release 42 可应用兼容修复。修复旧 LuaJIT 地址范围引起的闪退，并验证 Android 虚拟 Wi-Fi 联网。不修改或安装游戏 APK。实机手动部署已通过资源更新检查并到下载确认页；投稿脚本实机仅做了只读预检。详见附件 README。",
+      "device": "TB710FU",
+      "status": "community-review",
+      "risk": "需要管理员权限。执行会关闭当前安卓窗口并可能下载约 980 MB。升级 release 28 使用新 Android 目录，旧数据保留。会修改 Droidloom 的服务设置、媒体模块和 Android 联网校验端点。支持 TB710FU_FIX_ACTION=check、apply 和 rollback。回退详情见附件 README。",
+      "script": {
+        "path": "contributions/droidloom-r42-game-compat/script.sh",
+        "sha256": "d11a389898cc1d5f4d54934670b0f37aeb4dc85ae22b575a02feaec4a98ba44d",
+        "requires_admin": true
+      },
+      "attachments": [
+        {
+          "path": "contributions/droidloom-r42-game-compat/attachments/repair.py",
+          "sha256": "c00a84b5f06661c1b68af94930fad7cd81609816b8e337c7a4c277662daa3a71"
+        },
+        {
+          "path": "contributions/droidloom-r42-game-compat/attachments/README.md",
+          "sha256": "3f409fa19e94a7f7d3e737931683c1f463fd576dedcae7d7bd82915dff0227b2"
+        }
+      ]
     }
   ]
 }
