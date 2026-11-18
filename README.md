@@ -33,10 +33,11 @@
 | --- | --- |
 | `microphone-snap1`（原第 7 项） | 当前日期版 boot 已含 WCD/SoundWire DAI 1 采集链路；不再提供旧 snap1 镜像刷写入口。 |
 | `ath12k-stats-timeout-recovery`（原第 6 项） | 当前内核已含对应 vdev 计数补丁；移除旧版临时驱动重载入口，避免与正式内核修复重复。短期实测不等于全部 Wi-Fi 故障已解决。 |
+| `power-key-single-press` | 20261118 已包含单次按键亮屏和短按锁屏，沿用 ROM 中启用的电源键用户服务。原独立入口已退役，已安装独立修复的用户仍可从本机用 `tb-power-key-off` 回退对应的用户级安装。 |
 
 内核升级会保留现有麦克风 ALSA 初始化服务及 WirePlumber 路由，不新建这些用户态文件；不能把“镜像已含采集链路”理解为在任意原始系统上自动完成全部音频配置。
 
-目录现有 6 项，顺序为：日期内核升级、中文候选区与退格、电源键、窗口触控、DroidLoom 按需启动、DroidLoom 扬声器音频。后五项可独立应用，继续保留。内核包也包含已配置的电源键服务的短按锁屏调整。
+目录现有五项。第一项是 20261118 内核升级，其后为中文候选区与退格、窗口触控、DroidLoom 按需启动和 DroidLoom 扬声器音频。
 
 已有相机和手电筒补充会随内核升级迁移到 20261118。首次安装补充仍使用第一项的 `camera-install` 或 `flash-install`。新版相机保留全分辨率，以连续预览和后台编码缩短拍照等待。[相机与手电筒](contributions/kernel-offline-upgrade/attachments/flash-camera/README.md)
 
@@ -46,4 +47,4 @@
 
 [Issue #19 的测试说明与恢复步骤](contributions/usb-c-ucsi-host-candidate/attachments/README.md)。提供保持 UCSI 绑定的单次 host 协商候选、只读采样和可并行的独立 UCSI tracing。已复核软件逻辑；macOS 与 Linux ARM64 隔离环境各 32 项测试、平板只读检查通过。**目标 SSD 尚未实测，真实 host/trace 管理员路径也未验证，不宣称故障已修复。**
 
-[预发布测试包 v20261117.1](https://github.com/fakerUZI/tb710fu-repair-catalog/releases/tag/usb-c-ucsi-host-test-20261117.1)、[仓库内可导入包](packages/usb-c-ucsi-host-candidate-20261117.tbfix)及[SHA-256](packages/usb-c-ucsi-host-candidate-20261117.tbfix.sha256)。本候选不加入正式 `catalog.json`，现有六个条目不变；issue #19 保持开启，待目标硬件验收。
+[预发布测试包 v20261117.1](https://github.com/fakerUZI/tb710fu-repair-catalog/releases/tag/usb-c-ucsi-host-test-20261117.1)、[仓库内可导入包](packages/usb-c-ucsi-host-candidate-20261117.tbfix)及[SHA-256](packages/usb-c-ucsi-host-candidate-20261117.tbfix.sha256)。该候选通过预发布测试包提供，issue #19 保持开启，待目标硬件验收。

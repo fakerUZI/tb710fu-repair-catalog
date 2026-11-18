@@ -10,7 +10,6 @@ import unittest
 from unittest.mock import patch
 
 ROOT=Path(__file__).resolve().parents[1]
-POWER=ROOT/'contributions/power-key-single-press/attachments'
 DROID=ROOT/'contributions/droidloom-on-demand-launch/attachments'
 
 def module(path,name):
@@ -31,71 +30,6 @@ class Service:
         if op==self.fail:rc=1
         if rc and check:raise subprocess.CalledProcessError(rc,args,out)
         return subprocess.CompletedProcess(args,rc,out,'')
-
-class Power(unittest.TestCase):
-    def setUp(self):
-        self.tmp=tempfile.TemporaryDirectory();self.root=Path(self.tmp.name);self.m=module(POWER/'install-power-key.py','power')
-        self.source=self.root/'source';shutil.copytree(POWER,self.source)
-        self.hardware=self.root/'sys';dpms=self.hardware/'drm/card1-DSI-1/dpms';dpms.parent.mkdir(parents=True);dpms.write_text('On\n')
-        self.x=self.m.Installer(home=self.root/'user',source=self.source,state=self.root/'state',hardware=self.hardware)
-        self.service=Service(str(self.x.files[self.m.UNIT][0]));self.x.ctl=self.service
-        self.uid=patch.object(self.m.os,'geteuid',return_value=1000);self.uid.start()
-    def tearDown(self):self.uid.stop();self.tmp.cleanup()
-    def seed(self):
-        for name,(p,_) in self.x.files.items():p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(('original-'+name).encode());p.chmod(0o640)
-        self.service.active=True;self.service.enabled='enabled-runtime'
-    def test_check_does_not_create_user_files_or_change_service(self):
-        self.x.report();self.assertFalse(self.x.home.exists());self.assertFalse(self.x.state.exists());self.assertTrue(all(x[0] in ('show-environment','show','is-active') for x in self.service.calls))
-    def test_missing_hardware_stops_before_writes(self):
-        shutil.rmtree(self.hardware)
-        with self.assertRaises(ValueError):self.x.apply()
-        self.assertFalse(self.x.home.exists());self.assertFalse(self.x.state.exists())
-    def test_missing_attachment_stops_before_writes(self):
-        (self.source/'tb-power-key.py').unlink()
-        with self.assertRaises(ValueError):self.x.apply()
-        self.assertFalse(self.x.home.exists())
-    def test_fresh_apply_restart_and_rollback(self):
-        self.x.apply();self.assertIn(('restart',self.m.UNIT),self.service.calls);self.x.rollback()
-        self.assertFalse(any(p.exists() for p,_ in self.x.files.values()));self.assertFalse(self.service.active);self.assertEqual(self.service.enabled,'')
-    def test_custom_files_permissions_and_service_state_restored(self):
-        self.seed();self.x.apply();self.x.rollback()
-        for name,(p,_) in self.x.files.items():self.assertEqual(p.read_bytes(),('original-'+name).encode());self.assertEqual(p.stat().st_mode&0o777,0o640)
-        self.assertTrue(self.service.active);self.assertEqual(self.service.enabled,'enabled-runtime')
-    def test_reapply_preserves_original_snapshot(self):
-        self.seed();self.x.apply();before=(self.x.state/'tb-power-key.py.before').read_bytes();self.x.apply();self.assertEqual(before,(self.x.state/'tb-power-key.py.before').read_bytes());self.x.rollback();self.assertEqual(self.x.files['tb-power-key.py'][0].read_bytes(),before)
-    def test_changed_file_blocks_apply_and_rollback_without_service_mutation(self):
-        self.x.apply();p=self.x.files['tb-power-key.py'][0];p.write_text('user change');calls=len(self.service.calls)
-        for op in [self.x.apply,self.x.rollback]:
-            with self.assertRaises(ValueError):op()
-        self.assertEqual(p.read_text(),'user change');self.assertFalse(any(x[0] in ('stop','disable','restart') for x in self.service.calls[calls:]))
-    def test_corrupt_backup_blocks_rollback_before_mutation(self):
-        self.seed();self.x.apply();(self.x.state/'tb-power-key.py.before').write_text('bad');before=len(self.service.calls)
-        with self.assertRaises(ValueError):self.x.rollback()
-        self.assertEqual(len(self.service.calls),before)
-    def test_interrupted_first_install_can_restore_originals(self):
-        self.seed();self.service.fail='restart'
-        with self.assertRaises(subprocess.CalledProcessError):self.x.apply()
-        self.service.fail=None;self.x.rollback();self.assertEqual(self.x.files['tb-power-key.py'][0].read_text(),'original-tb-power-key.py')
-    def test_interrupted_upgrade_accepts_prior_package_files(self):
-        self.seed();self.x.apply();(self.source/'tb-power-key.py').write_text('upgraded\n')
-        real=self.m.atomic;count=0
-        def interrupted(p,data,mode=0o600):
-            nonlocal count
-            if p in [v[0] for v in self.x.files.values()]:
-                count+=1
-                if count==2:raise OSError('interrupted')
-            return real(p,data,mode)
-        with patch.object(self.m,'atomic',side_effect=interrupted):
-            with self.assertRaises(OSError):self.x.apply()
-        self.x.rollback();self.assertEqual(self.x.files['tb-power-key.py'][0].read_text(),'original-tb-power-key.py')
-    def test_symlink_target_rejected(self):
-        target=self.x.files['tb-power-key.py'][0];target.parent.mkdir(parents=True);outside=self.root/'outside';outside.write_text('private');target.symlink_to(outside)
-        with self.assertRaises(ValueError):self.x.apply()
-        self.assertEqual(outside.read_text(),'private')
-    def test_legacy_rollback_does_not_guess_or_delete(self):
-        self.seed()
-        with self.assertRaises(ValueError):self.x.rollback()
-        self.assertTrue(all(p.exists() for p,_ in self.x.files.values()))
 
 class Droid(unittest.TestCase):
     def setUp(self):

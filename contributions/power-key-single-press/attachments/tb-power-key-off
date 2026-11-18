@@ -1,3 +1,0 @@
-#!/bin/sh
-set -eu
-exec /usr/bin/python3 "$HOME/.local/lib/tb710fu-power-key/install-power-key.py" rollback
