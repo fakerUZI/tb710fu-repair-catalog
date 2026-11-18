@@ -48,3 +48,7 @@
 [Issue #19 的测试说明与恢复步骤](contributions/usb-c-ucsi-host-candidate/attachments/README.md)。提供保持 UCSI 绑定的单次 host 协商候选、只读采样和可并行的独立 UCSI tracing。已复核软件逻辑；macOS 与 Linux ARM64 隔离环境各 32 项测试、平板只读检查通过。**目标 SSD 尚未实测，真实 host/trace 管理员路径也未验证，不宣称故障已修复。**
 
 [预发布测试包 v20261117.1](https://github.com/fakerUZI/tb710fu-repair-catalog/releases/tag/usb-c-ucsi-host-test-20261117.1)、[仓库内可导入包](packages/usb-c-ucsi-host-candidate-20261117.tbfix)及[SHA-256](packages/usb-c-ucsi-host-candidate-20261117.tbfix.sha256)。该候选通过预发布测试包提供，issue #19 保持开启，待目标硬件验收。
+
+## TB710FU 修复助手
+
+Ubuntu 安装包 [下载 0.10.8（.deb）](packages/repair-assistant/tb710fu-repair-assistant_0.10.8_all.deb)。安装后从顶部“应用更新”检查新版。安装包的 SHA-256 和文件大小见[更新清单](packages/repair-assistant/latest.json)。
