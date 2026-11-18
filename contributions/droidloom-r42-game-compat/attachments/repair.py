@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import pwd
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -96,6 +97,19 @@ def require_desktop():
     if not wayland or not (runtime / wayland).is_socket():
         raise RuntimeError("需要当前用户已登录 Wayland 桌面")
     return uid, command
+
+
+def check_host_config():
+    mapping = [line.split() for line in Path("/proc/self/uid_map").read_text().splitlines()]
+    if mapping != [["0", "0", "4294967295"]]:
+        raise RuntimeError("需要通过宿主 Ubuntu 的 sudo 或 pkexec 运行，当前 root 位于用户命名空间")
+    for path in (SPEC.parent, SPEC):
+        if not exists(path):
+            continue
+        info = path.lstat()
+        expected_type = stat.S_ISDIR if path == SPEC.parent else stat.S_ISREG
+        if not expected_type(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o022:
+            raise RuntimeError(f"宿主配置权限异常：{path}。请核对其来源、属主和权限，保留原文件。")
 
 
 def digest(path):
@@ -219,6 +233,20 @@ def snapshot(paths, state):
         raise
 
 
+def archive_rolled_back(uid):
+    if not exists(BACKUP):
+        return
+    info = BACKUP.lstat()
+    receipt = BACKUP / "rolled-back.json"
+    if (not stat.S_ISDIR(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o077
+            or STATE.exists() or not receipt.is_file() or receipt.is_symlink()
+            or (read(receipt) or {}).get("uid") != uid):
+        raise RuntimeError(f"发现未确认的本机备份，保留原目录：{BACKUP}")
+    archived = BACKUP.with_name(f"{BACKUP.name}-rolled-back-{time.time_ns()}")
+    BACKUP.rename(archived)
+    print(f"上次已回退的快照保留于 {archived}", flush=True)
+
+
 def unit_running(*command):
     return run(*command, "is-active", "--quiet", "droidloom.service",
                check=False).returncode == 0
@@ -267,14 +295,23 @@ def wifi_validated(android):
 
 
 def connect_wifi(android):
-    if not wifi_validated(android):
-        android_call(android, "cmd", "wifi", "connect-network", "Droidloom", "open")
-    for _ in range(25):
-        if wifi_validated(android):
-            print("Droidloom 虚拟 Wi-Fi 已连接并通过联网校验", flush=True)
-            return
-        time.sleep(2)
-    raise RuntimeError("Droidloom 虚拟 Wi-Fi 未通过真实联网校验")
+    last_error = ""
+    for attempt in range(5):
+        if not wifi_validated(android):
+            if attempt == 0:
+                subprocess.run([*android, "/system/bin/cmd", "wifi", "set-wifi-enabled", "enabled"],
+                               check=False, capture_output=True, timeout=15)
+            result = subprocess.run([*android, "/system/bin/cmd", "wifi", "connect-network", "Droidloom", "open"],
+                                    check=False, capture_output=True, text=True, timeout=15)
+            if result.returncode:
+                details = (result.stderr.strip() or result.stdout.strip())[:500]
+                last_error = f"（连接命令退出码 {result.returncode} {details}）"
+        for _ in range(5):
+            if wifi_validated(android):
+                print("Droidloom 虚拟 Wi-Fi 已连接并通过联网校验", flush=True)
+                return
+            time.sleep(2)
+    raise RuntimeError("Droidloom 虚拟 Wi-Fi 未通过真实联网校验" + last_error)
 
 
 def configure_network(uid, state):
@@ -338,8 +375,7 @@ def apply(uid, user):
         run(*user, CTL, "start")
         configure_network(uid, state)
         return
-    if BACKUP.exists():
-        raise RuntimeError(f"请先为保留的旧备份另选保存位置：{BACKUP}")
+    archive_rolled_back(uid)
     if release != 42 and run("dpkg-query", "-S", CTL, capture=True,
                              check=False).returncode == 0:
         raise RuntimeError("现有 Droidloom 由 dpkg 管理，请使用原软件包管理方式")
@@ -429,6 +465,7 @@ def main():
         return
     if os.geteuid() != 0:
         raise RuntimeError("安装和回退需要管理员权限")
+    check_host_config()
     uid, user = require_desktop()
     with open("/run/lock/tb710fu-droidloom-r42-repair.lock", "a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)

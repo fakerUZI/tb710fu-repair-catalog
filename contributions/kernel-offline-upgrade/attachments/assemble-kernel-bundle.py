@@ -87,6 +87,8 @@ def main():
     parser.add_argument('--action', choices=['install', 'check', 'validate', 'status', 'finish', 'rollback'], default='check')
     parser.add_argument('--user', default='ubuntu')
     args = parser.parse_args()
+    # The assistant owns and removes the staging directory as a regular user.
+    sys.dont_write_bytecode = True
     require(sys.version_info >= (3, 11), '需要 Python 3.11 或更新版本。')
     require(args.action in ('validate', 'check') or os.geteuid() == 0, '需要管理员权限。')
     os.umask(0o077)
@@ -138,7 +140,7 @@ def main():
         if args.action == 'validate':
             print('PASS: 分片、压缩包、升级器、完整载荷及模块归档校验通过；未执行设备操作。')
             return 0
-        result = subprocess.run([sys.executable, str(installer), '--' + args.action, '--user', args.user])
+        result = subprocess.run([sys.executable, "-B", str(installer), '--' + args.action, '--user', args.user])
         return result.returncode
 
 

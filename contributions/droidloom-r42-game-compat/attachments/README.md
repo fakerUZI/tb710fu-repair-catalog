@@ -6,6 +6,8 @@
 
 - 《重返未来：1999》4.1.0 同意协议后闪退。游戏内置 LuaJIT 先报 `bad light userdata pointer` 并退出。Droidloom 的 systemd 服务通过 `setarch --addr-compat-layout` 使用兼容内存布局，应用的默认映射进入旧版 LuaJIT 可接受的地址范围。Ubuntu 的全局 ASLR 保持启用。
 - Android 虚拟 Wi-Fi 曾因联网校验失败被永久禁用自动重连。修复在原设置为空时为 Android 配置返回 HTTP 204 的小米联网校验端点，再恢复连接 `Droidloom`。新端点保留真实联网校验。
+- Android 报告启动完成后，虚拟 Wi-Fi 可能尚未就绪。连接命令失败时会等待并重试，以 Android 的实际联网校验为准。最终失败时保留命令退出码和诊断信息，按原流程回退。
+- 应用前检查宿主机的 root 身份，以及 `/etc/droidloom` 和现有 `cell.json` 的属主和权限。若目录被沙箱创建成 `nobody` 所有，先确认来源并保留内容，再由宿主管理员修复权限。
 - 如果当前内核把 DMA heap 编成模块，脚本按需加载 `system_heap`，并登记在系统启动时加载。该设备供 Android 媒体解码使用。
 
 ## 执行方法
@@ -29,7 +31,7 @@ droidloomctl launch com.shenlan.m.reverse1999 \
 
 ## 风险与回退
 
-需要管理员权限和已登录的 Wayland 桌面。运行时、Android 镜像、Droidloom systemd 配置及 Android 的联网校验设置可能变更。固件、GPT 和 Android APK 无写入。应用前请保存 Droidloom 内工作并为下载、解包和本机备份预留约 10 GB。新目录需要重新安装安卓应用，旧版存档随旧数据留在本机。安装失败会尝试恢复快照，人工回退可用上述 `rollback`。快照保存在 `/var/backups/tb710fu-droidloom-r42-repair`，完成回退后仍会保留。再次安装前可将已结束的快照移到其他本地备份位置。回退保留下载缓存、新旧 Android 数据和 Ubuntu 依赖；已加载的内核模块随正常系统重启重新读取模块配置。回退联网校验端点时，虚拟 Wi-Fi 的保存记录仍保留。
+需要管理员权限和已登录的 Wayland 桌面。运行时、Android 镜像、Droidloom systemd 配置及 Android 的联网校验设置可能变更。固件、GPT 和 Android APK 无写入。应用前请保存 Droidloom 内工作并为下载、解包和本机备份预留约 10 GB。新目录需要重新安装安卓应用，旧版存档随旧数据留在本机。安装失败会尝试恢复快照，人工回退可用上述 `rollback`。快照保存在 `/var/backups/tb710fu-droidloom-r42-repair`。再次应用时，同一用户已完成回退的快照会转存到相邻的带时间戳目录。回退保留下载缓存、新旧 Android 数据和 Ubuntu 依赖；已加载的内核模块随正常系统重启重新读取模块配置。回退联网校验端点时，虚拟 Wi-Fi 的保存记录仍保留。
 
 如果未来通过其他渠道升级了 Droidloom，先核对本条目的回退范围。脚本拒绝覆盖未知安装以及向已替换的运行时回退。
 

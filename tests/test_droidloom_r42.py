@@ -69,6 +69,25 @@ class DroidloomRepairTests(unittest.TestCase):
             self.assertEqual(data.read_text(), "untouched")
             self.assertTrue((backup / "rolled-back.json").is_file())
 
+    def test_virtual_wifi_retries_255_and_waits_for_validation(self):
+        probes = [False] * 7 + [True]
+        responses = [subprocess.CompletedProcess([], 0, ""),
+                     subprocess.CompletedProcess([], 255, "", ""),
+                     subprocess.CompletedProcess([], 0, "", "")]
+        with patch.object(repair, "wifi_validated", side_effect=probes), \
+                patch.object(repair.subprocess, "run", side_effect=responses) as command, \
+                patch.object(repair.time, "sleep"):
+            repair.connect_wifi(("nsenter",))
+        self.assertEqual(command.call_count, 3)
+        self.assertEqual(command.call_args.args[0][-4:], ["wifi", "connect-network", "Droidloom", "open"])
+
+    def test_virtual_wifi_still_requires_validation(self):
+        failure = subprocess.CompletedProcess([], 255, "", "Wi-Fi unavailable")
+        with patch.object(repair, "wifi_validated", return_value=False), \
+                patch.object(repair.subprocess, "run", return_value=failure), \
+                patch.object(repair.time, "sleep"):
+            with self.assertRaisesRegex(RuntimeError, "255 Wi-Fi unavailable"):
+                repair.connect_wifi(("nsenter",))
 
 if __name__ == "__main__":
     unittest.main()

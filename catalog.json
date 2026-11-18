@@ -10,7 +10,7 @@
       "risk": "install 写 boot_a 并更新 A 槽重试计数与启动成功状态，安装匹配模块及配套文件。掉电或存储故障可能导致无法启动。刷写前核对当前固件、GPT 和 boot，现场备份位于 /var/backups/tb710fu-kernel-upgrade/7.2.6-tb710fu-20261118/，包含本机身份，应留在本机。默认只读检查，安装后手动重启。\n\n回退使用同一入口的 rollback，再手动重启；不能启动时使用原机备份与外部恢复。相机/手电筒独立动作涉及用户态包、媒体和 LED 模块，适用范围、诊断和温升验证边界见附件。",
       "script": {
         "path": "contributions/kernel-offline-upgrade/script.sh",
-        "sha256": "d141bfe485119264630dcacccfb8fe0e80ddb1e0c65c73026bd96a41338f0630",
+        "sha256": "ff07da51a0eeb13372c3120d23a10029595204136264cfcb8132587f389eceb6",
         "requires_admin": true
       },
       "attachments": [
@@ -24,7 +24,7 @@
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/KERNEL-README.md",
-          "sha256": "70200fbf1d624162aaccca4c06c0743127f9be9f0bc2821f2f8592a0234cc4b4"
+          "sha256": "320a2459f818bbfbac0cb6c3b36b946626c7365983611202dc611e6b5befb747"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/KERNEL-VERSIONING.md",
@@ -36,7 +36,7 @@
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/assemble-kernel-bundle.py",
-          "sha256": "92e4febd45904904547a3589b675642a3bc352e1c0939ee38f7b50e86d03ea28"
+          "sha256": "d71a43496c4ab09a0c453979d6d0ab1d00905462f516bc1568076582b672749e"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/audit-public.py",
@@ -575,11 +575,11 @@
       "attachments": [
         {
           "path": "contributions/droidloom-r42-game-compat/attachments/repair.py",
-          "sha256": "c00a84b5f06661c1b68af94930fad7cd81609816b8e337c7a4c277662daa3a71"
+          "sha256": "194e45687e97627ab7571b7122381b85fb99a15f4c3a0934d6439e7121d841fb"
         },
         {
           "path": "contributions/droidloom-r42-game-compat/attachments/README.md",
-          "sha256": "3f409fa19e94a7f7d3e737931683c1f463fd576dedcae7d7bd82915dff0227b2"
+          "sha256": "cf6ecb6c41c25d0a99844cb18d8ea25deba15264d4eb22e96ee64e49829d43ba"
         }
       ]
     }

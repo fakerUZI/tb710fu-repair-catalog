@@ -6,7 +6,11 @@
 
 本版含 144Hz 与 DSI 启动初始化、触控亮屏恢复与充电状态同步，保留 20261117 的内部麦克风、AppArmor/Snap、网桥防火墙/NAT 与 ath12k 修复。默认 144Hz，120Hz 仍可选；开机屏幕初始化可能闪黑数次。随包更新已有电源键服务的短按锁屏流程，并补齐 dpkg 创建手册链接需要的目录。有已安装的相机/手电筒补充时，升级事务同时迁移配套模块和应用。新装补充继续显式使用第一项的 `camera-install` 或 `flash-install`。相机使用常驻全分辨率流和后台 JPEG 编码，前摄为原厂定焦。已启用私有前摄的设备须预先备好与新内核匹配的根目录侧模块。关机仅充电模式和 USB-C SSD 候选仍待各自硬件实测。
 
-修复助手只提供一个内核入口，位于目录第一项。默认 `check`，通过后选择 `install`；完成 boot_a 全量回读后手动重启。支持 `status`、`finish`、`rollback`。应用补充使用同一入口的 camera 或 flash 动作。Python 3.11 以上，需 systemd、gdisk、fdisk、util-linux、kmod，电量至少 30%，/var/tmp 至少 512 MiB 且根分区至少 1 GiB。
+修复助手只提供一个内核入口，位于目录第一项。助手以 `check` 执行只读检查。检查通过后，在终端对审核过的入口设置 `TB710FU_KERNEL_ACTION=install` 执行安装，完成 boot_a 全量回读后手动重启。支持 `status`、`finish`、`rollback`。应用补充使用同一入口的 camera 或 flash 动作。Python 3.11 以上，需 systemd、gdisk、fdisk、util-linux、kmod，电量至少 30%，/var/tmp 至少 512 MiB 且根分区至少 1 GiB。
+
+遇到固件指纹或后摄 overlay 不匹配时，请保留报错、原厂固件版本以及相关 SHA-256，供复核后添加完整的兼容基线。一次手工刷写后成功启动，仍需核验各分区及配套服务才能支持该基线。
+
+如果开机背光亮而画面黑，使用 `journalctl -b -u tb-panel-cycle.service` 和 `systemctl cat tb-panel-cycle.service` 核对开机服务。正式升级会安装按已连接的 DSI 接口动态查找 DRM 节点的脚本及 service 覆盖配置。看到旧脚本固定打开 `/dev/dri/card0` 时，先检查正式升级是否部署了 `90-dsi-card.conf`。注销后出现黑屏则需另取显示管理器与会话切换日志，开机服务只在显示管理器启动前运行。
 
 本机备份位于 `/var/backups/tb710fu-kernel-upgrade/7.2.6-tb710fu-20261118/`。备份含设备身份，留在本机。回退通过同一目录入口恢复备份文件和 boot 后手动重启。写入中掉电或无法启动时需使用外部救援和原机备份。
 
