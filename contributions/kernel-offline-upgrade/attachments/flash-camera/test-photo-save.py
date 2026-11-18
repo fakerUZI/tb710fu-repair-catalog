@@ -3,7 +3,7 @@ from pathlib import Path
 import gi
 gi.require_version('GdkPixbuf','2.0')
 from gi.repository import GdkPixbuf
-source=Path(sys.argv[1]) if len(sys.argv)>1 else Path(__file__).with_name('tb-rear-camera.py')
+source=Path(sys.argv[1]) if len(sys.argv)>1 else Path(__file__).with_name('tb-camera.py')
 spec=importlib.util.spec_from_file_location('rear_camera',source,loader=importlib.machinery.SourceFileLoader('rear_camera',str(source)));app=importlib.util.module_from_spec(spec);spec.loader.exec_module(app)
 def jpeg(color):
  p=GdkPixbuf.Pixbuf.new(GdkPixbuf.Colorspace.RGB,False,8,16,12);p.fill(color)
@@ -18,14 +18,14 @@ class Sample:
  def __init__(self,data):self.data=data
  def get_buffer(self):return Buffer(self.data)
 class Sink:
- def __init__(self):self.data=[black]+[red]*(app.PHOTO_WARMUP_FRAMES-2)+[blue];self.frames=0
+ def __init__(self):self.data=[black,blue];self.frames=0
  def emit(self,*args):self.frames+=1;return Sample(self.data.pop(0))
 class Pipeline:
  def __init__(self):self.sink=Sink()
  def get_by_name(self,name):assert name=='jpeg';return self.sink
 class Gst:SECOND=1000000000
 p=Pipeline();data=app.pull_ready_photo(Gst,p)
-assert data==blue and p.sink.frames==app.PHOTO_WARMUP_FRAMES,'Must discard startup frames even if second JPEG is structurally valid'
+assert data==blue and p.sink.frames==2,'Must ignore blank JPEG output; sensor warmup is handled before encoding'
 try:app.pull_ready_photo(Gst,p,timeout_seconds=0)
 except RuntimeError:pass
 else:raise AssertionError('Timeout must not return an empty image')
@@ -37,4 +37,4 @@ with tempfile.TemporaryDirectory() as folder:
  else:raise AssertionError('Wrong-size JPEG accepted')
  assert dest.read_bytes()==blue
  assert list(Path(folder).iterdir())==[dest]
-print('Startup black JPEG rejection, warm-up frame selection, timeout, dimensions, atomic save and private permissions passed')
+print('Blank JPEG rejection, timeout, dimensions, atomic save and private permissions passed')

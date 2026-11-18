@@ -1,11 +1,11 @@
 {
-  "boot_sha256": "8ef8203624371525150904700f7ffab7aec5f72e66a66cb62d74733f7603a4c9",
-  "config_sha256": "16eb9ee0e4f3037da4331cd83deda398f63278bb41979a1808e152ed2e96b933",
+  "boot_sha256": "d83ee187bce60b30c2f28c177b3ab158ea96e5688547e06d3dd4d7a7ed1d6e10",
+  "config_sha256": "2930add704f3c7fd10285916ed7a3256e0c8b7e9ca18f536813194a2cb557e1f",
   "files": {
-    "leds-qcom-flash.ko": "59162841490fab0ad78de83270de7123b31210d83309bd5b04ef40b218f79fc0",
+    "leds-qcom-flash.ko": "a73d59788553127cdf954d5e040f78302dd2a702443de228daa41a177797f9f5",
     "tb-flash.dtbo": "0b4491fda57f23d2668062911c0db073c589797e128b2a0b903f3e6757488635",
-    "tb_flash_overlay.ko": "b7a22014cbf2317e38cd341689da00e3e02959249f07445683ce5a6a70535143",
-    "v4l2-flash-led-class.ko": "10e619bfff8eaf4384ac5e0223afb91cb15eec1c31fa5e8b86aa7c1088009f6a"
+    "tb_flash_overlay.ko": "a770b3451a7d3490fab042317d3936ca877cbb5a11b723cc6aef5c88b7c80c20",
+    "v4l2-flash-led-class.ko": "25f450fad2fe215533b75591337154d8b4e5ff977fbc3f983104de9413a7b920"
   },
   "firmware": {
     "abl_a": "6a651633a08d1eef678c24de17ec36e249600589db4f9cf8cf3a770a9e015871",
@@ -24,154 +24,154 @@
       "lastlba": 1048570,
       "partitions": [
         {
-          "attrs": "GUID:50,54,60",
+          "attrs": "GUID:50,60",
           "name": "uefi_a",
           "size": 1280,
           "start": 6,
           "type": "400FFDCD-22E0-47E7-9A23-F16ED9382388"
         },
         {
-          "attrs": "GUID:50,54,60",
+          "attrs": "GUID:50,60",
           "name": "aop_a",
           "size": 128,
           "start": 1286,
           "type": "D69E90A5-4CAB-0071-F6DF-AB977F141A7F"
         },
         {
-          "attrs": "GUID:50,54,60",
+          "attrs": "GUID:50,60",
           "name": "aop_config_a",
           "size": 128,
           "start": 1414,
           "type": "3D12F234-C882-4B46-A20C-17D52C8FC03D"
         },
         {
-          "attrs": "GUID:50,54,60",
+          "attrs": "GUID:50,60",
           "name": "tz_a",
           "size": 1024,
           "start": 1542,
           "type": "A053AA7F-40B8-4B1C-BA08-2F68AC71A4F4"
         },
         {
-          "attrs": "GUID:50,54",
+          "attrs": "GUID:50",
           "name": "hyp_a",
           "size": 2048,
           "start": 2566,
           "type": "E1A6A689-0C8D-4CC6-B4E8-55A4320FBD8A"
         },
         {
-          "attrs": "GUID:50,54,60",
+          "attrs": "GUID:50,60",
           "name": "modem_a",
           "size": 89600,
           "start": 4614,
           "type": "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7"
         },
         {
-          "attrs": "GUID:50,54,60",
+          "attrs": "GUID:50,60",
           "name": "bluetooth_a",
           "size": 1024,
           "start": 94214,
           "type": "6CB747F1-C2EF-4092-ADD0-CA39F79C7AF4"
         },
         {
-          "attrs": "GUID:50,54,60",
+          "attrs": "GUID:50,60",
           "name": "abl_a",
           "size": 256,
           "start": 95238,
           "type": "BD6928A1-4CE0-A038-4F3A-1495E3EDDFFB"
         },
         {
-          "attrs": "GUID:50,54,60",
+          "attrs": "GUID:50,60",
           "name": "dsp_a",
           "size": 16384,
           "start": 95494,
           "type": "7EFE5010-2A1A-4A1A-B8BC-990257813512"
         },
         {
-          "attrs": "GUID:50,54,60",
+          "attrs": "GUID:50,60",
           "name": "keymaster_a",
           "size": 128,
           "start": 111878,
           "type": "A11D2A7C-D82A-4C2F-8A01-1805240E6626"
         },
         {
-          "attrs": "GUID:48,49,50",
+          "attrs": "GUID:50",
           "name": "boot_a",
           "size": 24576,
           "start": 112006,
           "type": "20117F86-E985-4357-B9EE-374BC1D8487D"
         },
         {
-          "attrs": "GUID:50,54",
+          "attrs": "GUID:50",
           "name": "devcfg_a",
           "size": 32,
           "start": 136582,
           "type": "F65D4B16-343D-4E25-AAFC-BE99B6556A6D"
         },
         {
-          "attrs": "GUID:50,54",
+          "attrs": "GUID:50",
           "name": "qupfw_a",
           "size": 20,
           "start": 136614,
           "type": "21D1219F-2ED1-4AB4-930A-41A16AE75F7F"
         },
         {
-          "attrs": "GUID:50,54,60",
+          "attrs": "GUID:50,60",
           "name": "vbmeta_a",
           "size": 16,
           "start": 136634,
           "type": "4B7A15D6-322C-42AC-8110-88B7DA0C5D77"
         },
         {
-          "attrs": "GUID:50,54",
+          "attrs": "GUID:50",
           "name": "dtbo_a",
           "size": 6144,
           "start": 136650,
           "type": "24D0D418-D31D-4D8D-AC2C-4D4305188450"
         },
         {
-          "attrs": "GUID:50,54",
+          "attrs": "GUID:50",
           "name": "uefisecapp_a",
           "size": 512,
           "start": 142794,
           "type": "BE8A7E08-1B7A-4CAE-993A-D5B7FB55B3C2"
         },
         {
-          "attrs": "RequiredPartition GUID:50,54",
+          "attrs": "RequiredPartition GUID:50",
           "name": "imagefv_a",
           "size": 512,
           "start": 143306,
           "type": "17911177-C9E6-4372-933C-804B678E666F"
         },
         {
-          "attrs": "GUID:50,54,60",
+          "attrs": "GUID:50,60",
           "name": "shrm_a",
           "size": 64,
           "start": 143818,
           "type": "CB74CA22-2F0D-4B82-A1D6-C4213F348D73"
         },
         {
-          "attrs": "GUID:50,54",
+          "attrs": "GUID:50",
           "name": "vm-bootsys_a",
           "size": 137500,
           "start": 143882,
           "type": "7B034C58-8AFC-4974-9444-B03FBEE85236"
         },
         {
-          "attrs": "GUID:50,54,60",
+          "attrs": "GUID:50,60",
           "name": "cpucp_a",
           "size": 256,
           "start": 281382,
           "type": "1E8615BD-6D8C-41AD-B3EA-50E8BF40E43F"
         },
         {
-          "attrs": "GUID:50,54",
+          "attrs": "GUID:50",
           "name": "featenabler_a",
           "size": 32,
           "start": 281638,
           "type": "741813D2-8C87-4465-8C69-032C771CCCE7"
         },
         {
-          "attrs": "GUID:50,54",
+          "attrs": "GUID:50",
           "name": "vendor_boot_a",
           "size": 24576,
           "start": 281670,
@@ -184,49 +184,49 @@
           "type": "358740B1-34BD-4E4C-9656-3454F0A8FDD9"
         },
         {
-          "attrs": "GUID:50,54,60",
+          "attrs": "GUID:50,60",
           "name": "qweslicstore_a",
           "size": 64,
           "start": 313926,
           "type": "7BAB3C93-5F73-4D02-B8CB-5B9F899D29A8"
         },
         {
-          "attrs": "GUID:50,54",
+          "attrs": "GUID:50",
           "name": "recovery_a",
           "size": 25600,
           "start": 313990,
           "type": "D504D6DB-FA92-4853-B59E-C7F292E2EA19"
         },
         {
-          "attrs": "GUID:50,54",
+          "attrs": "GUID:50",
           "name": "xbl_ramdump_a",
           "size": 512,
           "start": 339590,
           "type": "0382F197-E41F-4E84-B18B-0B564AEAD875"
         },
         {
-          "attrs": "GUID:50,54",
+          "attrs": "GUID:50",
           "name": "init_boot_a",
           "size": 2048,
           "start": 340102,
           "type": "E5B0F3F7-6606-43DA-BCE1-84DC0A239DDD"
         },
         {
-          "attrs": "GUID:50,54,60",
+          "attrs": "GUID:50,60",
           "name": "cpucp_dtb_a",
           "size": 16,
           "start": 342150,
           "type": "6C6018BC-4FBE-40C5-B148-4BCB1DB23748"
         },
         {
-          "attrs": "GUID:50,54,60",
+          "attrs": "GUID:50,60",
           "name": "pvmfw_a",
           "size": 256,
           "start": 342166,
           "type": "F26E5B94-3EEC-489E-BDDA-0FFE33AB82A8"
         },
         {
-          "attrs": "GUID:50,54,60",
+          "attrs": "GUID:50,60",
           "name": "spuservice_a",
           "size": 32,
           "start": 342422,
@@ -820,5 +820,5 @@
     "source_dtb_sha256": "21c8a018152152605979a1f135e60ed1b62ef08a6b2271766f40344997de44ff",
     "torch_per_channel_ua": 100000
   },
-  "version": "7.2.6-tb710fu-20261117"
+  "version": "7.2.6-tb710fu-20261118"
 }

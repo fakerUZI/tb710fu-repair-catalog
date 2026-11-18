@@ -1,13 +1,15 @@
 {
-  "version": "7.2.6-tb710fu-20261117",
-  "camss_sha256": "88893ef4221cb498979b8b60ed0416ce567756752167a1573442829296c3844e",
+  "camss_sha256": "37732b92c429d4e0d6bab1c20a9575310c5be964f6750a0f02eb6e9d2692d129",
+  "clock_hz": 24000000,
+  "csi_phy": 3,
   "files": {
-    "gc02m1_raw.ko": "0a5bf78f13f16ae5882154cb44f09e82d00368093abe548214ebdc5a13f1e254",
-    "tb_macro_registration.ko": "c1a397cebe1f00591e05f13a77ffcd2d274db6b9202ce993267c5657ab76a492",
-    "tb-macro-raw.dtbo": "2c2dfd3c4a0faded43dcec0434d56a9c64c4a3b59206bf0a8e7ded351f6cf39c"
+    "gc02m1_raw.ko": "b92358c31dda92ee974758b1be64bd40477eec8a8ab5959b5027b60c8b0799e4",
+    "tb-macro-raw.dtbo": "2c2dfd3c4a0faded43dcec0434d56a9c64c4a3b59206bf0a8e7ded351f6cf39c",
+    "tb_macro_registration.ko": "8a3c9b0abdd3c5ad15d60934a9a021c7ae2e3197e00298f6a59943f17241ffb5"
   },
-  "sensor": "GC02M1",
-  "sensor_id": "0x02e0",
+  "focus": "fixed macro",
+  "lanes": 1,
+  "note": "OEM mode/register values only; no EEPROM/calibration/identity dump.",
   "raw_size": [
     1600,
     1200
@@ -16,9 +18,7 @@
     1592,
     1200
   ],
-  "clock_hz": 24000000,
-  "csi_phy": 3,
-  "lanes": 1,
-  "focus": "fixed macro",
-  "note": "OEM mode/register values only; no EEPROM/calibration/identity dump."
+  "sensor": "GC02M1",
+  "sensor_id": "0x02e0",
+  "version": "7.2.6-tb710fu-20261118"
 }

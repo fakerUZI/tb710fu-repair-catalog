@@ -46,7 +46,16 @@ scripts/config --set-str LOCALVERSION "$localversion" --disable LOCALVERSION_AUT
  --set-str LSM 'landlock,lockdown,yama,loadpin,safesetid,apparmor,ipe,bpf' \
  --enable SQUASHFS_XATTR --enable SQUASHFS_LZO --enable SQUASHFS_LZ4 \
  --module VIDEO_OV13B10 --module NETFILTER_XT_TARGET_MASQUERADE
-bash "$(dirname -- "${BASH_SOURCE[0]}")/network-repair/configure-build.sh"
+bash "$script_dir/network-repair/configure-build.sh"
+if [[ $version == 7.2.6-tb710fu-20261118 ]]; then
+ patch -p1 --batch -F0 --no-backup-if-mismatch < "$script_dir/0002-tb710fu-display-touch-20261118.patch"
+ python3 - "$script_dir/display-touch-source-hashes.json" <<'PYHASH'
+import hashlib, json, sys
+from pathlib import Path
+for name, expected in json.loads(Path(sys.argv[1]).read_text()).items():
+    assert hashlib.sha256(Path(name).read_bytes()).hexdigest() == expected['built_sha256'], name
+PYHASH
+fi
 # Full Image + all modules are rebuilt together, so ARP namespace layout may change.
 scripts/config --module IP_NF_SECURITY --module IP6_NF_SECURITY \
  --module IP_NF_ARPTABLES --module IP_NF_ARPFILTER --module IP_NF_ARP_MANGLE
@@ -70,6 +79,14 @@ printf 'obj-m += tb_camera_overlay.o tb_camera_alias.o tb_camss_alias.o tb_focus
 make -j4 LOCALVERSION= M=/build/rear-helpers modules >> "$out/build.log" 2>&1
 mkdir -p "$out/rear-helpers"
 cp /build/rear-helpers/*.ko "$out/rear-helpers/"
+if [[ $version == 7.2.6-tb710fu-20261118 ]]; then
+ mkdir -p /build/dp-helper "$out/dp"
+ cp "$script_dir/tb_dp_overlay.c" /build/dp-helper/
+ printf 'obj-m += tb_dp_overlay.o\n' > /build/dp-helper/Makefile
+ make -j4 LOCALVERSION= M=/build/dp-helper modules >> "$out/build.log" 2>&1
+ aarch64-linux-gnu-strip --strip-debug /build/dp-helper/tb_dp_overlay.ko
+ cp /build/dp-helper/tb_dp_overlay.ko "$out/dp/"
+fi
 cp drivers/media/i2c/ov13b10.ko "$out/rear-helpers/ov13b10-rggb-UNTESTED.ko"
 cp drivers/media/platform/qcom/camss/qcom-camss.ko "$out/rear-helpers/qcom-camss-graph-UNTESTED.ko"
 rm -f /build/modstage/lib/modules/$version/{build,source}

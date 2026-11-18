@@ -3,7 +3,7 @@
 import copy,gzip,hashlib,json,os,platform,re,subprocess,sys
 from pathlib import Path
 
-VERSION='7.2.6-tb710fu-20261117'
+VERSION=os.uname().release if os.uname().release in ('7.2.6-tb710fu-20261117', '7.2.6-tb710fu-20261118') else '7.2.6-tb710fu-20261118'
 ROOT=Path('/opt/tb710fu-flash')/VERSION
 LED=Path('/sys/class/leds/tb710fu:flash:rear')
 
@@ -30,9 +30,43 @@ def normalized(tables):
     return sorted(result,key=lambda t:json.dumps(t,sort_keys=True))
 
 
+def normalize_attrs(value, ignored_bits):
+    def normalize_guid(match):
+        bits = sorted(set(map(int, match[1].split(','))) - ignored_bits)
+        return 'GUID:' + ','.join(map(str, bits)) if bits else ''
+    return ' '.join(re.sub(r'\bGUID:([0-9]+(?:,[0-9]+)*)(?=\s|$)',
+                           normalize_guid, value).split())
+
+
+def normalized_gpt(tables, *, identity=False):
+    """Retain geometry and safety flags. Allow documented A/B state to vary."""
+    result = []
+    for wrapped in tables.values():
+        table = copy.deepcopy(wrapped['partitiontable'])
+        table.pop('device', None)
+        if not identity:
+            table.pop('id', None)
+        names = {part.get('name', '') for part in table['partitions']}
+        for partition in table['partitions']:
+            partition.pop('node', None)
+            if not identity:
+                partition.pop('uuid', None)
+            name = partition.get('name', '')
+            ignored = set()
+            if name in {'boot_a', 'boot_b'}:
+                ignored = {48, 49, 51, 52, 53, 54}
+            elif name.endswith(('_a', '_b')) and name[:-1] + ('b' if name.endswith('_a') else 'a') in names:
+                ignored = {48, 49, 51, 52, 53, 54}
+            attrs = normalize_attrs(partition.pop('attrs', ''), ignored)
+            if attrs:
+                partition['attrs'] = attrs
+        result.append(table)
+    return sorted(result, key=lambda x: json.dumps(x, sort_keys=True))
+
+
 def preflight(installed=True):
     require(os.geteuid()==0,'需要管理员权限')
-    require(platform.machine()=='aarch64' and platform.release()==VERSION,'仅支持已审核的 20261117 ARM64 内核')
+    require(platform.machine()=='aarch64' and platform.release()==VERSION,'仅支持已审核的 20261117 / 20261118 ARM64 内核')
     require(b'lenovo,tb710fu' in Path('/sys/firmware/devicetree/base/compatible').read_bytes().split(b'\0'),'机型不匹配')
     m=json.loads((ROOT/'manifest.json').read_text())
     require(hashlib.sha256(gzip.decompress(Path('/proc/config.gz').read_bytes())).hexdigest()==m['config_sha256'],'运行配置不匹配')
@@ -43,7 +77,7 @@ def preflight(installed=True):
         node='/dev/'+p.name
         require('No problems found.' in run(['sgdisk','-v',node]),'GPT 校验失败：'+node)
         tables[node]=json.loads(run(['sfdisk','--json',node]))
-    require(normalized(tables)==m['gpt_layout'],'当前 GPT 布局不匹配')
+    require((normalized(tables) if VERSION=='7.2.6-tb710fu-20261117' else normalized_gpt(tables))==m['gpt_layout'],'当前 GPT 布局不匹配')
     for name,expected in m['firmware'].items():
         require(sha('/dev/disk/by-partlabel/'+name)==expected,'固件不匹配：'+name)
     for name,expected in m['files'].items():

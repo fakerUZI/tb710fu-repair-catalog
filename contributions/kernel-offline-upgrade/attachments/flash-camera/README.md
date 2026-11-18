@@ -1,10 +1,10 @@
-# 20261117 内核补充：手电筒与三路相机
+# 20261118 内核补充：手电筒与三路相机
 
 **相机清晰度、主摄自动对焦及第二后摄接入，见 [CAMERA-QUALITY.md](CAMERA-QUALITY.md)。推荐使用 `camera-check/install/rollback` 动作。**
 
 原厂 Android 相机风格的页面更新见 [STOCK-UI.md](STOCK-UI.md)：真实圆形快门、横竖屏布局、三路切换、补光、九宫格和倒计时，设置收进弹出面板。
 
-本补充仅适用于已审核的 `7.2.6-tb710fu-20261117`、对应 boot/配置/固件/GPT。它通过匹配的外部模块和可移除 DT 覆盖启用 PM8550 LED，并更新相机 UI；不改 Image，不刷写启动、DTBO 或固件分区，内核日期保持不变。原日期版七个分片保持原来的已验证内容。
+本补充仅适用于已审核的 `7.2.6-tb710fu-20261118`、对应 boot/配置/固件/GPT。它通过匹配的外部模块和可移除 DT 覆盖启用 PM8550 LED，并更新相机 UI；不改 Image，不刷写启动、DTBO 或固件分区，内核日期保持不变。本次内核升级也会迁移已有相机和手电筒补充。新版相机持续获取全分辨率预览帧，由后台编码照片。
 
 仍使用目录中第一项、唯一的内核修复入口。下载并验证该条目所有附件后：
 
@@ -50,10 +50,10 @@ GNOME 50 快捷设置新增“手电筒”开关。系统 D-Bus 服务只允许 
 
 ## 回退和后续内核
 
-首次快照 `/var/backups/tb710fu-flash-camera-20261117/` 保留原应用、桌面入口、文件、服务和扩展状态。后续已审核修订不会覆盖这些原始数据；未知用户改动或损坏备份会在回退前阻止覆盖。恢复脚本及完整配套持久化在该目录的 payload 链接下，删除下载目录后仍可：
+首次快照 `/var/backups/tb710fu-flash-camera-20261118/` 保留原应用、桌面入口、文件、服务和扩展状态。后续已审核修订不会覆盖这些原始数据；未知用户改动或损坏备份会在回退前阻止覆盖。恢复脚本及完整配套持久化在该目录的 payload 链接下，删除下载目录后仍可：
 
 ```bash
-sudo python3 /var/backups/tb710fu-flash-camera-20261117/payload/install-flash-camera.py rollback --user ubuntu
+sudo python3 /var/backups/tb710fu-flash-camera-20261118/payload/install-flash-camera.py rollback --user ubuntu
 ```
 
 回退先关灯、停止服务并卸载覆盖，恢复文件与扩展设置；不删除照片或原始快照。私有前摄模块不在此补充中，也不被改动。

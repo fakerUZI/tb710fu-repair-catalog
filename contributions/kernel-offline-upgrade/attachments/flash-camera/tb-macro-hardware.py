@@ -2,7 +2,7 @@
 """Version-pinned GC02M1 add-on; preserve and rebuild the existing camera graph."""
 import contextlib,hashlib,json,os,pwd,subprocess,sys,time
 from pathlib import Path
-VERSION='7.2.6-tb710fu-20261117'
+VERSION=os.uname().release if os.uname().release in ('7.2.6-tb710fu-20261117', '7.2.6-tb710fu-20261118') else '7.2.6-tb710fu-20261118'
 ROOT=Path('/opt/tb710fu-macro')/VERSION
 CAMSS=Path('/opt/tb710fu-camera-test')/VERSION/'qcom-camss-graph-UNTESTED.ko'
 UNITS=('wireplumber.service','pipewire-pulse.service','pipewire-pulse.socket','pipewire.service','pipewire.socket')

@@ -24,10 +24,11 @@ import tempfile
 import time
 from pathlib import Path, PurePosixPath
 
-VERSION = '7.2.6-tb710fu-20261117'
-RELEASE_PLAN = {'format': 2, 'source_policy': 'undated', 'target_version': VERSION}
+VERSION = '7.2.6-tb710fu-20261118'
+RELEASE_PLAN = {'format': 2, 'source_policy': 'undated-or-dated-before-target', 'target_version': VERSION}
 BOOT_HASH = 'BUILD_TIME_BOOT_SHA256'
 OLD_HASHES = {
+    '8ef8203624371525150904700f7ffab7aec5f72e66a66cb62d74733f7603a4c9',
     '64c9d426065ff9a6150c246ab63b8ae3e8960b4b7a668a2e090370fc80e5f5ec',
     'b2c5db7b73afebf6b83a0b786000e768186c08e27daa6a8907bf24ff5d61bda2',
     '49e01404b2f7725a3e04d4161089f7bbc6b86078dad60c82f237dbd070e7f16a',
@@ -38,7 +39,7 @@ BOOT_SIZE = 100663296
 MANIFEST_SHA256 = 'BUILD_TIME_MANIFEST_SHA256'
 BASE = Path('/var/backups/tb710fu-kernel-upgrade') / VERSION
 ACTIVE = BASE / 'kernel-upgrade-active'
-UNIT = 'tb710fu-kernel-upgrade-20261117.service'
+UNIT = 'tb710fu-kernel-upgrade-20261118.service'
 UNIT_PATH = Path('/etc/systemd/system') / UNIT
 HELPERS = ('tb_camera_overlay.ko', 'tb_camera_alias.ko', 'tb_camss_alias.ko', 'tb_focus_manual.ko')
 FILES = {
@@ -48,8 +49,21 @@ FILES = {
     '/usr/local/sbin/tb-ubuntu-usb-ncm': 'tb-ubuntu-usb-ncm',
     '/usr/local/libexec/tb-usb-ncm-identity.py': 'tb-usb-ncm-identity.py',
     '/etc/modules-load.d/90-tb710fu-netfilter.conf': '90-tb710fu-netfilter.conf',
+    '/usr/local/bin/tb-panel-cycle-py': 'tb-panel-cycle.py',
+    '/etc/systemd/system/tb-panel-cycle.service.d/90-dsi-card.conf': '90-dsi-card.conf',
+    '/usr/local/libexec/tb710fu-power-key.py': 'tb710fu-power-key.py',
+    '/etc/systemd/user/tb-gnome-power-button.service.d/90-lock-first.conf': '90-lock-first.conf',
+    '/etc/tmpfiles.d/tb710fu-package-dirs.conf': 'tb710fu-package-dirs.conf',
+    '/etc/dpkg/dpkg.cfg.d/90-tb710fu-package-dirs': '90-tb710fu-package-dirs',
+    '/etc/systemd/system/tb710fu-dp-early-guard.service.d/80-kernel-profile.conf': '80-kernel-profile.conf',
+    '/etc/systemd/system/tb710fu-kernel-upgrade-20261117.service.d/90-source-version.conf': '90-source-version.conf',
 }
-OPTIONAL_FILES = {'/opt/tb710fu-front-camera/tb-front-camera.sh': 'tb-front-camera.sh'}
+OPTIONAL_FILES = {
+    '/opt/tb710fu-front-camera/tb-front-camera.sh': 'tb-front-camera.sh',
+}
+EXECUTABLES = {'tb-camera-live.sh', 'tb-camera-focus.sh', 'tb-front-camera.sh',
+               'tb-ubuntu-usb-ncm', 'tb-usb-ncm-identity.py', 'tb-panel-cycle.py',
+               'tb710fu-power-key.py'}
 TRIAL_MASK = (7 << 51) | (1 << 54)
 
 
@@ -105,31 +119,38 @@ def save_state(work, state):
     atomic(work / 'state.json', (json.dumps(state, indent=2, ensure_ascii=False) + '\n').encode())
 
 
-def attrs_without_trials(value):
-    def replace(match):
-        bits = [int(x) for x in match[1].split(',')]
-        bits = [x for x in bits if x not in (51, 52, 53, 54)]
+def normalize_attrs(value, ignored_bits):
+    def normalize_guid(match):
+        bits = sorted(set(map(int, match[1].split(','))) - ignored_bits)
         return 'GUID:' + ','.join(map(str, bits)) if bits else ''
-    return re.sub(r'GUID:([0-9,]+)', replace, value).strip()
+    return ' '.join(re.sub(r'\bGUID:([0-9]+(?:,[0-9]+)*)(?=\s|$)',
+                           normalize_guid, value).split())
 
 
 def normalized_gpt(tables, *, identity=False):
-    """Ignore device enumeration; retain geometry, labels, types and other flags."""
+    """Retain geometry and safety flags. Allow documented A/B state to vary."""
     result = []
     for wrapped in tables.values():
         table = copy.deepcopy(wrapped['partitiontable'])
         table.pop('device', None)
         if not identity:
             table.pop('id', None)
+        names = {part.get('name', '') for part in table['partitions']}
         for partition in table['partitions']:
             partition.pop('node', None)
             if not identity:
                 partition.pop('uuid', None)
-            if partition.get('name') == 'boot_a':
-                partition['attrs'] = attrs_without_trials(partition.get('attrs', ''))
+            name = partition.get('name', '')
+            ignored = set()
+            if name in {'boot_a', 'boot_b'}:
+                ignored = {48, 49, 51, 52, 53, 54}
+            elif name.endswith(('_a', '_b')) and name[:-1] + ('b' if name.endswith('_a') else 'a') in names:
+                ignored = {48, 49, 51, 52, 53, 54}
+            attrs = normalize_attrs(partition.pop('attrs', ''), ignored)
+            if attrs:
+                partition['attrs'] = attrs
         result.append(table)
     return sorted(result, key=lambda x: json.dumps(x, sort_keys=True))
-
 
 
 def policy():
@@ -172,10 +193,26 @@ def private_front_preflight(manifest):
 
 
 
+def camera_migration_enabled():
+    units = ('tb710fu-macro-camera.service', 'tb710fu-flash-hardware.service', 'tb710fu-torch.service')
+    return any(Path('/etc/systemd/system', unit).exists() for unit in units)
+
+
+def selected_files(manifest):
+    files = FILES | OPTIONAL_FILES
+    if camera_migration_enabled():
+        files |= manifest['camera_migration']
+    return files
+
+
 def check_loaded_dependencies(manifest, front_enabled):
     # Explicitly loaded private front modules are kept outside the public module tree.
     # Validate their imports against the new tree without creating autoload aliases.
     manual = manifest['private_front_helpers'] if front_enabled else {}
+    camera_modules = {}
+    if camera_migration_enabled():
+        camera_modules = {Path(path).stem.replace('-', '_'): source for path, source
+                          in manifest['camera_migration'].items() if path.endswith('.ko')}
     for line in Path('/proc/modules').read_text().splitlines():
         name = line.split()[0]
         filename = name + '.ko'
@@ -183,6 +220,12 @@ def check_loaded_dependencies(manifest, front_enabled):
             path = Path('/opt/tb710fu-front-camera') / VERSION / filename
             dependencies = run(['modinfo', '-F', 'depends', str(path)]).stdout.strip().split(',')
             dependencies = [value for value in dependencies if value]
+        elif name in camera_modules:
+            path = Path(__file__).resolve().parent / camera_modules[name]
+            require(run(['modinfo', '-F', 'vermagic', str(path)]).stdout.split()[0] == VERSION,
+                    '相机配套模块 ABI 不匹配：' + name)
+            dependencies = [part for part in run(['modinfo', '-F', 'depends', str(path)]).stdout.strip().split(',')
+                            if part and part.replace('-', '_') not in camera_modules]
         else:
             dependencies = [name]
         for dependency in dependencies:
@@ -236,7 +279,8 @@ def disk_inventory(manifest):
         check = run(['sgdisk', '-v', node])
         require('No problems found.' in check.stdout + check.stderr, 'GPT 主/备校验未通过：' + node)
         tables[node] = json.loads(run(['sfdisk', '--json', node]).stdout)
-    require(normalized_gpt(tables) == manifest['gpt_layout'], '当前 GPT 布局不在已验证范围，拒绝沿用历史坐标。')
+    require(normalized_gpt(tables) == manifest['gpt_layout'],
+            '当前 GPT 布局或关键属性不在已验证范围。已允许 A/B 优先级、重试计数和成功状态的已知差异。')
     own = tables[str(disk)]['partitiontable']['partitions']
     found = [p for p in own if p.get('name') == 'boot_a']
     require(len(found) == 1 and Path(found[0]['node']).resolve() == boot, 'GPT boot_a 与设备标签不一致。')
@@ -391,6 +435,12 @@ def installation_preflight(bundle_root, manifest, before, user):
     for name, expected in manifest['required_firmware_files'].items():
         require(Path(name).is_file() and sha(name) == expected, '后摄 overlay 与已验证版本不匹配：' + name)
     require(before['boot_sha256'] in OLD_HASHES, '运行旧内核但磁盘已存在新镜像；请先重启或检查上次升级状态。')
+    previous_active = BASE.parent / '7.2.6-tb710fu-20261117/kernel-upgrade-active'
+    if previous_active.is_symlink():
+        previous = previous_active.resolve(strict=True)
+        require(previous.parent == previous_active.parent.resolve(), '20261117 升级记录路径异常。')
+        phase = json.loads((previous / 'state.json').read_text())['phase']
+        require(phase in ('kernel-validated', 'complete'), '20261117 升级尚未完成，请先检查旧升级状态。')
     require(not ACTIVE.exists() and not ACTIVE.is_symlink(), '存在上次升级记录；先查看 --status，必要时 --rollback。')
     require(not UNIT_PATH.exists() and not UNIT_PATH.is_symlink(), '升级服务已存在，请先检查。')
     require(not Path('/lib/modules', VERSION).exists(), '目标模块目录已存在，拒绝覆盖未知/未完成的模块安装。')
@@ -400,19 +450,27 @@ def installation_preflight(bundle_root, manifest, before, user):
     require(batteries and min(int(p.read_text()) for p in batteries) >= 30, '需要可读取的电池电量，且至少 30%。')
     account = pwd.getpwnam(user)
     require(account.pw_uid != 0 and Path(account.pw_dir).is_dir(), '--user 必须是已有主目录的普通用户。')
+    chosen = selected_files(manifest)
     for target, accepted in manifest['previous_files'].items():
+        if target not in chosen:
+            continue
         path = Path(target)
-        if target in OPTIONAL_FILES and not path.exists():
+        if not path.exists() and not path.is_symlink() and target not in {
+                '/opt/tb710fu-camera-test/tb-camera-live.sh', '/opt/tb710fu-camera-test/tb-camera-focus.sh',
+                '/usr/local/sbin/tb-ubuntu-usb-ncm'}:
             continue
         require(path.is_file() and not path.is_symlink() and sha(path) in accepted,
                 '旧系统配套脚本与已验证基线不一致：' + target)
-    for target, source in (FILES | OPTIONAL_FILES).items():
+    for target, source in chosen.items():
         if target in OPTIONAL_FILES and not Path(target).exists():
             continue
         path = Path(target)
         if str(path) not in manifest['previous_files'] and path.exists():
             require(path.is_file() and not path.is_symlink() and sha(path) == manifest['files'][source],
                     '目标配置已存在自定义内容，拒绝覆盖：' + target)
+    if camera_migration_enabled():
+        require(run(['systemctl', 'is-enabled', 'tb710fu-front-camera.service'], check=False).returncode == 0,
+                '已装的微距/闪光灯配套需要前摄服务及目标 ABI 模块。')
     for service in ('tb710fu-camera-test', 'tb710fu-camera-focus', 'tb-ubuntu-usb-ncm'):
         require(run(['systemctl', 'is-enabled', service], check=False).returncode == 0,
                 '旧系统配套服务未启用：' + service)
@@ -431,9 +489,10 @@ def installation_preflight(bundle_root, manifest, before, user):
 def install(bundle_root, manifest, before, user, reboot):
     if platform.release() == VERSION:
         require(before['boot_sha256'] == BOOT_HASH, '运行内核已更新，但启动分区不同；请先检查。')
-        log('当前已经运行目标内核，未写入任何分区；可直接运行 repair-ubuntu-snap.py。')
+        log('当前已经运行目标内核，未写入任何分区。')
         return
     usb_address = installation_preflight(bundle_root, manifest, before, user)
+    chosen = selected_files(manifest)
     usb_config = Path('/etc/tb710fu/usb-ncm-host-address')
     BASE.mkdir(mode=0o700, parents=True, exist_ok=True)
     work = Path(tempfile.mkdtemp(prefix=time.strftime('kernel-upgrade-%Y%m%d-%H%M%S-'), dir=BASE))
@@ -446,7 +505,8 @@ def install(bundle_root, manifest, before, user, reboot):
     bundle(payload)
     state = {'phase': 'preparing', 'user': user, 'before': before, 'files_before': {}, 'boot_write_started': False,
              'apt_holds': run(['apt-mark', 'showhold']).stdout,
-             'source_version': platform.release(), 'front_enabled': private_front_preflight(manifest)}
+             'source_version': platform.release(), 'front_enabled': private_front_preflight(manifest),
+             'camera_migrated': camera_migration_enabled()}
     save_state(work, state)
     try:
         # Record fresh GPT copies from every current UFS LUN, not historical coordinates.
@@ -462,6 +522,7 @@ def install(bundle_root, manifest, before, user, reboot):
         new_modules = stage / VERSION
         extra = new_modules / 'extra'
         extra.mkdir(exist_ok=True)
+        shutil.copy2(payload / 'tb_dp_overlay.ko', extra / 'tb_dp_overlay.ko')
         for name in HELPERS:
             shutil.copy2(payload / name, extra / name)
         modules = list(new_modules.rglob('*.ko'))
@@ -483,10 +544,11 @@ def install(bundle_root, manifest, before, user, reboot):
         for name in HELPERS + ('ov13b10-rggb-UNTESTED.ko', 'qcom-camss-graph-UNTESTED.ko'):
             shutil.copy2(payload / name, camera / name)
             (camera / name).chmod(0o644)
-        for target, source in (FILES | OPTIONAL_FILES).items():
+        for target, source in chosen.items():
             if target in OPTIONAL_FILES and not Path(target).exists():
                 continue
-            managed_file(work, target, (payload / source).read_bytes(), 0o644 if target.endswith('.conf') else 0o755, state)
+            managed_file(work, target, (payload / source).read_bytes(), 0o755 if source in EXECUTABLES or target.startswith(
+                             ('/usr/local/bin/', '/usr/local/sbin/', '/usr/local/libexec/')) else 0o644, state)
         if not usb_config.exists():
             usb_config.parent.mkdir(mode=0o700, exist_ok=True)
             managed_file(work, usb_config, (usb_address + '\n').encode(), 0o600, state)
@@ -537,6 +599,13 @@ def finish(work, state, manifest):
     if state.get('front_enabled'):
         require(run(['systemctl', 'is-active', 'tb710fu-front-camera'], check=False).returncode == 0,
                 '原本启用的前摄服务未运行，不能标记完成。')
+    require(any(p.read_text().strip() == 'connected' for p in Path('/sys/class/drm').glob('card*-DSI-*/status')),
+            '内屏 DSI 未就绪，不能标记启动成功。')
+    if state.get('camera_migrated'):
+        for service in ('tb710fu-macro-camera', 'tb710fu-flash-hardware', 'tb710fu-torch'):
+            if run(['systemctl', 'is-enabled', service], check=False).returncode == 0:
+                require(run(['systemctl', 'is-active', service], check=False).returncode == 0,
+                        '原本启用的配套服务未运行：' + service)
     repair = work / 'payload/repair-ubuntu-snap.py'
     result = run([sys.executable, str(repair), '--apply'], check=False, timeout=2400)
     atomic(work / 'snap-repair.log', (result.stdout + result.stderr).encode())
@@ -578,7 +647,8 @@ def rollback(work, state, manifest, *, failure=False):
         if not failure:
             require(current_hash in (BOOT_HASH, state['before']['boot_sha256']), '启动分区已被其他操作更改，拒绝回退。')
         write_image(old, now, current_hash, state['before']['boot_sha256'])
-        set_flags(now, state['before']['flags'])
+        current_flags = get_flags(now['disk'], now['number'])
+        set_flags(now, (current_flags & ~TRIAL_MASK) | (state['before']['flags'] & TRIAL_MASK))
     run(['systemctl', 'disable', UNIT], check=False)
     restore_files(work, state)
     if ACTIVE.is_symlink() and ACTIVE.resolve() == work.resolve():

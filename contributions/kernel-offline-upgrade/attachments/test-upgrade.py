@@ -26,7 +26,7 @@ u = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(u)
 REAL_SHA = u.sha
 REAL_PATH = Path
-TEST_OLD_VERSION = "7.2.6-tb710fu-snap1"
+TEST_OLD_VERSION = os.environ.get("TB_UPGRADE_TEST_SOURCE", "7.2.6-tb710fu-snap1")
 
 
 def flag_text(value):
@@ -151,6 +151,7 @@ class UpgradeTests(unittest.TestCase):
             '/sys/class/power_supply/battery/capacity': '90\n',
             '/sys/kernel/config/usb_gadget/g1/functions/ncm.usb0/host_addr': '02:00:00:00:00:01\n',
             '/proc/modules': 'libcomposite 100 0 - Live 0x0\n',
+            '/sys/class/drm/card1-DSI-1/status': 'connected\n',
             '/lib/modules/' + TEST_OLD_VERSION + '/keep': 'old modules retained\n',
         }.items():
             target = hardware.path(dest)
@@ -186,7 +187,7 @@ class UpgradeTests(unittest.TestCase):
             hardware = self.setup_machine(Path(temp))
             with self.mocks(hardware):
                 before = hardware.inventory(self.manifest)
-                old_scripts = {name: hardware.path(name).read_bytes() for name in self.manifest['previous_files']}
+                old_scripts = {name: hardware.path(name).read_bytes() for name in self.manifest['previous_files'] if hardware.path(name).exists()}
                 u.install(BUNDLE, self.manifest, before, 'ubuntu', False)
                 work = u.ACTIVE.resolve()
                 state = json.loads((work/'state.json').read_text())
@@ -302,10 +303,56 @@ class UpgradeTests(unittest.TestCase):
         changed = copy.deepcopy(tables)
         changed['/dev/fixture']['partitiontable']['partitions'][0]['attrs']='GUID:48,49,50,51,52,53'
         self.assertEqual(u.normalized_gpt(tables, identity=True),u.normalized_gpt(changed, identity=True))
-        for key,value in [('uuid','different-part'),('start',11),('size',21),('attrs','GUID:48,49,55')]:
+        for key,value in [('uuid','different-part'),('start',11),('size',21),('attrs','GUID:48,49,55'),('attrs','GUID:48,49,50,60')]:
             changed = copy.deepcopy(tables)
             changed['/dev/fixture']['partitiontable']['partitions'][0][key]=value
             self.assertNotEqual(u.normalized_gpt(tables,identity=True),u.normalized_gpt(changed,identity=True))
+
+    def test_screenshot_style_paired_slot_drift_and_safety_flags(self):
+        with tempfile.TemporaryDirectory() as temp:
+            h = self.setup_machine(Path(temp))
+            parts = {p['name']:p for w in h.tables.values()
+                     for p in w['partitiontable']['partitions']}
+            parts['boot_b']['attrs'] = 'GUID:49'
+            parts['vbmeta_system_a']['attrs'] = 'GUID:48,49,50,51,54,60'
+            self.assertEqual(u.normalized_gpt(h.tables), self.manifest['gpt_layout'])
+            for flags in ('GUID:49,50', 'GUID:49,55', 'GUID:49,60'):
+                parts['boot_b']['attrs'] = flags
+                self.assertNotEqual(u.normalized_gpt(h.tables), self.manifest['gpt_layout'])
+            parts['boot_b']['attrs'] = 'GUID:49'
+            parts['vbmeta_system_a']['attrs'] = 'GUID:50,54'
+            self.assertNotEqual(u.normalized_gpt(h.tables), self.manifest['gpt_layout'])
+
+    def test_migrate_installed_camera_payload_and_restore_older_executable(self):
+        with tempfile.TemporaryDirectory() as temp:
+            hardware = self.setup_machine(Path(temp))
+            hardware.front_enabled = True
+            with self.mocks(hardware):
+                front = hardware.path('/opt/tb710fu-front-camera') / u.VERSION
+                front.mkdir()
+                for name in self.manifest['private_front_helpers']:
+                    shutil.copyfile(Path(os.environ['TB_UPGRADE_TEST_FRONT'])/name, front/name)
+                for target, name in self.manifest['camera_migration'].items():
+                    if u.VERSION in target:
+                        continue
+                    p = hardware.path(target)
+                    p.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copyfile(BUNDLE/name,p)
+                    p.chmod(0o700 if target.startswith('/usr/local/') else 0o644)
+                hardware.path('/proc/modules').write_text(
+                    'gc13a2_raw 100 0 - Live 0x0\ngc02m1_raw 100 0 - Live 0x0\n'
+                    'tb_macro_registration 100 0 - Live 0x0\nleds_qcom_flash 100 0 - Live 0x0\n'
+                    'v4l2_flash_led_class 100 0 - Live 0x0\ntb_flash_overlay 100 0 - Live 0x0\n')
+                u.install(BUNDLE, self.manifest, hardware.inventory(self.manifest), 'ubuntu', False)
+                state = json.loads((u.ACTIVE/'state.json').read_text())
+                self.assertTrue(state['camera_migrated'])
+                app = hardware.path('/usr/local/bin/tb-rear-camera')
+                self.assertEqual(app.stat().st_mode & 0o777, 0o755)
+                hardware.kernel = u.VERSION
+                u.finish(u.ACTIVE.resolve(), state, self.manifest)
+                u.rollback(u.ACTIVE.resolve(), state, self.manifest)
+                self.assertEqual(app.stat().st_mode & 0o777, 0o700)
+                self.assertFalse(hardware.path('/opt/tb710fu-flash/'+u.VERSION+'/leds-qcom-flash.ko').exists())
 
     def test_enabled_front_requires_matching_private_addon_before_writes(self):
         with tempfile.TemporaryDirectory() as temp:

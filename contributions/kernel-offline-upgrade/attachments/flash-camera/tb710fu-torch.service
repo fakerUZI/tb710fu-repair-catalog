@@ -1,5 +1,6 @@
 [Unit]
-ConditionKernelVersion=7.2.6-tb710fu-20261117
+ConditionKernelVersion=|7.2.6-tb710fu-20261117
+ConditionKernelVersion=|7.2.6-tb710fu-20261118
 Description=TB710FU PM8550 torch control
 Requires=tb710fu-flash-hardware.service
 After=tb710fu-flash-hardware.service dbus.service

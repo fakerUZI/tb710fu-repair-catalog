@@ -1,28 +1,17 @@
-# 日期版本与旧版本匹配
+# 内核版本与升级兼容
 
-当前已发布并实机启动的目标：`7.2.6-tb710fu-20261117`，Linux 基础版本仍为 7.2.6。本次更新实际重编 Image、完整模块和本机摄像头辅助模块，同时更新嵌入配置，包含 legacy/xt NAT、ARP/security 表及 ath12k 计数修复。
+发布目标 `7.2.6-tb710fu-20261118`。目录、分片清单和升级器共享同一个版本计划。
 
 ```json
 {
   "format": 2,
-  "source_policy": "undated",
-  "target_version": "7.2.6-tb710fu-20261117"
+  "source_policy": "undated-or-dated-before-target",
+  "target_version": "7.2.6-tb710fu-20261118"
 }
 ```
 
-本次 `undated` 接受所有合法且不含日期的运行内核字符串，无旧版本白名单。例如原版、snap1、snap2、其他自定义版本均通过版本条件；但机型、系统、固件/GPT、boot 和配套文件仍须独立通过安装预检。所有日期版本在本次迁移中拒绝，不能以非法日期或不同日期分隔符绕过。
+本次接受所有合法的无日期运行版本，以及更早的标准日期内核（含 20261117）。旧系统可跳过 20261117 直接更新。版本名通过后仍须核对机型、A 槽、签发过的源 boot 指纹、固件、分区、模块和原配套文件。未知的自编 boot 或定制布局需另行适配。相同目标可做只读检查，升级禁止覆盖同日或回退日期。以后构建使用 `dated-before-target`，目标日期须晚于来源。未来日期和非法日期均拒绝。
 
-`undated` 只允许首次固定目标 20261117。后续发布必须使用 `source_policy: dated-before-target`。例如设备运行 `7.2.6-tb710fu-20261117`，在实际 2026-11-18 或以后发布 `7.2.6-tb710fu-20261118`。后续可接受任意更早的标准日期版本，不维护日期白名单；拒绝无日期、同日、较新和无效日期版本，并禁止未来目标日期。只读 check 可报告已处于目标版本，install 仍拒绝重复刷入。
+构建从已核验的 20261117 源码及配置出发，应用显示/触控补丁，按来源哈希校验改后源码。构建 Image、完整模块和扩展模块时使用相同 `7.2.6-tb710fu-20261118` ABI。实际发布 Image 已在平板启动，面板和触控沿用后续实测并安装过的模块修订。打包 boot 时保留 Android、DT 及 shim，执行 AVB 校验。
 
-```bash
-python3 kernel-release.py --plan kernel-release.json --running
-python3 kernel-release.py --plan kernel-release.json --current 7.2.6-tb710fu-snap2
-```
-
-build-kernel.sh 以计划设置真实 CONFIG_LOCALVERSION、关闭自动追加版本，完成后断言 make kernelrelease、每个模块 vermagic 及关键网络模块。当前构建器支持 Linux 7.2.6；升级 Linux 基础版本须先适配源码和构建器。首次可从审核后的 Snap/网络构建树重编；发布源码也提供干净源树构建入口。输出放在独立 artifacts/kernel-<目标版本>/build-output，不覆盖历史产物。
-
-打包工具用于适配开发工作区，不在平板安装时构建。pack-kernel.py 必须显式提供当前 inventory、baseline、Linux Image 和发布计划；它仅替换 Linux，逐字节保留已检查的 Android 载荷、DT 和 shim，并验证 AVB。build-bundle.py 需要 --project、--inventory、--output，在完整开发工作区核验候选证明后创建新包。capture-inventory.py 输出含本机身份的私有 JSON，不能上传。实际安装仍现场重新检查固件/GPT，历史坐标不作为写入依据。
-
-bundle-parts.json 仅支持 format 2；release 必须与 kernel-release.json、升级器 RELEASE_PLAN 完全一致，VERSION 必须等于目标。入口校验全部分片、完整归档、升级器、manifest 和模块归档后才能调用安装器。缺失载荷、校验失败或旧格式包均停止。本轮发布的七个分片均为新版 r2 归档，不调用旧 snap1 包。
-
-下一次发布须同步更新发布计划、升级器目标及独立备份/收尾服务、摄像头版本支持和模块；完成构建/启动验证后重新生成分片与 catalog 哈希。不能只改标题、清单或目录来冒充版本更新。
+使用 `build-bundle.py --inputs <已审核输入目录> --output <新目录> --parts-dir <附件目录>` 组装。输入名称和 SHA-256 见 `release-inputs.json`，目标和匹配的固件/GPT 见 `release-profile.json`。真实硬件备份与私有模块在用户设备或受控构建工作区保管。分片与完整归档有独立哈希，同一目录的脚本与附件仍由 catalog.json 独立校验。

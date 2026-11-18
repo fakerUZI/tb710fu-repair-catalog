@@ -2,7 +2,7 @@
 
 此目录供修复助手读取。`catalog.json` 中每条问题包括标题、说明、设备、状态、脚本相对路径、SHA-256、是否需要管理员权限及风险。`contributions/` 中的社区修复须按各自适用范围、验证边界和风险单独审核。
 
-清单第一项为唯一的 [TB710FU 日期内核升级](contributions/kernel-offline-upgrade/attachments/KERNEL-README.md)。本次接受所有不带日期的合法旧内核；后续更新只接受日期版本且目标日期严格递增。旧 Snap 内核升级入口及七个分片已删除。日期版完整载荷已构建，并完成 snap1 → 日期版实机升级和启动验证。
+清单第一项为唯一的 [TB710FU 日期内核升级](contributions/kernel-offline-upgrade/attachments/KERNEL-README.md)。20261118 接受无日期旧版和早于目标的标准日期版（包含 20261117）。升级器兼容已知 A/B 优先级、重试次数及成功位差异，并保留布局、固件、启动镜像和关键属性校验。以后发布的标准日期必须严格递增。
 
 原第二项 Snap 用户态独立修复/验证与第三项 snap1 网络模块修复已从目录及当前仓库移除，相关功能统一由当前日期版内核入口提供。
 
@@ -36,13 +36,11 @@
 
 内核升级会保留现有麦克风 ALSA 初始化服务及 WirePlumber 路由，不新建这些用户态文件；不能把“镜像已含采集链路”理解为在任意原始系统上自动完成全部音频配置。
 
-目录现有 6 项，顺序为：日期内核升级、中文候选区与退格、电源键、窗口触控、DroidLoom 按需启动、DroidLoom 扬声器音频。后五项修改用户配置、应用或会话服务，未包含在完整内核安装器中，继续保留。
+目录现有 6 项，顺序为：日期内核升级、中文候选区与退格、电源键、窗口触控、DroidLoom 按需启动、DroidLoom 扬声器音频。后五项可独立应用，继续保留。内核包也包含已配置的电源键服务的短按锁屏调整。
 
-相机和手电筒仍作为第一项的补充动作保留；普通 `install` 不自动执行 `camera-install` / `flash-install`。本次仅整理目录、说明及过时脚本，不改变日期内核版本、七个发布分片或设备状态。
+已有相机和手电筒补充会随内核升级迁移到 20261118。首次安装补充仍使用第一项的 `camera-install` 或 `flash-install`。新版相机保留全分辨率，以连续预览和后台编码缩短拍照等待。[相机与手电筒](contributions/kernel-offline-upgrade/attachments/flash-camera/README.md)
 
-[内核日期命名与升级版本检查](contributions/kernel-offline-upgrade/attachments/KERNEL-VERSIONING.md)：本次接受无日期旧内核，后续要求目标日期严格晚于设备当前日期版本。当前平板已运行 `7.2.6-tb710fu-20261117`；后续目标日期必须严格晚于 20261117。
-
-当前日期内核入口另提供[手电筒与三路相机补充](contributions/kernel-offline-upgrade/attachments/flash-camera/README.md)：`camera-install` 包含主摄自动对焦、前摄/微距切换与匹配的 libcamera 增益修复；`flash-install` 提供硬件/应用部分。均不刷设备分区，完整内核升级仍只使用第一项入口。
+[内核日期及构建规则](contributions/kernel-offline-upgrade/attachments/KERNEL-VERSIONING.md)
 
 ## USB-C 直连 SSD 测试候选（目标 SSD 尚未实测）
 

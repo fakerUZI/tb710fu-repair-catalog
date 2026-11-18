@@ -8,6 +8,7 @@ from pathlib import Path
 import sys
 import tempfile
 import time
+import threading
 
 CAMERA = '/base/soc@0/cci@ac15000/i2c-bus@1/camera@36'
 FULL = (4200, 3120)
@@ -17,7 +18,7 @@ PROFILES = {
     'macro': {'name': '后摄微距', 'path': '/base/soc@0/cci@ac16000/i2c-bus@0/camera@37',
               'full': (1592,1200), 'previews': [(1280,960),(1592,1200)], 'focus': False},
     'front': {'name': '前摄', 'path': '/base/soc@0/cci@ac15000/i2c-bus@0/camera@39',
-              'full': (4200,3120), 'previews': [(1280,720), (1920,1080), (4200,3120)], 'focus': False},
+              'full': (4200,3120), 'previews': [(1280,960), (1920,1440), (4200,3120)], 'focus': False},
 }
 
 
@@ -37,6 +38,7 @@ def available_cameras():
 def preview_labels(name):
     return [f'{width}×{height}' for width, height in profile(name)['previews']]
 
+APP_REVISION = 'tb710fu-camera-fastshot-20261118.3'
 PHOTO_WARMUP_FRAMES = 12
 FOCUS = Path('/sys/module/tb_focus_manual/parameters/position')
 
@@ -143,8 +145,18 @@ class ContrastFocus:
         self.records.append((self.position,score))
         if self.phase == 'baseline':
             self.baseline = score
-            self.phase = 'coarse'
-            self.pending = [v for v in list(range(0,1024,64))+[1023] if v != self.initial]
+            self.phase = 'local'
+            self.pending = [v for v in (self.initial-32,self.initial+32) if 0<=v<=1023]
+        elif not self.pending and self.phase == 'local':
+            neighbors=[score for pos,score in self.records if pos!=self.initial]
+            if (len(neighbors)==2 and self.baseline>=.0005
+                    and self.baseline>=max(neighbors)*1.12):
+                # A clear local peak needs only the existing verification step.
+                self.peak=self.baseline;self.phase='verify';self.move(self.initial,now)
+                return
+            self.phase='coarse'
+            sampled={pos for pos,_ in self.records}
+            self.pending=[v for v in list(range(0,1024,64))+[1023] if v not in sampled]
         elif not self.pending and self.phase == 'coarse':
             best, _ = max(self.records, key=lambda v:v[1])
             self.phase = 'fine'
@@ -159,6 +171,33 @@ class ContrastFocus:
             self.move(best,now)
         elif self.pending:
             self.move(self.pending.pop(0),now)
+
+
+def focus_signature(data, width, height, stride, center=(.5, .5)):
+    cx, cy = max(.15,min(.85,center[0]))*width, max(.15,min(.85,center[1]))*height
+    values = []
+    for gy in range(12):
+        for gx in range(12):
+            x = max(1,min(width-2,int(cx+(gx-5.5)*width*.28/12)))
+            y = max(1,min(height-2,int(cy+(gy-5.5)*height*.28/12)))
+            total = 0
+            for dy in (-1,0,1):
+                for dx in (-1,0,1):
+                    i=(y+dy)*stride+(x+dx)*4
+                    total += (int(data[i])+2*int(data[i+1])+int(data[i+2]))/4
+            values.append(total/9)
+    return tuple(values)
+
+
+def can_reuse_focus(memo, signature, key, position, now, score=None):
+    if not memo or not memo.get('signature') or not signature or key != memo['key'] or position != memo['position']:
+        return False
+    if not 0 <= now-memo['at'] <= 10 or len(signature) != len(memo['signature']):
+        return False
+    if score is None or memo.get('score') is None or not .8*memo['score']<=score<=1.25*memo['score']:
+        return False
+    return sum(abs(a-b) for a,b in zip(signature,memo['signature']))/len(signature) <= 5
+
 
 def crop_bounds(width, height, zoom, center=(.5, .5)):
     zoom = max(1., min(4., float(zoom)))
@@ -211,7 +250,7 @@ def pull_ready_photo(Gst, pipeline, timeout_seconds=12):
         buffer = sample.get_buffer()
         data = buffer.extract_dup(0, buffer.get_size())
         sample = None
-        if frames >= PHOTO_WARMUP_FRAMES and jpeg_has_image(data):
+        if jpeg_has_image(data):
             return data
     raise RuntimeError('相机画面尚未就绪，未保存空白照片')
 
@@ -241,7 +280,123 @@ def make_photo(Gst, destination, zoom=1., center=(.5, .5), camera='rear'):
     source.set_property('camera-name', selected['path'])
     pipeline.get_by_name('crop').set_properties(left=x, right=full[0]-x-w,
                                                top=y, bottom=full[1]-y-h)
+    # Warm the sensor/AE before JPEG encoding; discarded frames need no expensive
+    # full-resolution JPEG conversion. Keep exactly the same 12-frame warmup.
+    pending = {'frames': 0}
+    def warmed(pad, info):
+        pending['frames'] += 1
+        return Gst.PadProbeReturn.DROP if pending['frames'] < PHOTO_WARMUP_FRAMES else Gst.PadProbeReturn.REMOVE
+    pipeline.get_by_name('crop').get_static_pad('src').add_probe(Gst.PadProbeType.BUFFER, warmed)
     return pipeline, (w, h)
+
+
+
+def make_live_preview(Gst, camera, width, height):
+    selected = profile(camera)
+    fw, fh = selected['full']
+    pipe = Gst.parse_launch(
+        f'libcamerasrc name=camera ! video/x-raw,format=RGBA,width={fw},height={fh} '
+        '! tee name=full_tee '
+        'full_tee. ! queue max-size-buffers=1 max-size-bytes=0 max-size-time=0 leaky=downstream '
+        '! appsink name=full sync=false max-buffers=1 drop=true '
+        'full_tee. ! queue max-size-buffers=1 max-size-bytes=0 max-size-time=0 leaky=downstream '
+        f'! videoscale ! video/x-raw,width={width},height={height} '
+        '! appsink name=view sync=false max-buffers=1 drop=true')
+    pipe.get_by_name('camera').set_property('camera-name', selected['path'])
+    stats = {'frames': 0, 'last': 0., 'last_pts': None, 'warmup_pts': None}
+    def frame(pad, info):
+        buf = info.get_buffer()
+        stats['frames'] += 1
+        stats['last'] = time.monotonic()
+        stats['last_pts'] = buf.pts
+        if stats['frames'] == PHOTO_WARMUP_FRAMES:
+            stats['warmup_pts'] = buf.pts
+        return Gst.PadProbeReturn.OK
+    pipe.get_by_name('full_tee').get_static_pad('sink').add_probe(Gst.PadProbeType.BUFFER, frame)
+    pipe.tb_live_stats = stats
+    return pipe
+
+
+def take_live_frame(Gst, pipeline, camera):
+    stats = pipeline.tb_live_stats
+    if stats['frames'] < PHOTO_WARMUP_FRAMES or time.monotonic()-stats['last'] > .5:
+        return None
+    sample = pipeline.get_by_name('full').emit('try-pull-sample', 0)
+    if sample is None:
+        return None
+    caps = sample.get_caps()
+    st = caps.get_structure(0)
+    size = (st.get_value('width'), st.get_value('height'))
+    if size != profile(camera)['full'] or st.get_value('format') != 'RGBA':
+        raise ValueError('相机没有返回完整尺寸照片')
+    buf = sample.get_buffer()
+    valid_pts = all(p is not None and p != Gst.CLOCK_TIME_NONE
+                    for p in [buf.pts, stats['warmup_pts'], stats['last_pts']])
+    if valid_pts and (buf.pts < stats['warmup_pts'] or stats['last_pts']-buf.pts > Gst.SECOND//2):
+        return None
+    # Own the frame independently: closing/changing the live camera must not
+    # leave one of its capture-pool buffers retained by a JPEG worker.
+    copied = buf.copy_deep()
+    return caps.copy(), copied
+
+
+def raw_has_image(Gst, caps, buf, bounds=None):
+    st = caps.get_structure(0)
+    width, height = st.get_value('width'), st.get_value('height')
+    stride = buf.get_size()//height
+    left,top,rw,rh = bounds or (0,0,width,height)
+    ok, mapped = buf.map(Gst.MapFlags.READ)
+    if not ok:
+        raise RuntimeError('无法读取相机图像')
+    try:
+        data = mapped.data
+        for y in range(top+rh//48, top+rh, max(1,rh//24)):
+            for x in range(left+rw//48, left+rw, max(1,rw//24)):
+                i = y*stride+x*4
+                if any(data[i:i+3]):
+                    return True
+        return False
+    finally:
+        buf.unmap(mapped)
+
+
+def encode_live_photo(Gst, frame, zoom, center, cancelled):
+    caps, raw = frame
+    st = caps.get_structure(0)
+    width, height = st.get_value('width'), st.get_value('height')
+    x, y, w, h = crop_bounds(width, height, zoom, center)
+    if cancelled.is_set():
+        raise RuntimeError('拍照已取消')
+    if not raw_has_image(Gst, caps, raw, (x,y,w,h)):
+        raise RuntimeError('相机照片为空，未保存')
+    pipe = Gst.parse_launch('appsrc name=source format=time '
+        '! videocrop name=crop ! tee name=picture '
+        'picture. ! queue ! videoconvert ! jpegenc quality=98 '
+        '! appsink name=jpeg sync=false max-buffers=1 drop=true '
+        'picture. ! queue ! videoscale ! video/x-raw,format=RGBA,width=64,height=48 '
+        '! appsink name=thumb sync=false max-buffers=1 drop=true')
+    try:
+        pipe.get_by_name('crop').set_properties(left=x, right=width-x-w, top=y, bottom=height-y-h)
+        source = pipe.get_by_name('source')
+        source.set_property('caps', caps)
+        pipe.set_state(Gst.State.PLAYING)
+        if source.emit('push-buffer', raw) != Gst.FlowReturn.OK:
+            raise RuntimeError('照片编码无法开始')
+        source.emit('end-of-stream')
+        sample = pipe.get_by_name('jpeg').emit('try-pull-sample', 5*Gst.SECOND)
+        if not sample or cancelled.is_set():
+            raise RuntimeError('照片编码超时或已取消')
+        buf = sample.get_buffer()
+        data = buf.extract_dup(0, buf.get_size())
+        thumb = pipe.get_by_name('thumb').emit('try-pull-sample', Gst.SECOND)
+        if not thumb:
+            raise RuntimeError('照片缩略图尚未就绪')
+        tb = thumb.get_buffer()
+        thumbnail = (tb.extract_dup(0, tb.get_size()), 64, 48, tb.get_size()//48)
+        return data, (w, h), thumbnail
+    finally:
+        pipe.set_state(Gst.State.NULL)
+        pipe.get_state(Gst.SECOND)
 
 
 def load_gi():
@@ -289,7 +444,7 @@ def smoke_test():
     print('CAMERA_SMOKE_TEST_PASSED', flush=True)
 
 
-def run_app(test=False, camera='rear', switch_test=False):
+def run_app(test=False, camera='rear', switch_test=False, fast_test=False):
     Gtk, Gdk, Graphene, Gst, GLib, Gio = load_gi()
 
     import gi
@@ -385,6 +540,10 @@ def run_app(test=False, camera='rear', switch_test=False):
             self.photo_timeout = None
             self.photo_poll = None
             self.photo_frames = 0
+            self.shot_cancel = None
+            self.photo_thumbnail = None
+            self.shot_generation = 0
+            self.live_wait = None
             self.last_photo_name = None
             self.capture_folder = None
             self.busy = False
@@ -393,6 +552,11 @@ def run_app(test=False, camera='rear', switch_test=False):
             self.drag_start = [.5, .5]
             self.focus_timer = None
             self.af = None
+            self.af_memo = None
+            self.latest_signature = None
+            self.latest_focus_frame = None
+            self.last_focus_score = None
+            self.capture_requested_at = None
             self.af_pending_photo = False
             self.af_roi = (.5,.5)
             self.af_auto_started = False
@@ -591,6 +755,7 @@ def run_app(test=False, camera='rear', switch_test=False):
 
         def request_capture(self,*_):
             if self.busy or self.af_pending_photo or self.countdown_source:return
+            self.capture_requested_at = time.monotonic()
             if not self.timer_seconds:self.capture();return
             self.countdown_deadline=time.monotonic()+self.timer_seconds
             self.countdown_label.set_visible(True);self.countdown_source=GLib.timeout_add(80,self.countdown_tick)
@@ -766,12 +931,23 @@ def run_app(test=False, camera='rear', switch_test=False):
                            self.view.center[1]+(y-wh/2)/(dh*self.view.zoom))
             self.start_af()
 
+        def focus_key(self):
+            return (self.camera_key, tuple(self.af_roi), self.view.zoom, tuple(self.view.center))
+
         def start_af(self, photo=False):
             if self.busy or not self.preview or not profile(self.camera_key)['focus']:
                 return False
             if self.af and self.af.active:
                 self.af_pending_photo |= photo
                 return True
+            if photo:
+                try:
+                    if can_reuse_focus(self.af_memo, self.latest_signature, self.focus_key(), int(FOCUS.read_text()), time.monotonic(), focus_metric(*self.latest_focus_frame,self.af_roi) if self.latest_focus_frame else None):
+                        print('AUTOFOCUS_REUSED stable scene', flush=True)
+                        return False
+                except (OSError,ValueError):
+                    pass
+            self.af_memo = None
             if not os.access(FOCUS,os.W_OK):
                 self.status.set_text('对焦接口不可写，请检查相机对焦服务')
                 return False
@@ -804,6 +980,8 @@ def run_app(test=False, camera='rear', switch_test=False):
             return True
 
         def af_done(self, ok, position, message, records):
+            self.af_memo = ({'at':time.monotonic(), 'position':position, 'key':self.focus_key(),
+                             'signature':self.latest_signature,'score':self.last_focus_score} if ok and self.latest_signature else None)
             if self.af_watchdog:
                 GLib.source_remove(self.af_watchdog)
                 self.af_watchdog = None
@@ -826,11 +1004,13 @@ def run_app(test=False, camera='rear', switch_test=False):
             selected = profile(self.camera_key)
             width, height = selected['previews'][self.quality.get_selected()]
             self.set_title('相机 · '+selected['name'])
+            self.af_memo = None
+            self.latest_signature = None
+            self.latest_focus_frame = None
+            self.last_focus_score = None
             self.preview_frames = 0
             self.preview_last_frame = time.monotonic()
-            self.preview = Gst.parse_launch(f'libcamerasrc name=camera ! video/x-raw,format=RGBA,width={width},height={height} ! appsink name=view sync=false max-buffers=1 drop=true')
-            source = self.preview.get_by_name('camera')
-            source.set_property('camera-name', selected['path'])
+            self.preview = make_live_preview(Gst, self.camera_key, width, height)
             self.sink = self.preview.get_by_name('view')
             self.preview.get_bus().add_signal_watch()
             self.preview.get_bus().connect('message::error', self.preview_error)
@@ -877,9 +1057,13 @@ def run_app(test=False, camera='rear', switch_test=False):
                 raw = buffer.extract_dup(0, buffer.get_size())
                 self.preview_frames += 1
                 self.preview_last_frame = time.monotonic()
+                if profile(self.camera_key)['focus']:
+                    self.latest_focus_frame = (raw,width,height,stride)
+                    self.latest_signature = focus_signature(raw,width,height,stride,self.af_roi)
                 if self.af and self.af.active:
                     try:
-                        self.af.frame(focus_metric(raw,width,height,stride,self.af_roi))
+                        self.last_focus_score=focus_metric(raw,width,height,stride,self.af_roi)
+                        self.af.frame(self.last_focus_score)
                     except OSError as exc:
                         self.cancel_af()
                         self.status.set_text('对焦接口写入失败：'+str(exc))
@@ -902,60 +1086,80 @@ def run_app(test=False, camera='rear', switch_test=False):
             GLib.idle_add(self.stop_preview)
 
         def capture(self, *_, focused=False):
-            if self.busy:
+            if self.busy or not self.preview:
                 return
             if not focused and profile(self.camera_key)['focus'] and self.auto_focus.get_active():
                 if self.start_af(photo=True):
                     return
+            self.capture_started = time.monotonic()
             self.busy = True
             self.shutter.set_sensitive(False)
             self.quality.set_sensitive(False)
             self.camera_selector.set_sensitive(False)
-            self.stop_preview()
             folder = self.capture_folder or Path(GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_PICTURES) or Path.home()/'Pictures')/'Camera'
             folder.mkdir(parents=True, exist_ok=True)
             self.photo_path = folder/('IMG_'+datetime.datetime.now().strftime('%Y%m%d_%H%M%S_%f')+'.jpg')
-            self.photo, self.photo_dimensions = make_photo(Gst, self.photo_path, self.view.zoom, self.view.center, camera=self.camera_key)
-            self.photo_frames = 0
-            bus = self.photo.get_bus()
-            bus.add_signal_watch()
-            bus.connect('message::error', self.photo_error)
-            self.photo_timeout = GLib.timeout_add_seconds(15, self.photo_timed_out)
-            self.status.set_text('正在拍照，请稍候…')
-            self.photo.set_state(Gst.State.PLAYING)
-            self.photo_poll = GLib.timeout_add(100, self.poll_photo)
+            self.shot_generation += 1
+            self.shot_cancel = threading.Event()
+            self.photo_timeout = GLib.timeout_add_seconds(8, self.photo_timed_out)
+            self.live_deadline = time.monotonic()+2
+            self.status.set_text('正在保存照片…')
+            self.start_live_photo()
+            self.sync_chrome()
 
-        def poll_photo(self):
-            if not self.photo:
+        def start_live_photo(self):
+            self.live_wait = None
+            if self.closing or not self.busy:
                 return False
-            sample = self.photo.get_by_name('jpeg').emit('try-pull-sample', 0)
-            if not sample:
-                return True
-            buffer = sample.get_buffer()
-            data = buffer.extract_dup(0, buffer.get_size())
-            sample = None
-            self.photo_frames += 1
-            if self.photo_frames < PHOTO_WARMUP_FRAMES:
-                return True
             try:
-                if not jpeg_has_image(data):
-                    return True
-                save_photo(self.photo_path, data, self.photo_dimensions)
-            except (OSError, ValueError, GLib.Error) as exc:
-                self.photo_poll = None
+                frame = take_live_frame(Gst, self.preview, self.camera_key)
+                if frame is None:
+                    if time.monotonic() > self.live_deadline:
+                        raise RuntimeError('相机画面尚未就绪，请稍后重试')
+                    self.live_wait = GLib.timeout_add(25, self.start_live_photo)
+                    return False
+            except Exception as exc:
                 self.finish_photo(failed=True)
-                self.status.set_text('保存照片失败：'+str(exc))
+                self.status.set_text(str(exc))
                 return False
-            self.photo_poll = None
-            self.photo_done()
+            token, cancelled = self.shot_generation, self.shot_cancel
+            path = self.photo_path
+            zoom, center = self.view.zoom, tuple(self.view.center)
+            def worker():
+                result = None
+                error = None
+                try:
+                    result = encode_live_photo(Gst, frame, zoom, center, cancelled)
+                except Exception as exc:
+                    error = str(exc)
+                GLib.idle_add(self.live_photo_complete, token, cancelled, path, result, error)
+            threading.Thread(target=worker, name='camera-photo-encoder', daemon=True).start()
+            return False
+
+        def live_photo_complete(self, token, cancelled, path, result, error):
+            if self.closing or token != self.shot_generation or cancelled.is_set():
+                return False
+            try:
+                if error:
+                    raise RuntimeError(error)
+                data, self.photo_dimensions, self.photo_thumbnail = result
+                save_photo(path, data, self.photo_dimensions)
+                self.photo_done()
+            except Exception as exc:
+                self.finish_photo(failed=True)
+                self.status.set_text('拍照失败：'+str(exc))
             return False
 
         def photo_done(self, *_):
+            print('PHOTO_SAVED', self.camera_key, 'seconds', round(time.monotonic()-self.capture_started, 3), 'total_since_shutter', round(time.monotonic()-(self.capture_requested_at or self.capture_started),3), 'dimensions', self.photo_dimensions, flush=True)
+            self.capture_requested_at = None
             name = self.photo_path.name
             self.last_photo_name = name
             self.gallery_path=self.photo_path
-            pixbuf=GdkPixbuf.Pixbuf.new_from_file_at_scale(str(self.photo_path),56,56,True)
-            self.thumbnail.set_paintable(Gdk.Texture.new_for_pixbuf(pixbuf));self.gallery_button.set_child(self.thumbnail)
+            pixels, tw, th, stride = self.photo_thumbnail
+            texture = Gdk.MemoryTexture.new(tw, th, Gdk.MemoryFormat.R8G8B8A8, GLib.Bytes.new(pixels), stride)
+            self.thumbnail.set_paintable(texture);self.gallery_button.set_child(self.thumbnail)
+            self.photo_thumbnail = None
             width, height = self.photo_dimensions
             self.finish_photo()
             self.status.set_text('照片已保存')
@@ -973,32 +1177,31 @@ def run_app(test=False, camera='rear', switch_test=False):
             return False
 
         def finish_photo(self, failed=False):
-            if self.photo_poll:
-                GLib.source_remove(self.photo_poll)
-                self.photo_poll = None
+            if self.shot_cancel:
+                self.shot_cancel.set()
+                self.shot_cancel = None
+            self.shot_generation += 1
+            if self.live_wait:
+                GLib.source_remove(self.live_wait)
+                self.live_wait = None
             if self.photo_timeout:
                 GLib.source_remove(self.photo_timeout)
                 self.photo_timeout = None
-            if self.photo:
-                self.photo.set_state(Gst.State.NULL)
-                self.photo.get_state(3*Gst.SECOND)
-                self.photo.get_bus().remove_signal_watch()
-                self.photo = None
             if failed and self.photo_path:
                 self.photo_path.unlink(missing_ok=True)
             self.busy = False
             self.shutter.set_sensitive(True)
             self.quality.set_sensitive(True)
             self.camera_selector.set_sensitive(True)
-            GLib.timeout_add(250, self.start_preview)
+            self.sync_chrome()
 
         def close_camera(self, *_):
             self.closing = True
             self.cancel_countdown();self.release_torch()
             if self.focus_ring_source:GLib.source_remove(self.focus_ring_source);self.focus_ring_source=None
-            self.stop_preview()
-            if self.photo:
+            if self.busy:
                 self.finish_photo(failed=True)
+            self.stop_preview()
             if self.focus_timer:
                 GLib.source_remove(self.focus_timer)
             return False
@@ -1006,13 +1209,13 @@ def run_app(test=False, camera='rear', switch_test=False):
     app = Gtk.Application(application_id='org.tb710fu.RearCamera', flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE)
     app.add_main_option('camera', 0, GLib.OptionFlags.NONE, GLib.OptionArg.STRING, 'rear or front', 'CAMERA')
     app.initial_camera = camera
-    app.test_ok = not (test or switch_test)
+    app.test_ok = not (test or switch_test or fast_test)
     def activate(app):
         window = app.get_active_window()
         if not window:
             window = Window(app)
         window.present()
-        if not (test or switch_test):window.fullscreen()
+        if not (test or switch_test or fast_test):window.fullscreen()
         if test:
             temporary_photos = tempfile.TemporaryDirectory(prefix='tb-camera-ui-check-')
             window.capture_folder = Path(temporary_photos.name)
@@ -1041,6 +1244,61 @@ def run_app(test=False, camera='rear', switch_test=False):
                 app.quit()
                 return False
             GLib.timeout_add_seconds(11, finish_test)
+        if fast_test:
+            temporary_photos = tempfile.TemporaryDirectory(prefix='tb-camera-fast-check-')
+            window.capture_folder = Path(temporary_photos.name)
+            window.auto_focus.set_active(False)
+            app.hold()
+            progress = {'stage':0, 'deadline':time.monotonic()+45, 'files':[], 'ready_after':0.}
+            original = None
+            def advance_fast():
+                nonlocal original
+                try:
+                    if time.monotonic()>progress['deadline']:
+                        raise RuntimeError('fast/lifecycle test timed out')
+                    if time.monotonic()<progress['ready_after']:
+                        return True
+                    stage = progress['stage']
+                    if stage == 0:
+                        if window.frames < 10:return True
+                        original = window.preview
+                        window.request_capture();progress['stage']=1
+                    elif stage in (1,2,3):
+                        if window.busy:return True
+                        if not window.last_photo_name:raise RuntimeError('photo not saved')
+                        path=window.capture_folder/window.last_photo_name
+                        if path.name in progress['files']:raise RuntimeError('duplicate photo name')
+                        data=path.read_bytes()
+                        expected=crop_bounds(*profile(window.camera_key)['full'],2 if stage==2 else 1)[2:]
+                        assert jpeg_dimensions(data)==expected and jpeg_has_image(data)
+                        assert window.preview is original and window.preview.get_state(0)[1]==Gst.State.PLAYING
+                        progress['files'].append(path.name)
+                        if stage<3:
+                            window.zoom_slider.set_value(2 if stage==1 else 1)
+                            window.last_photo_name=None;window.request_capture();progress['stage']+=1
+                        else:
+                            window.request_capture()
+                            if window.photo_timeout:GLib.source_remove(window.photo_timeout)
+                            window.photo_timed_out()
+                            progress['stage']=4;progress['ready_after']=time.monotonic()+1
+                    elif stage==4:
+                        assert len(list(window.capture_folder.glob('*.jpg')))==3 and not window.busy
+                        window.last_photo_name=None;window.request_capture();progress['stage']=5
+                    elif stage==5:
+                        if window.busy:return True
+                        assert window.last_photo_name and len(list(window.capture_folder.glob('*.jpg')))==4
+                        window.request_capture();window.close()
+                        progress['stage']=6;progress['ready_after']=time.monotonic()+1
+                    else:
+                        assert len(list(window.capture_folder.glob('*.jpg')))==4
+                        app.test_ok=True
+                        print('FAST_LIFECYCLE_TEST PASS burst/zoom/preview continuity/timeout/close cancellation',flush=True)
+                        temporary_photos.cleanup();app.release();app.quit();return False
+                except Exception as exc:
+                    print('FAST_LIFECYCLE_TEST FAIL',type(exc).__name__,str(exc),flush=True)
+                    window.close();temporary_photos.cleanup();app.release();app.quit();return False
+                return True
+            GLib.timeout_add(50,advance_fast)
         if switch_test:
             temporary_photos = tempfile.TemporaryDirectory(prefix='tb-camera-switch-ui-')
             window.capture_folder = Path(temporary_photos.name)
@@ -1104,5 +1362,6 @@ if __name__ == '__main__':
         parser.add_argument('--camera', choices=['rear','front','macro'], default='rear')
         parser.add_argument('--ui-test', action='store_true')
         parser.add_argument('--switch-test', action='store_true')
+        parser.add_argument('--fast-test', action='store_true')
         args = parser.parse_args()
-        sys.exit(run_app(test=args.ui_test, camera=args.camera, switch_test=args.switch_test))
+        sys.exit(run_app(test=args.ui_test, camera=args.camera, switch_test=args.switch_test, fast_test=args.fast_test))

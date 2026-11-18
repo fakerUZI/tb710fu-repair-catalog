@@ -1,50 +1,50 @@
 {
+  "archive_sha256": "909adf2c3a552b3ab6077c3755481f506c120f31961f706c236470e9214580ec",
   "format": 2,
-  "release": {
-    "format": 2,
-    "source_policy": "undated",
-    "target_version": "7.2.6-tb710fu-20261117"
-  },
-  "payload_status": "ready",
-  "root": "ubuntu-kernel-upgrade-20261117-r2",
-  "archive_sha256": "1ff7106439fe1485fba44b8af276668bc5516ae15e13cadb3fcf265847f53f7b",
-  "installer_sha256": "fcb305d02b7567c057aeda78446ca12da1c2e57982e8e817000e9b2230caad60",
-  "manifest_sha256": "eb109b11ba3130fcc08d7df26d1222863c9f0d4172976f72a519845bfe9e7a42",
+  "installer_sha256": "280e25fd3faee0d26837360330e906df1119a404d5e2d2bfa7218273b75c9002",
+  "manifest_sha256": "17d5acc1db6129013ba174ad36dd7a3ab51db4380204fc48782184b26067fa53",
   "parts": [
     {
       "name": "kernel-upgrade.part01",
-      "size": 8388608,
-      "sha256": "fc6abcaf730a83148a34e649bf11a3d603def5dcf4bc95f1bea63420d60ac083"
+      "sha256": "aea3fc01bdf7712c4c495e550c9b9d57ceef4beccd9cb428199e53c40d48a9a5",
+      "size": 8388608
     },
     {
       "name": "kernel-upgrade.part02",
-      "size": 8388608,
-      "sha256": "4342562bd652e0efed685833e9007c5d319a27e4c1926013991e2ae415e8cbee"
+      "sha256": "a86c494c545fbabc905721aa1cca4c999e67e195ef3bac380850e4828bf3adf2",
+      "size": 8388608
     },
     {
       "name": "kernel-upgrade.part03",
-      "size": 8388608,
-      "sha256": "77a45b82dc202869aab84d3130264a1e80c70fc7e6f95df582cb73fe52393e7b"
+      "sha256": "9f4cd34d60ce681cedea2b823a0534189cb4a8538370e17ee783bde7c79a845c",
+      "size": 8388608
     },
     {
       "name": "kernel-upgrade.part04",
-      "size": 8388608,
-      "sha256": "e6857e7dfe27ba5f1f38ba7335c34fb13c901ba7fb44748ce0dfbcf0f49f644a"
+      "sha256": "a4fbfa97e0f7715fa73fb83249581e9a46b737a8cec14fc640378ac1f6a7dcd9",
+      "size": 8388608
     },
     {
       "name": "kernel-upgrade.part05",
-      "size": 8388608,
-      "sha256": "20859a897bc8abfbc2438b70f97920f5da44ef458608369e400214f1a66e4a24"
+      "sha256": "3f75e939a6f27d9467195af5d1be4dc0313bb38d8efc540bd568e1fd6dc6c3c0",
+      "size": 8388608
     },
     {
       "name": "kernel-upgrade.part06",
-      "size": 8388608,
-      "sha256": "4dcdedb074e9c5509e6d11a4e6464f98f4714881f56b3efe18d7b86fd13663f1"
+      "sha256": "bbf5a1f4cce8d537eb7ed6c5d5f5297e9f62d05872eae3d7d97ad17f0fdc96de",
+      "size": 8388608
     },
     {
       "name": "kernel-upgrade.part07",
-      "size": 4850285,
-      "sha256": "9f470aa98584090ebe1794ebe367c86a2a6e6c626c226ca668a9c6382f0c186f"
+      "sha256": "35c603937bb5011d1b236230d537380af974b0a754e0620abc88c69b79312726",
+      "size": 4585243
     }
-  ]
+  ],
+  "payload_status": "ready",
+  "release": {
+    "format": 2,
+    "source_policy": "undated-or-dated-before-target",
+    "target_version": "7.2.6-tb710fu-20261118"
+  },
+  "root": "ubuntu-kernel-upgrade-20261118"
 }

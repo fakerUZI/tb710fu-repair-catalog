@@ -14,6 +14,8 @@ class AFTests(unittest.TestCase):
  def test_find_peak_away_from_fixed_focus(self):
   writes,result=self.sweep(lambda p:.01+.2*math.exp(-((p-360)/85)**2))
   self.assertTrue(result[0]);self.assertLessEqual(abs(result[1]-360),24)
+ def test_local_clear_peak_uses_only_three_lens_moves(self):
+  writes,r=self.sweep(lambda p:.01+.2*math.exp(-((p-700)/85)**2));self.assertTrue(r[0]);self.assertLessEqual(len(writes),3)
  def test_already_focused(self):
   _,r=self.sweep(lambda p:.01+.2*math.exp(-((p-700)/85)**2));self.assertTrue(r[0]);self.assertEqual(r[1],700)
  def test_flat_scene_restores(self):

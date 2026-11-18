@@ -1,27 +1,113 @@
 {
   "accepted": {
+    "/etc/dbus-1/system.d/org.tb710fu.Torch1.conf": [
+      "ff856df555959fb1d37a279263e9c987adce639b1e0fba9c8b424cb7fc94e43d"
+    ],
+    "/etc/systemd/system/tb710fu-camera-focus.service.d/50-camera-focus-owner.conf": [
+      "db78c083d0d1acc7d3942596cdc8c586697c2f6003f2aa4122159e58b8d37fd1"
+    ],
+    "/etc/systemd/system/tb710fu-flash-hardware.service": [
+      "5215467429659dcced64785de14da6fea22ba92360ac034766c3085fe94f6d04",
+      "fdc551426034ead3d7f850ab602de74c4ee63587338a59a2338ef890f62a524a"
+    ],
+    "/etc/systemd/system/tb710fu-macro-camera.service": [
+      "01af1434907eaeef4456ae5c1e66bbe23b00178c65782b64e366772bc2115a34",
+      "e816030bd32106ab33849d69091effe38b46fccdc7f7015669ab86d80b0781db"
+    ],
+    "/etc/systemd/system/tb710fu-torch.service": [
+      "8ede2d4f5744e2ab5484370550fcc44368b5503578a124fe64583a59003bdd40",
+      "bfef308f7f0835249117bc044009bddb3a0a7c0e4e94bdb8f8b803bd96ebed10"
+    ],
+    "/lib/firmware/tb-flash.dtbo": [
+      "0b4491fda57f23d2668062911c0db073c589797e128b2a0b903f3e6757488635"
+    ],
+    "/lib/firmware/tb-macro-raw.dtbo": [
+      "2c2dfd3c4a0faded43dcec0434d56a9c64c4a3b59206bf0a8e7ded351f6cf39c"
+    ],
+    "/opt/tb710fu-flash/7.2.6-tb710fu-20261117/leds-qcom-flash.ko": [
+      "59162841490fab0ad78de83270de7123b31210d83309bd5b04ef40b218f79fc0"
+    ],
+    "/opt/tb710fu-flash/7.2.6-tb710fu-20261117/manifest.json": [
+      "71ef29ef8f9ed187faf519bc88bb80f74b9185456f7cdc45dbcc630bc03a1157"
+    ],
+    "/opt/tb710fu-flash/7.2.6-tb710fu-20261117/tb-flash.dtbo": [
+      "0b4491fda57f23d2668062911c0db073c589797e128b2a0b903f3e6757488635"
+    ],
+    "/opt/tb710fu-flash/7.2.6-tb710fu-20261117/tb_flash_overlay.ko": [
+      "b7a22014cbf2317e38cd341689da00e3e02959249f07445683ce5a6a70535143"
+    ],
+    "/opt/tb710fu-flash/7.2.6-tb710fu-20261117/v4l2-flash-led-class.ko": [
+      "10e619bfff8eaf4384ac5e0223afb91cb15eec1c31fa5e8b86aa7c1088009f6a"
+    ],
+    "/opt/tb710fu-flash/7.2.6-tb710fu-20261118/manifest.json": [
+      "50cf2f20fa9f20a8c53ccdedc35f5e3eeda890386c937cd8d7a49162a775a7d9"
+    ],
+    "/opt/tb710fu-macro/7.2.6-tb710fu-20261117/gc02m1_raw.ko": [
+      "0a5bf78f13f16ae5882154cb44f09e82d00368093abe548214ebdc5a13f1e254"
+    ],
+    "/opt/tb710fu-macro/7.2.6-tb710fu-20261117/macro-manifest.json": [
+      "d492642a54c7c42021d70c9a6c0065081fa91c717c09aa0eb32083e003e251d7"
+    ],
+    "/opt/tb710fu-macro/7.2.6-tb710fu-20261117/tb-macro-raw.dtbo": [
+      "2c2dfd3c4a0faded43dcec0434d56a9c64c4a3b59206bf0a8e7ded351f6cf39c"
+    ],
+    "/opt/tb710fu-macro/7.2.6-tb710fu-20261117/tb_macro_registration.ko": [
+      "c1a397cebe1f00591e05f13a77ffcd2d274db6b9202ce993267c5657ab76a492"
+    ],
+    "/opt/tb710fu-macro/7.2.6-tb710fu-20261118/macro-manifest.json": [
+      "2c772c36e4a61577896ef5f0560c301c753656b1ec08518dd3836c19b7907c78"
+    ],
     "/usr/local/bin/tb-front-camera-preview": [
-      "239587d7e52f582ce0f098b71d26095b57f7f01533d9256f131b5565bb9397ad"
+      "239587d7e52f582ce0f098b71d26095b57f7f01533d9256f131b5565bb9397ad",
+      "b5518bcd111e94e581712c3b6a690887139cc7bf10a37d0bc63d08469f63b583"
     ],
     "/usr/local/bin/tb-rear-camera": [
-      "9fc94fc1c2109708530907fbedd210b614974a0f5d545e43228b6201c3b227df"
+      "800e0f25ca6a53e0552035fd4856424171bde039a0aaff4798d115c1826af248",
+      "9fc94fc1c2109708530907fbedd210b614974a0f5d545e43228b6201c3b227df",
+      "d626c86f355e246f5f72e3c56d542f2890e58fc46929790802b8e8293e89909e"
+    ],
+    "/usr/local/libexec/tb-camera-focus-permission.py": [
+      "3c65fd6c51e5388c6bd930386154a6765248bf9e482472f22d61bc9279b982e8",
+      "98b4a370573aa2a337d771476d3a033974c19ba5cb21273ff414059bde62ff0d"
+    ],
+    "/usr/local/libexec/tb-flash-hardware.py": [
+      "6757f664472b07288d0b9e7c3798e35bb3d23872d6627c2011cf5fb2dfa7a3b2",
+      "a11c4794bcd6ee6ee2dc91e507391cc262eca6482d07da7c6295d2c3f3d32287"
+    ],
+    "/usr/local/libexec/tb-flash-off": [
+      "9878e128f69733b28bc70c5d595bc84d763b0c4722412d9432c797cf97b97185"
+    ],
+    "/usr/local/libexec/tb-macro-hardware.py": [
+      "6273dd602d56116a079495b42674d40be26d6e9c23f1c0a8491316b0ed0a3ef6",
+      "bf95127ad8427a8d44d3a95c4867116540e5897f9ff8d5f9f2c2b75c5b78d743"
+    ],
+    "/usr/local/libexec/tb-torch-daemon.py": [
+      "4471b4355fe313521633504bde2ce2972cf9150d957c5effda063024e976c8f9"
     ],
     "/usr/share/applications/tb710fu-front-camera.desktop": [
-      "a9fc7c0f2c742b622cf06cfcdd8b72c707f922084d18840232609c18433a8d74"
+      "a9fc7c0f2c742b622cf06cfcdd8b72c707f922084d18840232609c18433a8d74",
+      "b9e7b1a393ee3e70a2f521f5b7976190590365dc1c76be972f79879d73c9b32a"
     ],
     "/usr/share/applications/tb710fu-rear-camera.desktop": [
+      "1efe47b6f16996b6cfcb3cf385f46e0ab4d539456d11918b0bccac932995b01e",
       "5d1db156449dc92b578f66e0f997010c8cd4992177bb3e0dc49c6ede25c9eb69"
+    ],
+    "/usr/share/gnome-shell/extensions/tb-torch@tb710fu/extension.js": [
+      "7a5ed13170542a1e64e6f81be3f6009861d188e3f046e7ad4b8f2d9024f1bfd1"
+    ],
+    "/usr/share/gnome-shell/extensions/tb-torch@tb710fu/metadata.json": [
+      "c089bf83605a2844e7b11987be03075d412b3ab806cfad7363f60025c53f7d91"
     ]
   },
   "files": {
     "50-camera-focus-owner.conf": "db78c083d0d1acc7d3942596cdc8c586697c2f6003f2aa4122159e58b8d37fd1",
     "extension.js": "7a5ed13170542a1e64e6f81be3f6009861d188e3f046e7ad4b8f2d9024f1bfd1",
-    "gc02m1_raw.ko": "0a5bf78f13f16ae5882154cb44f09e82d00368093abe548214ebdc5a13f1e254",
+    "gc02m1_raw.ko": "b92358c31dda92ee974758b1be64bd40477eec8a8ab5959b5027b60c8b0799e4",
     "gstreamer1.0-libcamera_0.7.0-1ubuntu2+tb710fu20261117.3_arm64.deb": "e4b56874b9101b8a5d99e93f577257124a4a8b16c8b61e0452965f8af6b5643d",
     "gstreamer1.0-libcamera_0.7.0-1ubuntu2_arm64.deb": "b9d481295e2e60ec8307f955b755c767a7627a18352453bfe5c5864133e406a9",
     "install-camera-isp.py": "46d02b5cdd47947fe41daf891329e13374e8768c38b69dc3e48acdc671f6cf28",
-    "install-camera-quality.py": "8bbe8527e05562d7af4aa3fbf15812261ca51a24732c5119f7fe1b76d0e419d7",
-    "leds-qcom-flash.ko": "59162841490fab0ad78de83270de7123b31210d83309bd5b04ef40b218f79fc0",
+    "install-camera-quality.py": "141ae656b826f219cd245566e43757c7d6bebe6ea4ee3e167929a6337ff43139",
+    "leds-qcom-flash.ko": "a73d59788553127cdf954d5e040f78302dd2a702443de228daa41a177797f9f5",
     "libcamera-ipa_0.7.0-1ubuntu2+tb710fu20261117.3_arm64.deb": "afde5f6f9e35602b8d1d1132d0dda59f1ef46c0ac300564d0a778d5e33517b2e",
     "libcamera-ipa_0.7.0-1ubuntu2_arm64.deb": "d5f2b806a3467f1b70cfd7fac4cc7aae6979d1d307d5909775769a4cadf3e1fa",
     "libcamera-tools_0.7.0-1ubuntu2+tb710fu20261117.3_arm64.deb": "9ea7348b49fc3429a1b047394340aebbce30d6cb1f955b6a222d196d11221e44",
@@ -32,28 +118,28 @@
     "libcamera0.7_0.7.0-1ubuntu2_arm64.deb": "76ced371fc9dc7a7c7b02f1d7c3eaa5cacd2d6945c29f903250678eb2c9994f0",
     "local-tb-flash.dtbo": "0b4491fda57f23d2668062911c0db073c589797e128b2a0b903f3e6757488635",
     "local-tb-macro-raw.dtbo": "2c2dfd3c4a0faded43dcec0434d56a9c64c4a3b59206bf0a8e7ded351f6cf39c",
-    "macro-manifest.json": "d492642a54c7c42021d70c9a6c0065081fa91c717c09aa0eb32083e003e251d7",
-    "manifest.json": "71ef29ef8f9ed187faf519bc88bb80f74b9185456f7cdc45dbcc630bc03a1157",
+    "macro-manifest.json": "99b9e7ee2732c6185db2547f854c6e180441a9226eb511fddaf23571d34ef971",
+    "manifest.json": "1a4c413eebfa171aeb3da59a4738dec008d85f5ba3401339606bdd1be75f1bfa",
     "metadata.json": "c089bf83605a2844e7b11987be03075d412b3ab806cfad7363f60025c53f7d91",
     "org.tb710fu.Torch1.conf": "ff856df555959fb1d37a279263e9c987adce639b1e0fba9c8b424cb7fc94e43d",
-    "tb-camera-focus-permission.py": "3c65fd6c51e5388c6bd930386154a6765248bf9e482472f22d61bc9279b982e8",
-    "tb-camera.py": "d626c86f355e246f5f72e3c56d542f2890e58fc46929790802b8e8293e89909e",
-    "tb-flash-hardware.py": "a11c4794bcd6ee6ee2dc91e507391cc262eca6482d07da7c6295d2c3f3d32287",
+    "tb-camera-focus-permission.py": "f6444c11caf28bf4fcaad41a7889d75e3bc19fdcd28dd7f9f75cec03581d9d53",
+    "tb-camera.py": "9aaf0f9111d47d2364bbd289e421c3eb0be308a658b241ac1e9bd28b1f84fa4f",
+    "tb-flash-hardware.py": "7fb3b2d164d41ff4245913396dd463c814edeabc6b0a3aaa7f712e5b960e75db",
     "tb-flash-off": "9878e128f69733b28bc70c5d595bc84d763b0c4722412d9432c797cf97b97185",
     "tb-flash.dtbo": "0b4491fda57f23d2668062911c0db073c589797e128b2a0b903f3e6757488635",
     "tb-front-camera-preview": "b5518bcd111e94e581712c3b6a690887139cc7bf10a37d0bc63d08469f63b583",
-    "tb-macro-hardware.py": "bf95127ad8427a8d44d3a95c4867116540e5897f9ff8d5f9f2c2b75c5b78d743",
+    "tb-macro-hardware.py": "08dc912ff9129ef1ae2ca7631a6cc04f26cd238ccb23a2bbdf4e5de81b2f0e6c",
     "tb-macro-raw.dtbo": "2c2dfd3c4a0faded43dcec0434d56a9c64c4a3b59206bf0a8e7ded351f6cf39c",
     "tb-torch-daemon.py": "4471b4355fe313521633504bde2ce2972cf9150d957c5effda063024e976c8f9",
-    "tb710fu-flash-hardware.service": "fdc551426034ead3d7f850ab602de74c4ee63587338a59a2338ef890f62a524a",
+    "tb710fu-flash-hardware.service": "5215467429659dcced64785de14da6fea22ba92360ac034766c3085fe94f6d04",
     "tb710fu-front-camera.desktop": "b9e7b1a393ee3e70a2f521f5b7976190590365dc1c76be972f79879d73c9b32a",
-    "tb710fu-macro-camera.service": "01af1434907eaeef4456ae5c1e66bbe23b00178c65782b64e366772bc2115a34",
+    "tb710fu-macro-camera.service": "e816030bd32106ab33849d69091effe38b46fccdc7f7015669ab86d80b0781db",
     "tb710fu-rear-camera.desktop": "1efe47b6f16996b6cfcb3cf385f46e0ab4d539456d11918b0bccac932995b01e",
-    "tb710fu-torch.service": "8ede2d4f5744e2ab5484370550fcc44368b5503578a124fe64583a59003bdd40",
-    "tb_flash_overlay.ko": "b7a22014cbf2317e38cd341689da00e3e02959249f07445683ce5a6a70535143",
-    "tb_macro_registration.ko": "c1a397cebe1f00591e05f13a77ffcd2d274db6b9202ce993267c5657ab76a492",
-    "v4l2-flash-led-class.ko": "10e619bfff8eaf4384ac5e0223afb91cb15eec1c31fa5e8b86aa7c1088009f6a"
+    "tb710fu-torch.service": "bfef308f7f0835249117bc044009bddb3a0a7c0e4e94bdb8f8b803bd96ebed10",
+    "tb_flash_overlay.ko": "a770b3451a7d3490fab042317d3936ca877cbb5a11b723cc6aef5c88b7c80c20",
+    "tb_macro_registration.ko": "8a3c9b0abdd3c5ad15d60934a9a021c7ae2e3197e00298f6a59943f17241ffb5",
+    "v4l2-flash-led-class.ko": "25f450fad2fe215533b75591337154d8b4e5ff977fbc3f983104de9413a7b920"
   },
   "format": 1,
-  "version": "7.2.6-tb710fu-20261117"
+  "version": "7.2.6-tb710fu-20261118"
 }

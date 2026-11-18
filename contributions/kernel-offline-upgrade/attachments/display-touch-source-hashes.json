@@ -1,0 +1,54 @@
+{
+  "drivers/gpu/drm/msm/disp/dpu1/dpu_crtc.c": {
+    "base_sha256": "23c584ef7c4d73ef933f2d5eba9f0f998f93188e4d4f195fdcfbe77b0a55c2b8",
+    "built_sha256": "e0b11b1b2f1b83cafc5ae02ba22ec54794477f4846d53eafa6cd7b0b14b9f7dd"
+  },
+  "drivers/gpu/drm/msm/disp/dpu1/dpu_crtc.h": {
+    "base_sha256": "1e212715843284b8ad8592cbaceb71d3391f3850c0619acf82b4cf5a59b6fee0",
+    "built_sha256": "2c580926ea3f17e929f4ee8f1901959e8f6ebf515a9f72a463dd1750daa797d8"
+  },
+  "drivers/gpu/drm/msm/disp/dpu1/dpu_encoder.c": {
+    "base_sha256": "39540f2da96bd57107be037d2e0131a0f550744d7c982999e7ff7a07ebe4374d",
+    "built_sha256": "21edd767d501d2fc48340a4e8da9e8b99e53a68e1057f54833604d6602a23298"
+  },
+  "drivers/gpu/drm/msm/disp/dpu1/dpu_encoder.h": {
+    "base_sha256": "431f6c16b3a513ae276fa39476d5eda4f1a7eeda0f9404dc607d92ecc7e3b223",
+    "built_sha256": "0b5e1d74e01b18986e2e85761bc70004e632826cd085c99c419abe047a647fe2"
+  },
+  "drivers/gpu/drm/msm/disp/dpu1/dpu_encoder_phys.h": {
+    "base_sha256": "cfbe977d5402357ed0c264d85a83c79be8021094497785715447b8d82ed139c1",
+    "built_sha256": "46da0dd38bcacdce5ea403785f1bf0fd95a6d73f1049fa476330abbb5def2425"
+  },
+  "drivers/gpu/drm/msm/disp/dpu1/dpu_hw_catalog.h": {
+    "base_sha256": "5a2c878989089eee9c74412b6f25b5e4b4897dd7b22705d0c237938906476818",
+    "built_sha256": "bd501ddcdb52498ccaea45e0337be0eb9e20c4306b79f4062d4c9cf43818ce30"
+  },
+  "drivers/gpu/drm/msm/disp/dpu1/dpu_hw_mdss.h": {
+    "base_sha256": "c66a80dde1a8cd1c5d8a3f09286ac7a94de0d6dc4e2f126297e9f9e4dd891ff3",
+    "built_sha256": "b3a8849114080689c7df523d2c85dfbd69f3875e57ed2092a3949f09ccd422a7"
+  },
+  "drivers/gpu/drm/msm/disp/dpu1/dpu_kms.c": {
+    "base_sha256": "1c9af2bd2f31e565782baf815657512ecb769448f11ea6270c9fd25b97024705",
+    "built_sha256": "18f6ea94bd13f85c30bbc3c2372999b2e5d5f23ff3964c87ac94f6fb6149c736"
+  },
+  "drivers/gpu/drm/msm/disp/dpu1/dpu_kms.h": {
+    "base_sha256": "1aeab448eadf2f8983c489caad01465dc7021b815c66cd5d207a22164812e953",
+    "built_sha256": "553363371cef4d1b21af375d1469457fae5ea59fa54ce74b6ee62d85d09b7fa4"
+  },
+  "drivers/gpu/drm/msm/disp/dpu1/dpu_plane.c": {
+    "base_sha256": "b2345d8ac7256eb3d4a3be8162f408028f7f01a2f7df11e915a769deb21f34c1",
+    "built_sha256": "84eaf4c81752be77fe70bcf54c48c142c260f093d4eab97f8cf9663e756ea1e9"
+  },
+  "drivers/gpu/drm/msm/dsi/phy/dsi_phy_7nm.c": {
+    "base_sha256": "4480ea4261794576e4072778ed240ff6a2f5542494e3816e4a8909d9b3efb8f0",
+    "built_sha256": "11c26ae4a2ab44566e0115634f400b9265fe5c042b3b59f31c253b9a261872a6"
+  },
+  "drivers/gpu/drm/panel/panel-nt36532-wqhd-dual-dsi-dsc.c": {
+    "base_sha256": "d1245e5ada58cb0542b0d56681d5836890b23b6a4646086e48d91a27da45066d",
+    "built_sha256": "4d63d29ca867e929214c4703aec027c37bbfdf395c91a266b0ff20e71971f570"
+  },
+  "drivers/input/touchscreen/NT36XXX_SPI/nt36xxx.c": {
+    "base_sha256": "3babdfd5456908fffa168884b802d5bd1f0da0440d84c46d488977b9e9534d3f",
+    "built_sha256": "2d748c3c6a7904aa19256105405d0f643e0c728972510b4d6237706e07059efb"
+  }
+}

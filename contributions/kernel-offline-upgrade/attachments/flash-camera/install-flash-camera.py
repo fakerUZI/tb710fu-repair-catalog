@@ -3,9 +3,9 @@
 import argparse,ast,copy,hashlib,importlib.util,json,os,pwd,shutil,stat,subprocess,sys,tempfile
 from pathlib import Path
 
-PACKAGE_SHA256='34cedaaedadff6fe04a4aa85cd23b2eeebbc06ab55714340313cbc641e3fe53b'
-VERSION='7.2.6-tb710fu-20261117'
-BASE=Path('/var/backups/tb710fu-flash-camera-20261117')
+PACKAGE_SHA256='bf20454cd8ea6404fcbbd5f35ad751c9dbed27cdd7690dc0184f508b20119ecc'
+VERSION='7.2.6-tb710fu-20261118'
+BASE=Path('/var/backups/tb710fu-flash-camera-20261118')
 DEST=Path('/opt/tb710fu-flash')/VERSION
 UNITS=['tb710fu-macro-camera.service','tb710fu-flash-hardware.service','tb710fu-torch.service']
 EXT='tb-torch@tb710fu'

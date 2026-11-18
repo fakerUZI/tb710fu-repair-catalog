@@ -10,7 +10,8 @@ from pathlib import Path
 PATTERN = re.compile(r'([0-9]+\.[0-9]+\.[0-9]+)-tb710fu-([0-9]{8})', re.ASCII)
 KERNEL = re.compile(r'[0-9]+\.[0-9]+(?:\.[0-9]+)?(?:[-+._][A-Za-z0-9+._-]+)?', re.ASCII)
 DATE_TOKEN = re.compile(r'(?<![0-9])(?:[0-9]{8}|[0-9]{4}[-_.][0-9]{2}[-_.][0-9]{2})(?![0-9])', re.ASCII)
-POLICIES = ('undated', 'dated-before-target')
+POLICIES = ('undated', 'dated-before-target', 'undated-or-dated-before-target')
+BRIDGE_TARGET = '7.2.6-tb710fu-20261118'
 UNDATED_MIGRATION_TARGET = '7.2.6-tb710fu-20261117'
 
 
@@ -33,6 +34,8 @@ def validate(plan, current=None, today=None):
     following = release_date(target)
     if policy == 'undated' and target != UNDATED_MIGRATION_TARGET:
         raise ValueError('无日期迁移仅适用于首次目标 ' + UNDATED_MIGRATION_TARGET + '；后续发布必须使用 dated-before-target。')
+    if policy == 'undated-or-dated-before-target' and target != BRIDGE_TARGET:
+        raise ValueError('新旧兼容迁移策略仅适用于 ' + BRIDGE_TARGET + '。')
     if following > (today or date.today()):
         raise ValueError('目标日期晚于本机当前日期，请检查时钟或等待实际发布日期。')
     if current is None:
@@ -42,6 +45,8 @@ def validate(plan, current=None, today=None):
     if policy == 'undated':
         if DATE_TOKEN.search(current):
             raise ValueError('本次迁移仅接受不带日期的旧内核；已带日期的版本应使用后续日期更新包。')
+    elif policy == 'undated-or-dated-before-target' and not DATE_TOKEN.search(current):
+        return target
     elif release_date(current) >= following:
         raise ValueError('目标内核日期必须严格晚于当前内核日期；禁止同日覆盖或日期倒退。')
     return target

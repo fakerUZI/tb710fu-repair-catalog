@@ -1,0 +1,1036 @@
+--- a/drivers/gpu/drm/msm/disp/dpu1/dpu_crtc.c
++++ b/drivers/gpu/drm/msm/disp/dpu1/dpu_crtc.c
+@@ -208,7 +208,7 @@
+ 		struct dpu_crtc_state *crtc_state)
+ {
+ 	struct dpu_crtc_mixer *m;
+-	u32 crcs[CRTC_DUAL_MIXERS];
++	u32 crcs[CRTC_QUAD_MIXERS];
+ 
+ 	int rc = 0;
+ 	int i;
+@@ -1520,52 +1520,88 @@
+ #define MAX_CHANNELS_PER_CRTC PIPES_PER_PLANE
+ #define MAX_HDISPLAY_SPLIT 1080
+ 
++/* One-boot trial only. Capacity accounting and topology selection share
++ * this exact gate; no clock limit or frequency table is raised. */
++static bool dpu_tb710fu_quad_mode(const struct dpu_kms *kms,
++                                 const struct drm_display_mode *mode)
++{
++	return tb710fu_quad_trial && dpu_use_virtual_planes &&
++		of_machine_is_compatible("lenovo,tb710fu") &&
++		kms->catalog->caps->has_3d_merge &&
++		kms->catalog->mixer_count >= 4 && kms->catalog->dsc_count >= 4 &&
++		mode->hdisplay == 3200 && mode->vdisplay == 2000 &&
++		mode->hsync_start == 3476 && mode->hsync_end == 3492 &&
++		mode->htotal == 3524 && mode->vsync_start == 2026 &&
++		mode->vsync_end == 2028 && mode->vtotal == 2260 &&
++		mode->clock == 1146850 && !mode->flags && mode->vscan <= 1;
++}
++
+ static struct msm_display_topology dpu_crtc_get_topology(
+ 		struct drm_crtc *crtc,
+ 		struct dpu_kms *dpu_kms,
+ 		struct drm_crtc_state *crtc_state)
+ {
+ 	struct drm_display_mode *mode = &crtc_state->adjusted_mode;
++	const struct dpu_caps *caps = dpu_kms->catalog->caps;
+ 	struct msm_display_topology topology = {0};
+ 	struct drm_encoder *drm_enc;
+-
+-	drm_for_each_encoder_mask(drm_enc, crtc->dev, crtc_state->encoder_mask)
++	bool dsc = false;
++	u64 mode_rate;
++
++	topology.cwb_enabled = drm_crtc_in_clone_mode(crtc_state);
++
++	drm_for_each_encoder_mask(drm_enc, crtc->dev, crtc_state->encoder_mask) {
+ 		dpu_encoder_update_topology(drm_enc, &topology, crtc_state->state,
+ 					    &crtc_state->adjusted_mode);
+-
+-	topology.cwb_enabled = drm_crtc_in_clone_mode(crtc_state);
++		if (dpu_encoder_get_dsc_config(drm_enc))
++			dsc = true;
++	}
+ 
+ 	/*
+ 	 * Datapath topology selection
+ 	 *
+ 	 * Dual display
+ 	 * 2 LM, 2 INTF ( Split display using 2 interfaces)
++	 * 4 LM, 2 INTF ( Split display using 2 interfaces and stream merge
++	 *		  to support high resolution interfaces if virtual
++	 *		  plane is enabled)
++	 * If DSC is enabled, use 2:2:2 for 2 LMs case, and 4:4:2 for 4 LMs
++	 * case.
+ 	 *
+ 	 * Single display
+ 	 * 1 LM, 1 INTF
+ 	 * 2 LM, 1 INTF (stream merge to support high resolution interfaces)
+ 	 *
+-	 * If DSC is enabled, use 2 LMs for 2:2:1 topology
++	 * If DSC is enabled, use 2 LMs for 2:2:1 topology for single display
++	 * to support legacy devices that use this topology. Use 1:1:1 topology
++	 * if there is only one DSC engine in SoC.
+ 	 *
+ 	 * Add dspps to the reservation requirements if ctm or gamma_lut are requested
+-	 *
+-	 * Only hardcode num_lm to 2 for cases where num_intf == 2 and CWB is not
+-	 * enabled. This is because in cases where CWB is enabled, num_intf will
+-	 * count both the WB and real-time phys encoders.
+-	 *
+-	 * For non-DSC CWB usecases, have the num_lm be decided by the
+-	 * (mode->hdisplay > MAX_HDISPLAY_SPLIT) check.
+ 	 */
+ 
+-	if (topology.num_intf == 2 && !topology.cwb_enabled)
+-		topology.num_lm = 2;
+-	else if (topology.num_dsc == 2)
+-		topology.num_lm = 2;
+-	else if (dpu_kms->catalog->caps->has_3d_merge &&
+-		 topology.num_dsc == 0)
+-		topology.num_lm = (mode->hdisplay > MAX_HDISPLAY_SPLIT) ? 2 : 1;
+-	else
+-		topology.num_lm = 1;
++	mode_rate = (u64)mode->hdisplay * mode->vtotal * drm_mode_vrefresh(mode);
++
++	if (topology.num_intf == 2) {
++		if (dpu_tb710fu_quad_mode(dpu_kms, mode) && caps->has_3d_merge &&
++		    !topology.cwb_enabled &&
++		    (mode->hdisplay > 2 * caps->max_mixer_width ||
++		     mode_rate > 2 * dpu_kms->perf.max_core_clk_rate))
++			topology.num_lm = 4;
++		else
++			topology.num_lm = 2;
++	} else {
++		if (dsc)
++			topology.num_lm = min(2, dpu_kms->catalog->dsc_count);
++		else if (caps->has_3d_merge &&
++			 (mode->hdisplay > MAX_HDISPLAY_SPLIT ||
++			  mode_rate > dpu_kms->perf.max_core_clk_rate))
++			topology.num_lm = 2;
++		else
++			topology.num_lm = 1;
++	}
++
++	if (dsc)
++		topology.num_dsc = topology.num_lm;
+ 
+ 	if (dpu_crtc_state_needs_dspp(crtc_state))
+ 		topology.num_dspp = topology.num_lm;
+@@ -1628,7 +1664,7 @@
+ 						 ARRAY_SIZE(hw_dspp));
+ 
+ 	for (i = 0; i < num_lm; i++) {
+-		int ctl_idx = (i < num_ctl) ? i : (num_ctl-1);
++		int ctl_idx = i * num_ctl / num_lm;
+ 
+ 		cstate->mixers[i].hw_lm = to_dpu_hw_mixer(hw_lm[i]);
+ 		cstate->mixers[i].lm_ctl = to_dpu_hw_ctl(hw_ctl[ctl_idx]);
+@@ -1862,6 +1898,9 @@
+ 							    dpu_kms->perf.perf_cfg);
+ 
+ 	if (dpu_kms->catalog->caps->has_3d_merge)
++		adjusted_mode_clk /= 2;
++	/* Four allocated mixers process the gated dual-DSI mode in parallel. */
++	if (dpu_tb710fu_quad_mode(dpu_kms, mode))
+ 		adjusted_mode_clk /= 2;
+ 
+ 	/*
+--- a/drivers/gpu/drm/msm/disp/dpu1/dpu_crtc.h
++++ b/drivers/gpu/drm/msm/disp/dpu1/dpu_crtc.h
+@@ -215,7 +215,7 @@
+ 
+ 	bool bw_control;
+ 	bool bw_split_vote;
+-	struct drm_rect lm_bounds[CRTC_DUAL_MIXERS];
++	struct drm_rect lm_bounds[CRTC_QUAD_MIXERS];
+ 
+ 	uint64_t input_fence_timeout_ns;
+ 
+@@ -223,10 +223,10 @@
+ 
+ 	/* HW Resources reserved for the crtc */
+ 	u32 num_mixers;
+-	struct dpu_crtc_mixer mixers[CRTC_DUAL_MIXERS];
++	struct dpu_crtc_mixer mixers[CRTC_QUAD_MIXERS];
+ 
+ 	u32 num_ctls;
+-	struct dpu_hw_ctl *hw_ctls[CRTC_DUAL_MIXERS];
++	struct dpu_hw_ctl *hw_ctls[CRTC_QUAD_MIXERS];
+ 
+ 	enum dpu_crtc_crc_source crc_source;
+ 	int crc_frame_skip_count;
+--- a/drivers/gpu/drm/msm/disp/dpu1/dpu_encoder.c
++++ b/drivers/gpu/drm/msm/disp/dpu1/dpu_encoder.c
+@@ -62,7 +62,7 @@
+ #define MAX_PHYS_ENCODERS_PER_VIRTUAL \
+ 	(MAX_H_TILES_PER_DISPLAY * NUM_PHYS_ENCODER_TYPES)
+ 
+-#define MAX_CHANNELS_PER_ENC 2
++#define MAX_CHANNELS_PER_ENC 4
+ #define MAX_CWB_PER_ENC 2
+ 
+ #define IDLE_SHORT_TIMEOUT	1
+@@ -708,38 +708,14 @@
+ 				 const struct drm_display_mode *adj_mode)
+ {
+ 	struct dpu_encoder_virt *dpu_enc = to_dpu_encoder_virt(drm_enc);
+-	struct msm_drm_private *priv = dpu_enc->base.dev->dev_private;
+ 	struct msm_display_info *disp_info = &dpu_enc->disp_info;
+-	struct dpu_kms *dpu_kms = to_dpu_kms(priv->kms);
+ 	struct drm_connector *connector;
+ 	struct drm_connector_state *conn_state;
+ 	struct drm_framebuffer *fb;
+-	struct drm_dsc_config *dsc;
+-
+-	int i;
+-
+-	for (i = 0; i < MAX_PHYS_ENCODERS_PER_VIRTUAL; i++)
+-		if (dpu_enc->phys_encs[i])
+-			topology->num_intf++;
+-
+-	dsc = dpu_encoder_get_dsc_config(drm_enc);
+-
+-	/* We only support 2 DSC mode (with 2 LM and 1 INTF) */
+-	if (dsc) {
+-		/*
+-		 * Use 2 DSC encoders, 2 layer mixers and 1 or 2 interfaces
+-		 * when Display Stream Compression (DSC) is enabled,
+-		 * and when enough DSC blocks are available.
+-		 * This is power-optimal and can drive up to (including) 4k
+-		 * screens.
+-		 */
+-		WARN(topology->num_intf > 2,
+-		     "DSC topology cannot support more than 2 interfaces\n");
+-		if (topology->num_intf >= 2 || dpu_kms->catalog->dsc_count >= 2)
+-			topology->num_dsc = 2;
+-		else
+-			topology->num_dsc = 1;
+-	}
++
++	/* a cloned writeback taps the datapath of the real-time encoder */
++	if (!topology->cwb_enabled || disp_info->intf_type != INTF_WB)
++		topology->num_intf += dpu_enc->num_phys_encs;
+ 
+ 	connector = drm_atomic_get_new_connector_for_encoder(state, drm_enc);
+ 	if (!connector)
+@@ -2250,6 +2226,7 @@
+ {
+ 	struct dpu_encoder_phys *enc_master = dpu_enc->cur_master;
+ 	struct dpu_hw_ctl *ctl = enc_master->hw_ctl;
++	struct drm_dsc_config pair_config;
+ 	struct dpu_hw_dsc *hw_dsc[MAX_CHANNELS_PER_ENC];
+ 	struct dpu_hw_pingpong *hw_pp[MAX_CHANNELS_PER_ENC];
+ 	int this_frame_slices;
+@@ -2294,6 +2271,19 @@
+ 						dsc_common_mode);
+ 	else
+ 		initial_lines = dpu_encoder_dsc_initial_line_calc(dsc, enc_ip_w);
++
++	/* Downstream _dce_dsc_setup_helper: with four DSCs each DCE pair
++	 * operates on half the picture. Keep the DSI/PPS config unchanged.
++	 */
++	if (of_machine_is_compatible("lenovo,tb710fu") &&
++	    tb710fu_quad_trial && num_dsc == 4 &&
++	    (dsc_common_mode & DSC_MODE_MULTIPLEX)) {
++		pair_config = *dsc;
++		pair_config.pic_width = pic_width / 2;
++		dsc = &pair_config;
++		DRM_INFO("TB710FU DSC pair-width trial: picture=%d pair=%u enc=%d\n",
++			 pic_width, dsc->pic_width, enc_ip_w);
++	}
+ 
+ 	for (i = 0; i < num_dsc; i++)
+ 		dpu_encoder_dsc_pipe_cfg(ctl, hw_dsc[i], hw_pp[i],
+@@ -3099,8 +3089,11 @@
+ 	if (ctl->ops.reset_intf_cfg)
+ 		ctl->ops.reset_intf_cfg(ctl, &intf_cfg);
+ 
+-	ctl->ops.trigger_flush(ctl);
+-	ctl->ops.trigger_start(ctl);
++	/* a legacy CTL latches its flush at the vsync of a stopped interface */
++	if (phys_enc->dpu_kms->catalog->mdss_ver->core_major_ver >= 5) {
++		ctl->ops.trigger_flush(ctl);
++		ctl->ops.trigger_start(ctl);
++	}
+ 	ctl->ops.clear_pending_flush(ctl);
+ }
+ 
+@@ -3650,6 +3643,7 @@
+ {
+ 	struct dpu_encoder_virt *dpu_enc = to_dpu_encoder_virt(phys_enc->parent);
+ 	int i, num_mixers = 0;
++	unsigned int num_intf;
+ 
+ 	if (!phys_enc || phys_enc->enable_state == DPU_ENC_DISABLING)
+ 		return BLEND_3D_NONE;
+@@ -3660,9 +3654,9 @@
+ 		num_mixers++;
+ 	}
+ 
+-	/* Use merge_3d unless DSC MERGE topology is used */
+-	if (phys_enc->split_role == ENC_ROLE_SOLO &&
+-	    num_mixers == CRTC_DUAL_MIXERS &&
++	num_intf = phys_enc->split_role == ENC_ROLE_SOLO ? 1 : 2;
++	/* Upstream quad-pipe merge selection, using this tree's cached resources. */
++	if (num_mixers > num_intf &&
+ 	    !dpu_encoder_use_dsc_merge(phys_enc->parent))
+ 		return BLEND_3D_H_ROW_INT;
+ 
+--- a/drivers/gpu/drm/msm/disp/dpu1/dpu_encoder.h
++++ b/drivers/gpu/drm/msm/disp/dpu1/dpu_encoder.h
+@@ -84,6 +84,8 @@
+ 
+ bool dpu_encoder_use_dsc_merge(struct drm_encoder *drm_enc);
+ 
++struct drm_dsc_config *dpu_encoder_get_dsc_config(struct drm_encoder *drm_enc);
++
+ void dpu_encoder_update_topology(struct drm_encoder *drm_enc,
+ 				 struct msm_display_topology *topology,
+ 				 struct drm_atomic_commit *state,
+--- a/drivers/gpu/drm/msm/disp/dpu1/dpu_encoder_phys.h
++++ b/drivers/gpu/drm/msm/disp/dpu1/dpu_encoder_phys.h
+@@ -298,8 +298,6 @@
+ 
+ unsigned int dpu_encoder_helper_get_dsc(struct dpu_encoder_phys *phys_enc);
+ 
+-struct drm_dsc_config *dpu_encoder_get_dsc_config(struct drm_encoder *drm_enc);
+-
+ u32 dpu_encoder_get_drm_fmt(struct dpu_encoder_phys *phys_enc);
+ 
+ bool dpu_encoder_needs_periph_flush(struct dpu_encoder_phys *phys_enc);
+--- a/drivers/gpu/drm/msm/disp/dpu1/dpu_hw_catalog.h
++++ b/drivers/gpu/drm/msm/disp/dpu1/dpu_hw_catalog.h
+@@ -24,7 +24,7 @@
+ #define DPU_MAX_IMG_WIDTH 0x3fff
+ #define DPU_MAX_IMG_HEIGHT 0x3fff
+ 
+-#define CRTC_DUAL_MIXERS	2
++#define CRTC_QUAD_MIXERS	4
+ 
+ #define MAX_XIN_COUNT 16
+ 
+--- a/drivers/gpu/drm/msm/disp/dpu1/dpu_hw_mdss.h
++++ b/drivers/gpu/drm/msm/disp/dpu1/dpu_hw_mdss.h
+@@ -34,7 +34,7 @@
+ #define DPU_MAX_PLANES			4
+ #endif
+ 
+-#define STAGES_PER_PLANE		1
++#define STAGES_PER_PLANE		2
+ #define PIPES_PER_STAGE			2
+ #define PIPES_PER_PLANE			(PIPES_PER_STAGE * STAGES_PER_PLANE)
+ #ifndef DPU_MAX_DE_CURVES
+--- a/drivers/gpu/drm/msm/disp/dpu1/dpu_kms.c
++++ b/drivers/gpu/drm/msm/disp/dpu1/dpu_kms.c
+@@ -54,6 +54,10 @@
+  */
+ #define DPU_DEBUGFS_DIR "msm_dpu"
+ #define DPU_DEBUGFS_HWMASKNAME "hw_log_mask"
++
++bool tb710fu_quad_trial = true;
++module_param(tb710fu_quad_trial, bool, 0444);
++MODULE_PARM_DESC(tb710fu_quad_trial, "Experimental TB710FU 144-Hz quad-pipe trial");
+ 
+ bool dpu_use_virtual_planes = true;
+ module_param(dpu_use_virtual_planes, bool, 0);
+--- a/drivers/gpu/drm/msm/disp/dpu1/dpu_kms.h
++++ b/drivers/gpu/drm/msm/disp/dpu1/dpu_kms.h
+@@ -56,6 +56,7 @@
+ 	ktime_compare(ktime_sub((A), (B)), ktime_set(0, 0))
+ 
+ extern bool dpu_use_virtual_planes;
++extern bool tb710fu_quad_trial;
+ 
+ struct dpu_kms {
+ 	struct msm_kms base;
+--- a/drivers/gpu/drm/msm/disp/dpu1/dpu_plane.c
++++ b/drivers/gpu/drm/msm/disp/dpu1/dpu_plane.c
+@@ -890,6 +890,7 @@
+ 	int stage_id, num_stages;
+ 
+ 	max_linewidth = pdpu->catalog->caps->max_linewidth;
++	memset(pstate->pipe_cfg, 0, sizeof(pstate->pipe_cfg));
+ 
+ 	/* In non-virtual plane case, one mixer pair is always needed. */
+ 	num_lm = dpu_crtc_get_num_lm(crtc_state);
+--- a/drivers/gpu/drm/msm/dsi/phy/dsi_phy_7nm.c
++++ b/drivers/gpu/drm/msm/dsi/phy/dsi_phy_7nm.c
+@@ -1068,18 +1068,31 @@
+ 	       timing->hs_trail, timing->hs_rqst,
+ 	       timing->shared_timings.clk_pre, timing->shared_timings.clk_post);
+ 
+-	timing->clk_zero = 0x27;
+-	timing->clk_prepare = 0x0a;
+-	timing->clk_trail = 0x0a;
+-	timing->hs_exit = 0x1b;
+-	timing->hs_zero = 0x19;
+-	timing->hs_prepare = 0x0a;
+-	timing->hs_trail = 0x0b;
+-	timing->hs_rqst = 0x0a;
+-	timing->shared_timings.clk_pre = 0x20;
+-	timing->shared_timings.clk_post = 0x0f;
+-	pr_err("TBPHTAG %s overridden with vendor nt36532 timings\n",
+-	       dev_name(&phy->pdev->dev));
++	/* Offline 144-Hz candidate: the established 120-Hz path remains
++	 * byte-for-byte identical below. The fixed profile is not valid at
++	 * the new ~1.359-Gbit/s lane rate (clock-zero and clock-trail minima).
++	 * Retain the already-calculated v4 D-PHY timings only on this board
++	 * above the original vendor lane rate. This is not hardware validated.
++	 */
++	if (!phy->cphy_mode && of_machine_is_compatible("lenovo,tb710fu") &&
++	    clk_req->bitclk_rate > 1200000000UL) {
++		dev_warn(&phy->pdev->dev,
++			 "experimental high-rate D-PHY timings at %lu bit/s\n",
++			 clk_req->bitclk_rate);
++	} else {
++		timing->clk_zero = 0x27;
++		timing->clk_prepare = 0x0a;
++		timing->clk_trail = 0x0a;
++		timing->hs_exit = 0x1b;
++		timing->hs_zero = 0x19;
++		timing->hs_prepare = 0x0a;
++		timing->hs_trail = 0x0b;
++		timing->hs_rqst = 0x0a;
++		timing->shared_timings.clk_pre = 0x20;
++		timing->shared_timings.clk_post = 0x0f;
++		pr_err("TBPHTAG %s overridden with vendor nt36532 timings\n",
++		       dev_name(&phy->pdev->dev));
++	}
+ 
+ 	if (dsi_phy_hw_v4_0_is_pll_on(phy))
+ 		pr_warn("PLL turned on before configuring PHY\n");
+--- a/drivers/gpu/drm/panel/panel-nt36532-wqhd-dual-dsi-dsc.c
++++ b/drivers/gpu/drm/panel/panel-nt36532-wqhd-dual-dsi-dsc.c
+@@ -26,12 +26,26 @@
+ 
+ #define DSI_NUM_MIN 1
+ 
++/* Offline candidate: the established 120-Hz path remains the default.
++ * 144 Hz must be enabled explicitly for a supervised, reversible trial. */
++static bool experimental_144hz = true;
++static bool prefer_144hz_trial = true;
++module_param(prefer_144hz_trial, bool, 0444);
++module_param(experimental_144hz, bool, 0444);
++MODULE_PARM_DESC(experimental_144hz,
++	"Expose unvalidated 144 Hz mode in addition to default 120 Hz");
++
++#define TB710FU_HTOTAL (3200 + 276 + 16 + 32)
++#define TB710FU_VTOTAL (2000 + 26 + 2 + 232)
++#define TB710FU_CLOCK_KHZ(hz) (TB710FU_HTOTAL * TB710FU_VTOTAL * (hz) / 1000)
++
+ struct panel_info {
+ 	struct drm_panel panel;
+ 	struct drm_connector *connector;
+ 	struct mipi_dsi_device *dsi[2];
+ 	struct panel_desc *desc;
+ 	enum drm_panel_orientation orientation;
++	unsigned int active_refresh_hz;
+ 
+ 	struct gpio_desc *reset_gpio;
+ 	/* vddio, vci, vdd, avdd, avee — 社区参考的 bias 是单路 aw37504，
+@@ -61,6 +75,39 @@
+ static inline struct panel_info *to_panel_info(struct drm_panel *panel)
+ {
+ 	return container_of(panel, struct panel_info, panel);
++}
++
++/* Called by prepare after the atomic state swap, before shared rails/reset
++ * are changed. Refuse arbitrary modelines rather than send mismatched panel
++ * commands. The default-disabled candidate preserves the original path. */
++static int nt36532_select_refresh(struct panel_info *pinfo)
++{
++	const struct drm_display_mode *mode;
++	struct drm_connector_state *state;
++	int refresh;
++
++	pinfo->active_refresh_hz = 120;
++	if (!experimental_144hz)
++		return 0;
++	if (!pinfo->connector || !pinfo->connector->state)
++		return -EINVAL;
++	state = pinfo->connector->state;
++	if (!state->crtc || !state->crtc->state)
++		return -EINVAL;
++	mode = &state->crtc->state->adjusted_mode;
++	refresh = drm_mode_vrefresh(mode);
++	if (mode->hdisplay != 3200 || mode->vdisplay != 2000 ||
++	    mode->hsync_start != 3476 || mode->hsync_end != 3492 ||
++	    mode->vsync_start != 2026 || mode->vsync_end != 2028 ||
++	    mode->htotal != TB710FU_HTOTAL || mode->vtotal != TB710FU_VTOTAL ||
++	    mode->flags || mode->vscan > 1)
++		return -EINVAL;
++	if (refresh != 120 && !(experimental_144hz && refresh == 144))
++		return -EINVAL;
++	if (abs(mode->clock - TB710FU_CLOCK_KHZ(refresh)) > 1)
++		return -EINVAL;
++	pinfo->active_refresh_hz = refresh;
++	return 0;
+ }
+ 
+ static int nt36532_wqhd_init_sequence(struct panel_info *pinfo)
+@@ -180,8 +227,15 @@
+ 	mipi_dsi_picture_parameter_set_multi(&dsi_ctx, &pps);
+ 
+ 	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0x9d, 0x01);
+-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xb2, 0x91);
+-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xb3, 0x40);
++	/* Exact current Android vendor commands, page 0x10 unlocked above.
++	 * The 144-Hz DSI/PHY timing still needs a supervised hardware trial. */
++	if (pinfo->active_refresh_hz == 144) {
++		mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xb2, 0x80);
++		mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xb3, 0x00);
++	} else {
++		mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xb2, 0x91);
++		mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xb3, 0x40);
++	}
+ 	
+ 	/* Start Display */
+ 	mipi_dsi_dcs_exit_sleep_mode_multi(&dsi_ctx);
+@@ -205,6 +259,17 @@
+ 		.vsync_start = 2000 + 26,
+ 		.vsync_end = 2000 + 26 + 2,
+ 		.vtotal = 2000 + 26 + 2 + 232,
++	},
++	{
++		.clock = TB710FU_CLOCK_KHZ(144),
++		.hdisplay = 3200,
++		.hsync_start = 3200 + 276,
++		.hsync_end = 3200 + 276 + 16,
++		.htotal = TB710FU_HTOTAL,
++		.vdisplay = 2000,
++		.vsync_start = 2000 + 26,
++		.vsync_end = 2000 + 26 + 2,
++		.vtotal = TB710FU_VTOTAL,
+ 	},
+ };
+ 
+@@ -254,7 +319,10 @@
+ 	struct panel_info *pinfo = to_panel_info(panel);
+ 	int ret;
+ 
+-	dev_info(panel->dev, "prepare\n");
++	ret = nt36532_select_refresh(pinfo);
++	if (ret)
++		return dev_err_probe(panel->dev, ret, "unsupported panel mode\n");
++	dev_info(panel->dev, "prepare %u Hz\n", pinfo->active_refresh_hz);
+ 
+ 	ret = regulator_bulk_enable(ARRAY_SIZE(pinfo->supplies), pinfo->supplies);
+ 	if (ret < 0) {
+@@ -311,12 +379,14 @@
+ 			       struct drm_connector *connector)
+ {
+ 	struct panel_info *pinfo = to_panel_info(panel);
+-	int i;
++	int i, count = 0;
+ 
+ 	for (i = 0; i < pinfo->desc->num_modes; i++) {
+ 		const struct drm_display_mode *m = &pinfo->desc->modes[i];
+ 		struct drm_display_mode *mode;
+ 
++		if (i > 0 && !experimental_144hz)
++			continue;
+ 		mode = drm_mode_duplicate(connector->dev, m);
+ 		if (!mode) {
+ 			dev_err(panel->dev, "failed to add mode %ux%u@%u\n",
+@@ -325,11 +395,12 @@
+ 		}
+ 
+ 		mode->type = DRM_MODE_TYPE_DRIVER;
+-		if (i == 0)
++		if (i == ((experimental_144hz && prefer_144hz_trial) ? 1 : 0))
+ 			mode->type |= DRM_MODE_TYPE_PREFERRED;
+ 
+ 		drm_mode_set_name(mode);
+ 		drm_mode_probed_add(connector, mode);
++		count++;
+ 	}
+ 
+ 	connector->display_info.width_mm = pinfo->desc->width_mm;
+@@ -337,7 +408,7 @@
+ 	connector->display_info.bpc = pinfo->desc->bpc;
+ 	pinfo->connector = connector;
+ 
+-	return pinfo->desc->num_modes;
++	return count;
+ }
+ 
+ static enum drm_panel_orientation nt36532_get_orientation(struct drm_panel *panel)
+@@ -474,3 +545,5 @@
+ MODULE_AUTHOR("Driver Author");
+ MODULE_DESCRIPTION("DRM driver for Novatek NT36532 WQHD based MIPI DSI panels");
+ MODULE_LICENSE("GPL");
++
++MODULE_VERSION("tb710fu-display-startup-20261118.1");
+--- a/drivers/input/touchscreen/NT36XXX_SPI/nt36xxx.c
++++ b/drivers/input/touchscreen/NT36XXX_SPI/nt36xxx.c
+@@ -26,6 +26,7 @@
+ #include <linux/irqdomain.h>
+ #include "nt36xxx.h"
+ #include <linux/gpio/consumer.h>
++#include <drm/drm_panel.h>
+ /* Kirby code for KIRBYU-960 by liaoxg1 at 2024/4/26 start */
+ /* Kirby code for KIRBYU-960 by liaoxg1 at 2024/4/26 end */
+ 
+@@ -256,6 +257,86 @@
+ static void nvt_fw_health_work(struct work_struct *work);
+ static DECLARE_DELAYED_WORK(nvt_fw_health_dwork, nvt_fw_health_work);
+ 
++/* The touch die shares the panel reset/power state. An unprepared panel is
++ * expected not to answer SPI; it must never trigger firmware recovery. */
++static bool nvt_panel_resume_trial = true;
++module_param_named(panel_resume_trial, nvt_panel_resume_trial, bool, 0444);
++static unsigned int nvt_panel_resumes;
++static unsigned int nvt_panel_resume_us;
++static int nvt_panel_resume_result = -EAGAIN;
++module_param_named(panel_resume_result, nvt_panel_resume_result, int, 0444);
++module_param_named(panel_resumes, nvt_panel_resumes, uint, 0444);
++module_param_named(panel_resume_us, nvt_panel_resume_us, uint, 0444);
++static int nvt_fw_alive_probe(void);
++static void nvt_ts_remove(struct spi_device *client);
++static bool nvt_panel_active;
++static bool nvt_panel_following;
++static bool nvt_health_ready;
++#if NVT_SET_CHARGER
++static int nvt_charger_sync(bool force);
++#endif
++static unsigned int nvt_health_checks;
++static unsigned int nvt_health_repairs;
++module_param_named(health_checks, nvt_health_checks, uint, 0444);
++module_param_named(health_repairs, nvt_health_repairs, uint, 0444);
++static struct drm_panel_follower nvt_panel_follower;
++module_param_named(panel_active, nvt_panel_active, bool, 0444);
++MODULE_PARM_DESC(panel_active, "TB710FU panel prepared; firmware recovery allowed");
++
++static int nvt_health_panel_prepared(struct drm_panel_follower *follower)
++{
++	ktime_t started = ktime_get();
++	int ret;
++
++	if (!READ_ONCE(nvt_health_ready))
++		return 0;
++	WRITE_ONCE(nvt_panel_active, true);
++	cancel_delayed_work_sync(&nvt_fw_health_dwork);
++	cancel_delayed_work_sync(&ts->nvt_fwu_work);
++	/* Do not wait for the threaded IRQ while holding ts->lock. */
++	nvt_irq_enable(false);
++	/* Reuse the reviewed boot firmware/configuration path, synchronously
++	 * after panel reset and DCS commands, before the next video kickoff.
++	 */
++	Boot_Update_Firmware(&ts->nvt_fwu_work.work);
++	mutex_lock(&ts->lock);
++	ret = nvt_fw_alive_probe();
++	mutex_unlock(&ts->lock);
++#if NVT_SET_CHARGER
++	/* Firmware reload clears charger compensation, even if ONLINE is unchanged. */
++	if (!ret)
++		nvt_charger_sync(true);
++#endif
++	if (!ret)
++		nvt_irq_enable(true);
++	nvt_panel_resume_result = ret;
++	nvt_panel_resumes++;
++	nvt_panel_resume_us = ktime_us_delta(ktime_get(), started);
++	NVT_LOG("panel touch ready: ret=%d duration=%u us\n", ret, nvt_panel_resume_us);
++	mod_delayed_work(system_wq, &nvt_fw_health_dwork,
++			 msecs_to_jiffies(ret ? 250 : 5000));
++	return ret ? -EIO : 0;
++}
++
++static int nvt_health_panel_unpreparing(struct drm_panel_follower *follower)
++{
++	WRITE_ONCE(nvt_panel_active, false);
++#if NVT_SET_CHARGER
++	if (ts->nvt_charger_notify_wq)
++		cancel_work_sync(&ts->charger_notify_work);
++#endif
++	/* Both work items must drain before the panel changes shared power. */
++	cancel_delayed_work_sync(&nvt_fw_health_dwork);
++	cancel_delayed_work_sync(&ts->nvt_fwu_work);
++	nvt_irq_enable(false);
++	return 0;
++}
++
++static const struct drm_panel_follower_funcs nvt_health_panel_funcs = {
++	.panel_prepared = nvt_health_panel_prepared,
++	.panel_unpreparing = nvt_health_panel_unpreparing,
++};
++
+ /* TB710FU: the generic handshake-byte probe (0xA0 pattern) never matches
+  * this panel's FW - it keeps EVENT_MAP_HANDSHAKING at 0x00 even while fully
+  * alive, so the poll re-flashed every ~5.9 s and touch hitched each time.
+@@ -284,15 +365,34 @@
+ 
+ static void nvt_fw_health_work(struct work_struct *work)
+ {
++	bool repaired = false;
++	if (!READ_ONCE(nvt_health_ready) ||
++	    (nvt_panel_resume_trial && !READ_ONCE(nvt_panel_active)))
++		return;
++
++	/* Serialize both the probe and repair against other touch SPI clients. */
++	mutex_lock(&ts->lock);
++	nvt_health_checks++;
+ 	if (nvt_fw_alive_probe()) {
++		nvt_health_repairs++;
+ 		NVT_ERR("fw health: touch FW dead, re-flashing\n");
+-		mutex_lock(&ts->lock);
+ 		nvt_update_firmware(BOOT_UPDATE_FIRMWARE_NAME);
+-		mutex_unlock(&ts->lock);
++		repaired = true;
+ 		nvt_irq_enable(true);
+ 	}
+-	queue_delayed_work(system_wq, &nvt_fw_health_dwork,
+-			   msecs_to_jiffies(5000));
++	mutex_unlock(&ts->lock);
++
++#if NVT_SET_CHARGER
++	if (repaired)
++		nvt_charger_sync(true);
++#else
++	(void)repaired;
++#endif
++
++	if (READ_ONCE(nvt_health_ready) &&
++	    (!nvt_panel_resume_trial || READ_ONCE(nvt_panel_active)))
++		queue_delayed_work(system_wq, &nvt_fw_health_dwork,
++				   msecs_to_jiffies(5000));
+ }
+ 
+ /*******************************************************
+@@ -2579,124 +2679,116 @@
+ /* Kirby code for KIRBYU-235 by liaoxg1 at 2024/4/26 end */
+ 
+ #if NVT_SET_CHARGER
++static DEFINE_MUTEX(nvt_charger_lock);
++static bool nvt_charger_registered;
++static int nvt_charger_online = -1;
++static int nvt_charger_applied = -1;
++static int nvt_charger_result = -EAGAIN;
++module_param_named(charger_online, nvt_charger_online, int, 0444);
++module_param_named(charger_applied, nvt_charger_applied, int, 0444);
++module_param_named(charger_result, nvt_charger_result, int, 0444);
++
++static int nvt_read_usb_online(void)
++{
++	struct power_supply *psy;
++	union power_supply_propval prop;
++	int ret;
++
++	psy = power_supply_get_by_name("usb");
++	if (!psy)
++		psy = power_supply_get_by_name("qcom-battmgr-usb");
++	if (!psy)
++		return -ENODEV;
++	ret = power_supply_get_property(psy, POWER_SUPPLY_PROP_ONLINE, &prop);
++	power_supply_put(psy);
++	return ret < 0 ? ret : !!prop.intval;
++}
++
++static int nvt_charger_sync(bool force)
++{
++	int online, ret;
++
++	mutex_lock(&nvt_charger_lock);
++	online = nvt_read_usb_online();
++	if (online < 0) {
++		ret = online;
++		goto out;
++	}
++	WRITE_ONCE(nvt_charger_online, online);
++	WRITE_ONCE(ts->usb_plug_status, online);
++	WRITE_ONCE(tp_charge_flag, !!online);
++	/* Remember changes while off; never send SPI commands into panel reset. */
++	if (ts->fw_update_stat != 1 || !bTouchIsAwake ||
++	    (nvt_panel_resume_trial && !READ_ONCE(nvt_panel_active))) {
++		ret = -EAGAIN;
++		goto out;
++	}
++	if (!force && online == nvt_charger_applied) {
++		ret = 0;
++		goto out;
++	}
++	ret = nvt_set_charger(online);
++	if (!ret)
++		WRITE_ONCE(nvt_charger_applied, online);
++ out:
++	WRITE_ONCE(nvt_charger_result, ret);
++	mutex_unlock(&nvt_charger_lock);
++	return ret;
++}
++
+ static void nvt_charger_notify_work(struct work_struct *work)
+ {
+-	int ret = 0;
+-	struct power_supply *psy = NULL;
+-	union power_supply_propval prop;
+-	//struct nvt_ts_data *ts = container_of(nb, struct nvt_ts_data, charger_notif);
+-
+-	if (ts->fw_update_stat != 1)
+-		return ;
+-
+-	psy = power_supply_get_by_name("usb");
+-	if (!psy) {
+-		NVT_ERR("Couldn't get usbpsy\n");
+-		return ;
+-	}
+-
+-	if (!strcmp(psy->desc->name, "usb")) {
+-		if (psy && ts) {
+-			ret = power_supply_get_property(psy, POWER_SUPPLY_PROP_ONLINE, &prop);
+-			power_supply_put(psy);
+-			if (ret < 0) {
+-				NVT_ERR("Couldn't get POWER_SUPPLY_PROP_ONLINE rc=%d\n", ret);
+-				return ;
+-			} else {
+-				if (prop.intval != ts->usb_plug_status) {
+-					NVT_LOG("usb_plug_status = %d\n", prop.intval);
+-					ts->usb_plug_status = prop.intval;
+-					if (!(bTouchIsAwake)){
+-						if (USB_DETECT_IN == ts->usb_plug_status) {
+-							tp_charge_flag = true;
+-							NVT_LOG("USB plug in");
+-						} else if (USB_DETECT_OUT == ts->usb_plug_status) {
+-							tp_charge_flag = false;
+-							NVT_LOG("USB plug out");
+-						} else {
+-							NVT_LOG("Charger flag:%d not currently required!\n",ts->usb_plug_status);
+-						}
+-						return;
+-					}
+-				} else {
+-					//the same value do nothing.
+-					return;
+-				}
+-			}
+-		} else {
+-			power_supply_put(psy);
+-			return;
+-		}
+-	} else {
+-		power_supply_put(psy);
++	nvt_charger_sync(false);
++}
++
++static int nvt_charger_notifier_callback(struct notifier_block *nb,
++				       unsigned long val, void *v)
++{
++	struct power_supply *psy = v;
++
++	if (val != PSY_EVENT_PROP_CHANGED || !psy || !psy->desc)
++		return NOTIFY_DONE;
++	if (strcmp(psy->desc->name, "usb") &&
++	    strcmp(psy->desc->name, "qcom-battmgr-usb"))
++		return NOTIFY_DONE;
++	if (ts->nvt_charger_notify_wq)
++		queue_work(ts->nvt_charger_notify_wq, &ts->charger_notify_work);
++	return NOTIFY_OK;
++}
++
++static void nvt_charger_deinit(void)
++{
++	if (nvt_charger_registered) {
++		power_supply_unreg_notifier(&ts->charger_notif);
++		nvt_charger_registered = false;
++	}
++	if (ts->nvt_charger_notify_wq) {
++		cancel_work_sync(&ts->charger_notify_work);
++		destroy_workqueue(ts->nvt_charger_notify_wq);
++		ts->nvt_charger_notify_wq = NULL;
++	}
++}
++
++void nvt_charger_init(void)
++{
++	int ret;
++
++	ts->nvt_charger_notify_wq = create_singlethread_workqueue("nvt_charger_wq");
++	if (!ts->nvt_charger_notify_wq)
+ 		return;
+-	}
+-
+-	if (NULL == work) {
+-		NVT_ERR("%s:  parameter work are null!\n", __func__);
+-		return;
+-	}
+-
+-	NVT_LOG("enter nvt_charger_notify_work\n");
+-
+-	if (USB_DETECT_IN == ts->usb_plug_status) {
+-		tp_charge_flag = true;
+-		NVT_LOG("USB plug in");
+-		if (tp_resume_flag == true)
+-			nvt_set_charger(USB_DETECT_IN);
+-	} else if (USB_DETECT_OUT == ts->usb_plug_status) {
+-		tp_charge_flag = false;
+-		NVT_LOG("USB plug out");
+-		if (tp_resume_flag == true)
+-			nvt_set_charger(USB_DETECT_OUT);
+-	} else {
+-		NVT_LOG("Charger flag:%d not currently required!\n",ts->usb_plug_status);
+-	}
+-
+-}
+-
+-static int nvt_charger_notifier_callback(struct notifier_block *nb,unsigned long val, void *v)
+-{
+-
+-	if(ts->nvt_charger_notify_wq != NULL && val == POWER_SUPPLY_PROP_STATUS)
+-		queue_work(ts->nvt_charger_notify_wq, &ts->charger_notify_work);
+-
+-	return 0;
+-}
+-
+-void nvt_charger_init(void)
+-{
+-	int ret = 0;
+-	struct power_supply *psy = NULL;
+-	union power_supply_propval prop;
+-
+-	ts->nvt_charger_notify_wq = create_singlethread_workqueue("nvt_charger_wq");
+-	if (!ts->nvt_charger_notify_wq) {
+-		NVT_ERR("allocate nvt_charger_notify_wq failed\n");
+-		return;
+-	}
+ 	INIT_WORK(&ts->charger_notify_work, nvt_charger_notify_work);
+ 	ts->charger_notif.notifier_call = nvt_charger_notifier_callback;
+ 	ret = power_supply_reg_notifier(&ts->charger_notif);
+ 	if (ret) {
+-		NVT_ERR("Unable to register charger_notifier: %d\n",ret);
+-	}
+-
+-	/* if power supply supplier registered brfore TP
+-	* ps_notify_callback will not receive PSY_EVENT_PROP_ADDED
+-	* event, and will cause miss to set TP into charger state.
+-	* So check PS state in probe.
+-	*/
+-	psy = power_supply_get_by_name("usb");
+-	if (psy) {
+-		ret = power_supply_get_property(psy, POWER_SUPPLY_PROP_ONLINE, &prop);
+-		if (ret < 0) {
+-			NVT_ERR("Couldn't get POWER_SUPPLY_PROP_ONLINE rc=%d\n", ret);
+-		} else {
+-			ts->usb_plug_status = prop.intval;
+-			NVT_LOG("boot check usb_plug_status = %d\n", prop.intval);
+-		}
+-	}
++		NVT_ERR("Unable to register charger notifier: %d\n", ret);
++		nvt_charger_deinit();
++		return;
++	}
++	nvt_charger_registered = true;
++	/* Suppliers may already be registered. Record initial state without
++	 * writing firmware before the panel/follower has prepared the chip.
++	 */
++	nvt_charger_sync(false);
+ }
+ #endif
+ 
+@@ -2799,6 +2891,20 @@
+ #if ((TOUCH_KEY_NUM > 0) || WAKEUP_GESTURE)
+ 	int32_t retry = 0;
+ #endif
++	if (nvt_panel_resume_trial) {
++		struct device_node *panel_node;
++		struct drm_panel *panel;
++
++		if (!of_machine_is_compatible("lenovo,tb710fu"))
++			return -ENODEV;
++		panel_node = of_parse_phandle(client->dev.of_node, "panel", 0);
++		if (!panel_node)
++			return dev_err_probe(&client->dev, -ENODEV, "missing panel reference\n");
++		panel = of_drm_find_panel(panel_node);
++		of_node_put(panel_node);
++		if (IS_ERR(panel))
++			return dev_err_probe(&client->dev, PTR_ERR(panel), "panel supplier not ready\n");
++	}
+ /* Kirby code for KIRBYU-235 by liaoxg1 at 2024/4/26 start */
+ #if BOOT_UPDATE_FIRMWARE
+ 	tp_compare_ic();
+@@ -3218,7 +3324,20 @@
+ 
+ 	NVT_LOG("end\n");
+ 	nvt_irq_enable(true);
+-	schedule_delayed_work(&nvt_fw_health_dwork, msecs_to_jiffies(10000));
++	WRITE_ONCE(nvt_panel_active, !nvt_panel_resume_trial);
++	WRITE_ONCE(nvt_health_ready, true);
++	if (nvt_panel_resume_trial) {
++		nvt_panel_follower.funcs = &nvt_health_panel_funcs;
++		ret = drm_panel_add_follower(&client->dev, &nvt_panel_follower);
++		if (ret) {
++			WRITE_ONCE(nvt_health_ready, false);
++			nvt_ts_remove(client);
++			return dev_err_probe(&client->dev, ret, "cannot follow panel power\n");
++		}
++		nvt_panel_following = true;
++	} else {
++		schedule_delayed_work(&nvt_fw_health_dwork, msecs_to_jiffies(10000));
++	}
+ 
+ 	return 0;
+ 
+@@ -3293,12 +3412,7 @@
+ err_create_nvt_fwu_wq_failed:
+ #endif
+ #if NVT_SET_CHARGER
+-	if (ts->nvt_charger_notify_wq) {
+-		cancel_work_sync(&ts->charger_notify_work);
+-		destroy_workqueue(ts->nvt_charger_notify_wq);
+-		ts->nvt_charger_notify_wq = NULL;
+-	}
+-	power_supply_unreg_notifier(&ts->charger_notif);
++	nvt_charger_deinit();
+ #endif
+ #if WAKEUP_GESTURE
+ 	device_init_wakeup(&ts->client->dev, 0);
+@@ -3360,6 +3474,13 @@
+ static void nvt_ts_remove(struct spi_device *client)
+ {
+ 	NVT_LOG("Removing driver...\n");
++
++	WRITE_ONCE(nvt_health_ready, false);
++	if (nvt_panel_following) {
++		drm_panel_remove_follower(&nvt_panel_follower);
++		nvt_panel_following = false;
++	}
++	cancel_delayed_work_sync(&nvt_fw_health_dwork);
+ 
+ #if IS_ENABLED(NVT_PLATFORM_DRIVER)
+ 	platform_device_unregister(nvt_ts_pdev);
+@@ -3386,7 +3507,7 @@
+ 	mtk_disp_notifier_unregister(&ts->disp_notifier);
+ #endif
+ #if NVT_SET_CHARGER
+-	power_supply_unreg_notifier(&ts->charger_notif);
++	nvt_charger_deinit();
+ #endif
+ #if NVT_TOUCH_MP
+ 	nvt_mp_proc_deinit();
+@@ -3421,9 +3542,6 @@
+ 
+ 	cancel_delayed_work_sync(&nvt_fw_health_dwork);
+ 
+-#if IS_ENABLED(NVT_PLATFORM_DRIVER)
+-	platform_device_unregister(nvt_ts_pdev);
+-#endif
+ 
+ 	nvt_irq_enable(false);
+ 	free_irq(client->irq, ts);
+@@ -3460,6 +3578,9 @@
+ 
+ static void nvt_ts_shutdown(struct spi_device *client)
+ {
++	WRITE_ONCE(nvt_health_ready, false);
++	WRITE_ONCE(nvt_panel_active, false);
++	cancel_delayed_work_sync(&nvt_fw_health_dwork);
+ 	NVT_LOG("Shutdown driver...\n");
+ 
+ 	nvt_irq_enable(false);
+@@ -4207,3 +4328,5 @@
+ MODULE_DESCRIPTION("Novatek Touchscreen Driver");
+ MODULE_LICENSE("GPL");
+ /* TB710FU: built-in build does not need the vendor VFS import namespace */
++
++MODULE_VERSION("tb710fu-panel-resume-charger-20261118.2");

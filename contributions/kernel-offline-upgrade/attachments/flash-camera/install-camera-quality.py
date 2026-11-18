@@ -13,7 +13,7 @@ def main():
   addon.rollback()
   if (isp.BASE/'state.json').exists():isp.rollback()
   return
- m=addon.package(ROOT);isp.check()
+ m=addon.package(ROOT);addon.hardware_check(ROOT);addon.original_check(m);isp.check()
  if a.action=='check':print('相机软件包、配套与现场硬件校验通过；未写入设备。');return
  old=all(v==isp.OLD for v in isp.versions().values())
  isp.apply()

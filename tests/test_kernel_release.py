@@ -101,9 +101,21 @@ class UpgradeGate(unittest.TestCase):
         for current in ['7.2.6-tb710fu', '7.2.6-tb710fu-snap1', '7.2.6-tb710fu-snap99']:
             self.assembler.check_release(self.spec, self.installer, 'install', current)
 
-    def test_actual_gate_rejects_dated_source(self):
+    def test_actual_gate_rejects_equal_or_newer_sources(self):
         with self.assertRaises(ValueError):
             self.assembler.check_release(self.spec, self.installer, 'install', self.plan['target_version'])
+
+    def test_actual_gate_accepts_17_and_an_earlier_valid_date(self):
+        for current in ('7.2.6-tb710fu-20261117', '7.2.6-tb710fu-20261116'):
+            self.assembler.check_release(self.spec, self.installer, 'install', current)
+        for current in ('7.2.6-tb710fu-20261119', '7.2.6-custom-2026-11-17', '7.2.6-tb710fu-20260230'):
+            with self.subTest(current=current), self.assertRaises(ValueError):
+                self.assembler.check_release(self.spec, self.installer, 'install', current)
+
+    def test_bridge_policy_cannot_leak_into_newer_release(self):
+        with self.assertRaises(ValueError):
+            release.validate(dict(self.plan, target_version='7.2.6-tb710fu-20261119'),
+                             '7.2.6-tb710fu-snap1', date(2026, 11, 19))
 
     def test_metadata_cannot_lie_about_installer_policy(self):
         bad = dict(self.spec, release=dict(self.plan, source_policy='dated-before-target'))

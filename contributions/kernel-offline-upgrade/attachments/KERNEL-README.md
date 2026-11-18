@@ -1,55 +1,13 @@
-# TB710FU 日期内核升级：20261117
+# TB710FU 内核 20261118
 
-目标内核 `7.2.6-tb710fu-20261117`。本条目是目录第一项，也是唯一完整内核升级入口；七个分片均为新的日期版载荷，历史“原版 → snap1”脚本、旧格式分支和旧分片已移除。
+目标为 `7.2.6-tb710fu-20261118`，适用通过现场硬件预检的 TB710FU Ubuntu ARM64。版本检查接受合法无日期旧版，以及标准日期早于 20261118 的 TB710FU 内核（含 20261117）。同日、倒退、非法日期或未来发布日期会停止。原无日期版可直接升级。
 
-已在 Ubuntu 26.04.1 ARM64 实机完成 `7.2.6-tb710fu-snap1` → 日期版升级、重启和自动收尾。实际 `uname -r`、嵌入配置和模块版本均已核验，Snap strict/full、USB、前后摄、对焦及隔离 NAT 测试通过。完整证据和边界见 [VALIDATION.md](VALIDATION.md)。
+核对 GPT 主备、扇区范围、分区名称和类型时，允许已配对 A/B 分区的优先级、重试次数和成功位存在差异。继续核对活动位、不可启动位、只读位与其他属性。升级目标按现场 `boot_a` 标签定位，仍要求当前 A 槽、已审核的固件和源 boot 镜像指纹。无需手工改 GPT 属性来通过校验。若仍报错，保留报错原文及脱敏的分区名、属性差异。
 
-本次版本条件接受所有合法、不带日期的旧内核，不限制 snap1 白名单。仍须匹配已审核的固件、GPT、boot、后摄 overlay 和配套文件；未知定制系统会在写入前停止。后续更新仅接受标准日期版本，目标日期必须严格晚于设备当前内核日期，不允许同日覆盖、倒退或虚构未来日期。规则见 [KERNEL-VERSIONING.md](KERNEL-VERSIONING.md)。
+本版含 144Hz 与 DSI 启动初始化、触控亮屏恢复与充电状态同步，保留 20261117 的内部麦克风、AppArmor/Snap、网桥防火墙/NAT 与 ath12k 修复。默认 144Hz，120Hz 仍可选；开机屏幕初始化可能闪黑数次。随包更新已有电源键服务的短按锁屏流程，并补齐 dpkg 创建手册链接需要的目录。有已安装的相机/手电筒补充时，升级事务同时迁移配套模块和应用。新装补充继续显式使用第一项的 `camera-install` 或 `flash-install`。相机使用常驻全分辨率流和后台 JPEG 编码，前摄为原厂定焦。已启用私有前摄的设备须预先备好与新内核匹配的根目录侧模块。关机仅充电模式和 USB-C SSD 候选仍待各自硬件实测。
 
-## 已包含的修复与独立补充
+修复助手只提供一个内核入口，位于目录第一项。默认 `check`，通过后选择 `install`；完成 boot_a 全量回读后手动重启。支持 `status`、`finish`、`rollback`。应用补充使用同一入口的 camera 或 flash 动作。Python 3.11 以上，需 systemd、gdisk、fdisk、util-linux、kmod，电量至少 30%，/var/tmp 至少 512 MiB 且根分区至少 1 GiB。
 
-发布的 boot 设备树已包含内置麦克风 WCD/SoundWire DAI 1 采集链路，ath12k 模块已含 vdev 计数补丁。旧 `microphone-snap1` 刷写入口及 `ath12k-stats-timeout-recovery` 临时重载入口已从目录和当前仓库删除；历史记录保留在 Git 中。
+本机备份位于 `/var/backups/tb710fu-kernel-upgrade/7.2.6-tb710fu-20261118/`。备份含设备身份，留在本机。回退通过同一目录入口恢复备份文件和 boot 后手动重启。写入中掉电或无法启动时需使用外部救援和原机备份。
 
-现有麦克风 ALSA 初始化服务和 WirePlumber 路由继续沿用，完整内核安装器不会新建这些用户态文件。输入法、电源键、窗口触控、DroidLoom 按需启动与容器音频为独立用户态配置，仍保留各自目录入口。
-
-`install` 只执行完整内核升级。相机、微距、自动对焦、原厂风格界面和手电筒的新增配套仍需显式执行本文末尾的 `camera-install` / `flash-install`，不能仅凭附件存在就视为已安装。
-
-## 使用
-
-修复助手必须下载本条目全部附件，核验 catalog.json 中所有 SHA256，再将附件目录交给唯一 Bash 入口。每个分片最多 8 MiB，小于应用单附件 10 MiB 限制。
-
-```bash
-# 默认 check，仅现场只读预检，不写分区。
-sudo env TB710FU_ATTACHMENTS_DIR=/path/to/attachments bash /path/to/script.sh
-# 安装：备份、模块检查、写 boot_a、完整回读，不自动重启。
-sudo env TB710FU_ATTACHMENTS_DIR=/path/to/attachments \
-  TB710FU_KERNEL_ACTION=install TB710FU_KERNEL_USER=ubuntu bash /path/to/script.sh
-# 保存工作后手动重启。
-sudo reboot
-```
-
-`TB710FU_KERNEL_ACTION` 支持 check/install/validate/status/finish/rollback，兼容已有 `TB710FU_SNAP_KERNEL_ACTION`。validate 只重组并核验包，不访问设备，不需要 root；check 在平板上执行现场预检。status/finish/rollback 需要管理员权限。已运行目标版本时 check 可报告已完成；install 拒绝重复刷入同日目标。安装动作须先展示风险并取得用户授权。
-
-需要 Python 3.11+、完整 Ubuntu ARM64/systemd、gdisk/fdisk/kmod/util-linux，电量至少 30%，/var/tmp 至少 512 MiB、根分区至少 1 GiB 空间。安装本身离线；启动后 Snap 收尾若需下载缺少的软件包/hello-world，则需要网络。失败后可通过 finish 重试，不重复刷写。
-
-## 前摄与私有配套
-
-完整公开模块包含后摄/对焦及正式网络模块。已经启用前摄的设备，须预先具备 `/opt/tb710fu-front-camera/7.2.6-tb710fu-20261117/` 下匹配的新私有模块 `gc13a2_raw.ko`、`tb_front_registration.ko`，其哈希和 vermagic 必须通过升级器校验。本轮平板已单独重编、安装并实测这些配套；私有模块和表数据不在 GitHub 载荷中。没有启用前摄的系统不会被自动开启前摄。
-
-这些手动加载模块继续保留在私有目录；安装器单独校验其依赖，不把它们塞进公共模块目录或生成自动加载别名。若配套缺失，安装会在写 boot 前停止。
-
-## 回退
-
-每版本独立备份目录：`/var/backups/tb710fu-kernel-upgrade/7.2.6-tb710fu-20261117/`，其 `kernel-upgrade-active` 指向本次记录。保留现场 boot、六份 GPT、配套文件、状态及持久化安装器。备份含设备身份，应保密。
-
-```bash
-sudo python3 /var/backups/tb710fu-kernel-upgrade/7.2.6-tb710fu-20261117/kernel-upgrade-active/payload/upgrade-ubuntu-kernel.py --status
-sudo python3 /var/backups/tb710fu-kernel-upgrade/7.2.6-tb710fu-20261117/kernel-upgrade-active/payload/upgrade-ubuntu-kernel.py --rollback
-sudo reboot
-```
-
-回退前核验所有备份、当前固件/GPT 和文件；发现损坏备份或其他操作改动会拒绝覆盖。正在运行的新内核模块不会被删除，旧内核及原私有前摄模块均保留。完全无法启动时需外部救援使用本机备份。源码回退不等于设备启动分区回退。
-
-## 手电筒与相机切换可选补充
-
-[flash-camera/README.md](flash-camera/README.md) 提供 flash-check / flash-install / flash-rollback 动作，仅在当前已审核日期内核上加载模块和运行态覆盖并更新相机应用，不更换七个原 Image 分片，也不新增内核升级入口。新增 `camera-check / camera-install / camera-rollback` 动作提供[主摄自动对焦、第二后摄与增益适配](flash-camera/CAMERA-QUALITY.md)。同日仅补充 ABI 匹配模块与用户态包，不替换原 Image。GNOME Snapshot 同步硬件闪光仍未完成。
+[版本及构建规则](KERNEL-VERSIONING.md) · [测试和限制](VALIDATION.md)

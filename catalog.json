@@ -3,11 +3,11 @@
   "issues": [
     {
       "id": "kernel-offline-upgrade",
-      "title": "TB710FU 日期内核升级（20261117）",
-      "description": "完整离线升级至 7.2.6-tb710fu-20261117，Linux 基础版本为 7.2.6。已在 Ubuntu 26.04.1 ARM64 的 TB710FU 上通过 snap1 → 日期版实际安装、完整 boot 回读、重启和自动收尾。新 Image/完整模块包含 Snap/AppArmor、IPv4/IPv6 legacy/xt NAT、ARP/security 表及 ath12k 两枚计数修复，保留已工作的麦克风、前后摄、对焦与 USB 配套。\n\n本次版本条件接受所有合法、不带日期的旧内核（包括原版、snap1、其他自定义版本），没有 snap1 白名单；机型、当前固件/GPT、boot、overlay 和配套文件仍须匹配已审核指纹，未知系统会停止。后续更新只接受日期版本，目标日期必须严格晚于设备当前日期，拒绝同日、倒退、非法日期和未来目标日期。已运行目标时 check 可报告无需升级，install 不重复刷入。\n\n新载荷约 53 MiB，分为七个最多 8 MiB 的附件；客户端须核验并下载全部附件，通过 TB710FU_ATTACHMENTS_DIR 传给唯一 Bash 入口。默认 check 只读预检；TB710FU_KERNEL_ACTION=install 备份现场 boot/GPT/文件、安装匹配模块、写 boot_a 并完整回读，不自动重启。status/finish/rollback 查询、收尾或回退；validate 仅校验/重组载荷，不访问设备。支持旧客户端的 TB710FU_SNAP_KERNEL_ACTION。\n\n需要 Python 3.11+、完整 Ubuntu ARM64/systemd、gdisk/fdisk/kmod/util-linux，电量至少 30%，/var/tmp 至少 512 MiB、根分区至少 1 GiB 可用空间。已启用前摄的设备必须预先具备新版本私有模块，其哈希/vermagic/依赖均受校验；包内不发布私有前摄表数据，缺少配套会在刷写前停止。\n\n实机验证 Snap strict/full、USB、前摄 30 帧 RGB/后摄三帧 RAW、对焦和四种 netfilter 后端的真实 NAT 流量，security 表查询与 ARP 模块加载通过。旧原版/其他无日期版本尚未逐一实机刷写，Wi-Fi 实测 10 次重连、301.67 秒、160 次查询，最长 8.49ms，统计超时为 0；全天 Wi-Fi、AP 信道切换及 aTrust 业务验收仍有边界；详见 VALIDATION.md。\n\n20261117 同版本可选补充：flash-check / flash-install / flash-rollback 在已审核日期内核上提供 PM8550 手电筒模块、动态覆盖、受限 D-Bus 开关、60 秒自动熄灭和 GNOME 快捷设置扩展，同时把现有相机应用更新为前后摄切换。该补充不更换 Image、不刷写启动/固件分区，原日期版分片保持原样。相机已完成后→前→后→前四次实机预览/全幅 JPEG 测试；手电筒实际定时关闭、SSH 权限拒绝及光学亮度对照通过。图形会话磁贴点击、长时间温升和 GNOME Snapshot 同步闪光尚未完成，详见 flash-camera/README.md；issue #18 不自动关闭。\n\n同日相机质量补充：camera-check / camera-install / camera-rollback 提供 OV13B10 主摄对比度自动对焦、点击对焦、十二帧拍照预热与真实数字裁切尺寸；接入 GC02M1 固定焦点微距，支持主后摄/前摄/微距三路切换，JPEG 分别为 4200×3120、4200×3120、1592×1200。匹配的 libcamera 0.7.0-1ubuntu2+tb710fu20261117.3 修正增益换算和曝光阈值。新增同 ABI 微距模块，不重刷 Image 或分区，原日期版分片保持原样。暗场噪声和未校准 SoftISP 色彩仍有边界，详见 flash-camera/CAMERA-QUALITY.md。\n\n原厂相机风格界面更新：参考本机 com.zui.camera 18.0.1 的静态布局，提供黑色拍摄页、白色圆形快门、黄色模式选中、相册缩略图、横竖屏排列、补光/九宫格/倒计时，以及设置面板。三路传感器和拍摄算法沿用已验证配套；已安装设备仅变更界面时采用原子更新，六项相机/手电筒服务保持运行。原始 APK、厂商资源/原生库和现场截图不发布，详见 flash-camera/STOCK-UI.md。\n\n目录归并：当前日期版启动镜像已包含内置麦克风 WCD/SoundWire DAI 1 采集链路，ath12k 模块已包含 vdev 计数修复；旧 microphone-snap1 刷写包及 ath12k-stats-timeout-recovery 临时重载入口已移除。麦克风现有 ALSA 初始化服务和 WirePlumber 路由配置继续沿用，完整内核安装器不新建这些用户态文件。输入法、电源键、窗口触控、DroidLoom 按需启动及容器音频属于独立用户态修复，不由内核升级安装。相机/手电筒补充仍须显式运行 camera-install / flash-install，普通 install 不自动执行。",
+      "title": "TB710FU 日期内核升级（20261118）",
+      "description": "完整离线升级至 7.2.6-tb710fu-20261118。接受所有合法无日期旧版，以及更早的标准日期版（含 20261117），无需先装 20261117。独立核对机型、A 槽、GPT、已审核的源 boot、固件和配套文件。升级器允许已配对 A/B 分区的优先级、重试次数与成功位存在差异，继续严格校验分区范围、名称、类型、活动、不可启动和只读位。\n\n包含 144Hz 与首次登录初始化、触控亮屏和充电状态修复，沿用麦克风、Snap/AppArmor、NAT/网桥与 ath12k 支持。已有相机/手电筒补充会迁移到目标 ABI，更新全分辨率快拍。也更新现有电源键服务短按锁屏，并补齐包管理目录。首次装相机/手电筒补充可以使用 camera-install / flash-install。已启用前摄须预先备好匹配的本机模块。关机仅充电和 USB-C SSD 候选仍待实测。\n\n同一入口默认 check，install 备份现场并写 boot_a，全量回读后手动重启；status/finish/rollback 用于查询、收尾和回退。Python 3.11+；电量至少 30%，/var/tmp 至少 512 MiB、根分区至少 1 GiB。完整新载荷由七个分片组成。本机已验证目标 Image 和显示/触控修订，公开包完成只读实机检查及两类旧版升级和回退的隔离测试。",
       "device": "TB710FU",
       "status": "community-review",
-      "risk": "高风险：install 写 boot_a、更新启动尝试/成功属性，并安装新模块及摄像头/USB 配套文件。掉电、UFS 故障、系统差异或写入中断仍可能导致无法启动；先展示风险并确认授权，准备本机备份和外部恢复方式。默认 check，不自动重启。当前固件/GPT 每次重新检查，不沿用历史分区坐标；不改分区布局，不删除旧内核及私有前摄模块。\n备份位于 /var/backups/tb710fu-kernel-upgrade/7.2.6-tb710fu-20261117/，kernel-upgrade-active 指向本次记录，保存 boot、六份 GPT、文件和状态；这些含本机身份，不可上传。写入失败会尝试恢复本次状态；硬件故障/掉电不保证自动恢复。\n回退：同一入口 TB710FU_KERNEL_ACTION=rollback，或 sudo python3 /var/backups/tb710fu-kernel-upgrade/7.2.6-tb710fu-20261117/kernel-upgrade-active/payload/upgrade-ubuntu-kernel.py --rollback，然后手动重启。回退前核验全部备份、当前固件/GPT和目标文件，拒绝覆盖其他操作改动。若完全无法启动，需外部救援使用本机备份。源码回退不等于启动分区回退。\n可选 flash-install 会加载 LED/媒体模块和运行态覆盖，控制 PM8550 LED，并更新相机 UI、两项 systemd 服务、D-Bus 策略及用户快捷设置扩展。仅接受当前审核的 kernel/config/boot/firmware/GPT 和原应用指纹；默认关灯、约 100mA torch、60 秒熄灭，但仍须确认实际出光与温升。该补充回退快照为 /var/backups/tb710fu-flash-camera-20261117/，其 payload 内保留独立恢复程序；回退不会刷写启动/固件分区或删除照片。\n可选 camera-install 还会安装五个匹配的 libcamera 用户态包、GC02M1 微距模块/运行态覆盖及对焦权限配置，短暂停止并恢复当前媒体服务；包内提供原 Ubuntu 包和五分钟验证失败回退。使用首次文件快照，不覆盖未知用户修改，不读取或上传 EEPROM/现场照片。camera-rollback 恢复硬件/应用补充及原 Ubuntu libcamera；不刷启动分区或删除照片。",
+      "risk": "install 写 boot_a 并更新 A 槽重试计数与启动成功状态，安装匹配模块及配套文件。掉电或存储故障可能导致无法启动。刷写前核对当前固件、GPT 和 boot，现场备份位于 /var/backups/tb710fu-kernel-upgrade/7.2.6-tb710fu-20261118/，包含本机身份，应留在本机。默认只读检查，安装后手动重启。\n\n回退使用同一入口的 rollback，再手动重启；不能启动时使用原机备份与外部恢复。相机/手电筒独立动作涉及用户态包、媒体和 LED 模块，适用范围、诊断和温升验证边界见附件。",
       "script": {
         "path": "contributions/kernel-offline-upgrade/script.sh",
         "sha256": "d141bfe485119264630dcacccfb8fe0e80ddb1e0c65c73026bd96a41338f0630",
@@ -19,16 +19,20 @@
           "sha256": "15a727c4e6acaf03ad785b7f4b810fd994349bb88c4415fc34a8f1a08a93c9a1"
         },
         {
+          "path": "contributions/kernel-offline-upgrade/attachments/0002-tb710fu-display-touch-20261118.patch",
+          "sha256": "5b9506aedaa3fc6ab2b8639eb4ec916807ef9b2026141a392148b9ff56888c6b"
+        },
+        {
           "path": "contributions/kernel-offline-upgrade/attachments/KERNEL-README.md",
-          "sha256": "a886969333591e24d6c6cf08d59168858e3b2d52110262239fe06ca22dd06f68"
+          "sha256": "70200fbf1d624162aaccca4c06c0743127f9be9f0bc2821f2f8592a0234cc4b4"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/KERNEL-VERSIONING.md",
-          "sha256": "efa19b550f09453fcef3cf483d582f7ed3fdd15644a67d20cdeb0c840639bc9b"
+          "sha256": "be818f4351c7620bca94a8851dfd10b0103b6fe0004824015f44b54611a34b3a"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/VALIDATION.md",
-          "sha256": "1cc7412265687057a28098f4742452382fd4003f32bcb80968f8683cad9d4464"
+          "sha256": "97e53b3e55ee3641b6466ab503a20715ba9345fc5c23ebb2ae15add38f16837b"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/assemble-kernel-bundle.py",
@@ -40,19 +44,47 @@
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/build-bundle.py",
-          "sha256": "a8045a21754c0d034753af910f72b756da5182add984637a0bccae61907e05f3"
+          "sha256": "c04b46cb41cb8c7a6208f49fa9dbf5c9f85e40f668d58f49bc42751777f499a2"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/build-kernel.sh",
-          "sha256": "1905c5f0a940f3462561d5d3a9aa0bbe04ac87233f520dd5094d4c2f8bf57492"
+          "sha256": "eeba0e585b027d7144f6a3feb5727f2da738ef52a26c8ff869dc92884d857214"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/bundle-parts.json",
-          "sha256": "110bff4cf36dc7b6f2bcd8f6fcb300cd77e27c19933b8671ce8d6509faaab1d1"
+          "sha256": "c1c8261462697e5a3397d1d1a108a716ba1bacf48b6e95a1afc4c943a08a4e5b"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/capture-inventory.py",
           "sha256": "abbb37c0eb9f5f8197c366c28e787529c2b37dbf37d1b01c68e2de046a06747e"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/display-touch-source-hashes.json",
+          "sha256": "3d526b7e681fa1b720d6e7cec1710f14ccf5d5e81e2f88e4cf3c2b127413e611"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/0003-libipa-Add-OV13B10-camera-sensor-helper.patch",
+          "sha256": "e3c43bea7de24e833b1bb38a55b4ba3b8a95ab3e99394a2592b88077166f10fb"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/0004-libcamera-sensor-Add-OV13B10-sensor-properties.patch",
+          "sha256": "a7c1b7c72ab59c31fd6142348a9241403a727fd91991019899b4355f1b328994"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/0005-simple-agc-unity-threshold.patch",
+          "sha256": "91bd771131605a944ecf5510fb10e664c8ef4e749388a69bd16e54d8380a0ef7"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/0006-tb710fu-raw-q10-gain.patch",
+          "sha256": "9cbd134dcc971c0fce9d5f8943995cd1fbeb98e8226238ee52f5872c76533311"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/50-camera-focus-owner.conf",
+          "sha256": "db78c083d0d1acc7d3942596cdc8c586697c2f6003f2aa4122159e58b8d37fd1"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/CAMERA-QUALITY.md",
+          "sha256": "1fe404fc009e8602b47c7b220faa93a8f23bf771fbcec3de33f47f9274344dcc"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/Makefile",
@@ -60,15 +92,47 @@
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/README.md",
-          "sha256": "75314c54030e172cce7fcd73615c750f3ad88a6dd5c25b7f83a691494323c037"
+          "sha256": "6eb525471452defb2024b76c36831e9aec33619dddd17b87984c6d957c58017b"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/STOCK-UI.md",
+          "sha256": "86946860fd7d6e356a179c7e736391b872e7df00b37a5db15215bf181c0f9cf3"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/build-camera-isp.sh",
+          "sha256": "e2d2626c9a483b589099da55f774297414c9eb43feb245b2a3b6ede883255f36"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/extension.js",
           "sha256": "7a5ed13170542a1e64e6f81be3f6009861d188e3f046e7ad4b8f2d9024f1bfd1"
         },
         {
+          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/gc02m1_raw.c",
+          "sha256": "0b85acac9f4f87f17b6291ded6421c28ffca518a4e2190d0e32128e293983f81"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/gc02m1_raw.ko",
+          "sha256": "b92358c31dda92ee974758b1be64bd40477eec8a8ab5959b5027b60c8b0799e4"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/gstreamer1.0-libcamera_0.7.0-1ubuntu2+tb710fu20261117.3_arm64.deb",
+          "sha256": "e4b56874b9101b8a5d99e93f577257124a4a8b16c8b61e0452965f8af6b5643d"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/gstreamer1.0-libcamera_0.7.0-1ubuntu2_arm64.deb",
+          "sha256": "b9d481295e2e60ec8307f955b755c767a7627a18352453bfe5c5864133e406a9"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/install-camera-isp.py",
+          "sha256": "46d02b5cdd47947fe41daf891329e13374e8768c38b69dc3e48acdc671f6cf28"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/install-camera-quality.py",
+          "sha256": "141ae656b826f219cd245566e43757c7d6bebe6ea4ee3e167929a6337ff43139"
+        },
+        {
           "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/install-flash-camera.py",
-          "sha256": "b894a16284cc17b362fd51f6ec2a397de0dc13b89c9974480fb8cd6a6292dfa6"
+          "sha256": "b186754abb1fddc4efb622e7270b0241e91230763e86f9b64ac1d3d0a930f6ba"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/leds-qcom-flash.c",
@@ -76,15 +140,55 @@
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/leds-qcom-flash.ko",
-          "sha256": "59162841490fab0ad78de83270de7123b31210d83309bd5b04ef40b218f79fc0"
+          "sha256": "a73d59788553127cdf954d5e040f78302dd2a702443de228daa41a177797f9f5"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/libcamera-ipa_0.7.0-1ubuntu2+tb710fu20261117.3_arm64.deb",
+          "sha256": "afde5f6f9e35602b8d1d1132d0dda59f1ef46c0ac300564d0a778d5e33517b2e"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/libcamera-ipa_0.7.0-1ubuntu2_arm64.deb",
+          "sha256": "d5f2b806a3467f1b70cfd7fac4cc7aae6979d1d307d5909775769a4cadf3e1fa"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/libcamera-tools_0.7.0-1ubuntu2+tb710fu20261117.3_arm64.deb",
+          "sha256": "9ea7348b49fc3429a1b047394340aebbce30d6cb1f955b6a222d196d11221e44"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/libcamera-tools_0.7.0-1ubuntu2_arm64.deb",
+          "sha256": "77c46c5364654b895a27cd8005a69e8d94abec46c1e43971918ae02f4d180338"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/libcamera-v4l2_0.7.0-1ubuntu2+tb710fu20261117.3_arm64.deb",
+          "sha256": "fe733c4ea932b5cab71f1cae7148611201b999356bff36deea44bcd64d7dcb8f"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/libcamera-v4l2_0.7.0-1ubuntu2_arm64.deb",
+          "sha256": "3ef5141b9004fea942db7cb2399a38b0297a28ecacbca6f1b0bfb5590f0d64af"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/libcamera0.7_0.7.0-1ubuntu2+tb710fu20261117.3_arm64.deb",
+          "sha256": "62c32af7eae35911c9c20f33cd74773b82ca58e5c3ced1ea019f0db619f6614b"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/libcamera0.7_0.7.0-1ubuntu2_arm64.deb",
+          "sha256": "76ced371fc9dc7a7c7b02f1d7c3eaa5cacd2d6945c29f903250678eb2c9994f0"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/local-tb-flash.dtbo",
           "sha256": "0b4491fda57f23d2668062911c0db073c589797e128b2a0b903f3e6757488635"
         },
         {
+          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/local-tb-macro-raw.dtbo",
+          "sha256": "2c2dfd3c4a0faded43dcec0434d56a9c64c4a3b59206bf0a8e7ded351f6cf39c"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/macro-manifest.json",
+          "sha256": "99b9e7ee2732c6185db2547f854c6e180441a9226eb511fddaf23571d34ef971"
+        },
+        {
           "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/manifest.json",
-          "sha256": "71ef29ef8f9ed187faf519bc88bb80f74b9185456f7cdc45dbcc630bc03a1157"
+          "sha256": "1a4c413eebfa171aeb3da59a4738dec008d85f5ba3401339606bdd1be75f1bfa"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/metadata.json",
@@ -96,15 +200,19 @@
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/package.json",
-          "sha256": "34cedaaedadff6fe04a4aa85cd23b2eeebbc06ab55714340313cbc641e3fe53b"
+          "sha256": "bf20454cd8ea6404fcbbd5f35ad751c9dbed27cdd7690dc0184f508b20119ecc"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/tb-camera-focus-permission.py",
+          "sha256": "f6444c11caf28bf4fcaad41a7889d75e3bc19fdcd28dd7f9f75cec03581d9d53"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/tb-camera.py",
-          "sha256": "d626c86f355e246f5f72e3c56d542f2890e58fc46929790802b8e8293e89909e"
+          "sha256": "9aaf0f9111d47d2364bbd289e421c3eb0be308a658b241ac1e9bd28b1f84fa4f"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/tb-flash-hardware.py",
-          "sha256": "a11c4794bcd6ee6ee2dc91e507391cc262eca6482d07da7c6295d2c3f3d32287"
+          "sha256": "7fb3b2d164d41ff4245913396dd463c814edeabc6b0a3aaa7f712e5b960e75db"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/tb-flash-off",
@@ -123,16 +231,32 @@
           "sha256": "b5518bcd111e94e581712c3b6a690887139cc7bf10a37d0bc63d08469f63b583"
         },
         {
+          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/tb-macro-hardware.py",
+          "sha256": "08dc912ff9129ef1ae2ca7631a6cc04f26cd238ccb23a2bbdf4e5de81b2f0e6c"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/tb-macro-raw.dtbo",
+          "sha256": "2c2dfd3c4a0faded43dcec0434d56a9c64c4a3b59206bf0a8e7ded351f6cf39c"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/tb-macro-raw.dtso",
+          "sha256": "ced5afa46cd39f1460731e5ac404859e1aa4feb9c075bd211c8e6aa65ec4498b"
+        },
+        {
           "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/tb-torch-daemon.py",
           "sha256": "4471b4355fe313521633504bde2ce2972cf9150d957c5effda063024e976c8f9"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/tb710fu-flash-hardware.service",
-          "sha256": "fdc551426034ead3d7f850ab602de74c4ee63587338a59a2338ef890f62a524a"
+          "sha256": "5215467429659dcced64785de14da6fea22ba92360ac034766c3085fe94f6d04"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/tb710fu-front-camera.desktop",
           "sha256": "b9e7b1a393ee3e70a2f521f5b7976190590365dc1c76be972f79879d73c9b32a"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/tb710fu-macro-camera.service",
+          "sha256": "e816030bd32106ab33849d69091effe38b46fccdc7f7015669ab86d80b0781db"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/tb710fu-rear-camera.desktop",
@@ -140,7 +264,7 @@
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/tb710fu-torch.service",
-          "sha256": "8ede2d4f5744e2ab5484370550fcc44368b5503578a124fe64583a59003bdd40"
+          "sha256": "bfef308f7f0835249117bc044009bddb3a0a7c0e4e94bdb8f8b803bd96ebed10"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/tb_flash_overlay.c",
@@ -148,11 +272,43 @@
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/tb_flash_overlay.ko",
-          "sha256": "b7a22014cbf2317e38cd341689da00e3e02959249f07445683ce5a6a70535143"
+          "sha256": "a770b3451a7d3490fab042317d3936ca877cbb5a11b723cc6aef5c88b7c80c20"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/tb_macro_registration.c",
+          "sha256": "eff0b97524d6895a97f55a0c05a30576b4501fe17d4fd5e13542e6fd78a76ae6"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/tb_macro_registration.ko",
+          "sha256": "8a3c9b0abdd3c5ad15d60934a9a021c7ae2e3197e00298f6a59943f17241ffb5"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/test-autofocus.py",
+          "sha256": "a9499928c4ffaa96fcddaf928fba69ae4267f610836f5f18390a1442263d46f7"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/test-camera-isp.py",
+          "sha256": "51580a293e48d1cffa31f7b4c96857f37cb272874b6b29e66fe3050bd79d4980"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/test-focus-permission.py",
+          "sha256": "4e3ab6daeae9d06648a55e1aa73fc62faf8cf569da4be5748367d6609884434c"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/test-installer.py",
           "sha256": "9a2d66968514a32d6aeeb506f5ea04c190a036f269fee7e9b95a7563ad156a2c"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/test-libcamera-gain.cpp",
+          "sha256": "1b48f3d0830cd75f8dadebe02a005eb40d587577016b8c058507367703e1587c"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/test-macro-media.py",
+          "sha256": "3510962808e9fbaa210e790a175e0ec95cbc10f03e5a57e06b018651d58511c0"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/test-photo-save.py",
+          "sha256": "cacaa46294d688ac65b6f7fbd8a8cac7b0d3411ee634bcb0a65627ee6fcf2a76"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/test-torch-optical.py",
@@ -168,43 +324,43 @@
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/v4l2-flash-led-class.ko",
-          "sha256": "10e619bfff8eaf4384ac5e0223afb91cb15eec1c31fa5e8b86aa7c1088009f6a"
+          "sha256": "25f450fad2fe215533b75591337154d8b4e5ff977fbc3f983104de9413a7b920"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/kernel-release.json",
-          "sha256": "23e1a1c564cdfdf16e809f271c8088618d2b1ac2b559a3b51a1bc93722cf7ffe"
+          "sha256": "80ffc41c90ce61aef9daabc29efd8ca03a4369e683bbc8829899a32d3bcd4f5f"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/kernel-release.py",
-          "sha256": "ac1a3925d2d4ac45adbabbf3a87fed0167a3a65ce06309bf8b41d902c2fd31af"
+          "sha256": "b4f630215004a8ac954271f497afcb0727e9ebbcb2fd4d41b9ad243c464dfd96"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/kernel-upgrade.part01",
-          "sha256": "fc6abcaf730a83148a34e649bf11a3d603def5dcf4bc95f1bea63420d60ac083"
+          "sha256": "aea3fc01bdf7712c4c495e550c9b9d57ceef4beccd9cb428199e53c40d48a9a5"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/kernel-upgrade.part02",
-          "sha256": "4342562bd652e0efed685833e9007c5d319a27e4c1926013991e2ae415e8cbee"
+          "sha256": "a86c494c545fbabc905721aa1cca4c999e67e195ef3bac380850e4828bf3adf2"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/kernel-upgrade.part03",
-          "sha256": "77a45b82dc202869aab84d3130264a1e80c70fc7e6f95df582cb73fe52393e7b"
+          "sha256": "9f4cd34d60ce681cedea2b823a0534189cb4a8538370e17ee783bde7c79a845c"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/kernel-upgrade.part04",
-          "sha256": "e6857e7dfe27ba5f1f38ba7335c34fb13c901ba7fb44748ce0dfbcf0f49f644a"
+          "sha256": "a4fbfa97e0f7715fa73fb83249581e9a46b737a8cec14fc640378ac1f6a7dcd9"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/kernel-upgrade.part05",
-          "sha256": "20859a897bc8abfbc2438b70f97920f5da44ef458608369e400214f1a66e4a24"
+          "sha256": "3f75e939a6f27d9467195af5d1be4dc0313bb38d8efc540bd568e1fd6dc6c3c0"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/kernel-upgrade.part06",
-          "sha256": "4dcdedb074e9c5509e6d11a4e6464f98f4714881f56b3efe18d7b86fd13663f1"
+          "sha256": "bbf5a1f4cce8d537eb7ed6c5d5f5297e9f62d05872eae3d7d97ad17f0fdc96de"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/kernel-upgrade.part07",
-          "sha256": "9f470aa98584090ebe1794ebe367c86a2a6e6c626c226ca668a9c6382f0c186f"
+          "sha256": "35c603937bb5011d1b236230d537380af974b0a754e0620abc88c69b79312726"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/network-repair/0001-ath12k-vdev-restart-count.patch",
@@ -235,160 +391,24 @@
           "sha256": "d44504b76859a7992c705743f8c196e7b703854becb12440657b9055d29bd3bd"
         },
         {
+          "path": "contributions/kernel-offline-upgrade/attachments/release-inputs.json",
+          "sha256": "bf22685a5cafe5bb7d4416ae96d7623101b785ca27d53ccb49e5a964f440e21e"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/release-profile.json",
+          "sha256": "af4599286a5679b0b33cb9449976e3c0dc4ec97f0dd22eb6f732362ad3cb38b4"
+        },
+        {
+          "path": "contributions/kernel-offline-upgrade/attachments/tb_dp_overlay.c",
+          "sha256": "a58645da438fa3e2c8358e00dddb24e47e75dc07d7a61ab291661d5553c01247"
+        },
+        {
           "path": "contributions/kernel-offline-upgrade/attachments/test-upgrade.py",
-          "sha256": "06c4920036a759ac357ccf9a25fbd17e7bf185d8cf06ccf71018cfd43a1b48a3"
+          "sha256": "c405e2d721a401e9ab9a1c68dd36dddf0d9bd9cb0645a8732f1eba57c8caa5df"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/upgrade-ubuntu-kernel.py",
-          "sha256": "1637cbec531c57d561a816cf6d5f56a658212f624682d302c733094f008cc964"
-        },
-        {
-          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/test-libcamera-gain.cpp",
-          "sha256": "1b48f3d0830cd75f8dadebe02a005eb40d587577016b8c058507367703e1587c"
-        },
-        {
-          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/test-focus-permission.py",
-          "sha256": "4e3ab6daeae9d06648a55e1aa73fc62faf8cf569da4be5748367d6609884434c"
-        },
-        {
-          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/tb-macro-raw.dtso",
-          "sha256": "ced5afa46cd39f1460731e5ac404859e1aa4feb9c075bd211c8e6aa65ec4498b"
-        },
-        {
-          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/tb-camera-focus-permission.py",
-          "sha256": "3c65fd6c51e5388c6bd930386154a6765248bf9e482472f22d61bc9279b982e8"
-        },
-        {
-          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/macro-manifest.json",
-          "sha256": "d492642a54c7c42021d70c9a6c0065081fa91c717c09aa0eb32083e003e251d7"
-        },
-        {
-          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/libcamera-ipa_0.7.0-1ubuntu2+tb710fu20261117.3_arm64.deb",
-          "sha256": "afde5f6f9e35602b8d1d1132d0dda59f1ef46c0ac300564d0a778d5e33517b2e"
-        },
-        {
-          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/test-camera-isp.py",
-          "sha256": "51580a293e48d1cffa31f7b4c96857f37cb272874b6b29e66fe3050bd79d4980"
-        },
-        {
-          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/tb-macro-raw.dtbo",
-          "sha256": "2c2dfd3c4a0faded43dcec0434d56a9c64c4a3b59206bf0a8e7ded351f6cf39c"
-        },
-        {
-          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/CAMERA-QUALITY.md",
-          "sha256": "1fe404fc009e8602b47c7b220faa93a8f23bf771fbcec3de33f47f9274344dcc"
-        },
-        {
-          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/local-tb-macro-raw.dtbo",
-          "sha256": "2c2dfd3c4a0faded43dcec0434d56a9c64c4a3b59206bf0a8e7ded351f6cf39c"
-        },
-        {
-          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/install-camera-isp.py",
-          "sha256": "46d02b5cdd47947fe41daf891329e13374e8768c38b69dc3e48acdc671f6cf28"
-        },
-        {
-          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/install-camera-quality.py",
-          "sha256": "8bbe8527e05562d7af4aa3fbf15812261ca51a24732c5119f7fe1b76d0e419d7"
-        },
-        {
-          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/libcamera-tools_0.7.0-1ubuntu2+tb710fu20261117.3_arm64.deb",
-          "sha256": "9ea7348b49fc3429a1b047394340aebbce30d6cb1f955b6a222d196d11221e44"
-        },
-        {
-          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/0004-libcamera-sensor-Add-OV13B10-sensor-properties.patch",
-          "sha256": "a7c1b7c72ab59c31fd6142348a9241403a727fd91991019899b4355f1b328994"
-        },
-        {
-          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/test-macro-media.py",
-          "sha256": "3510962808e9fbaa210e790a175e0ec95cbc10f03e5a57e06b018651d58511c0"
-        },
-        {
-          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/libcamera0.7_0.7.0-1ubuntu2_arm64.deb",
-          "sha256": "76ced371fc9dc7a7c7b02f1d7c3eaa5cacd2d6945c29f903250678eb2c9994f0"
-        },
-        {
-          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/0003-libipa-Add-OV13B10-camera-sensor-helper.patch",
-          "sha256": "e3c43bea7de24e833b1bb38a55b4ba3b8a95ab3e99394a2592b88077166f10fb"
-        },
-        {
-          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/build-camera-isp.sh",
-          "sha256": "e2d2626c9a483b589099da55f774297414c9eb43feb245b2a3b6ede883255f36"
-        },
-        {
-          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/libcamera-v4l2_0.7.0-1ubuntu2_arm64.deb",
-          "sha256": "3ef5141b9004fea942db7cb2399a38b0297a28ecacbca6f1b0bfb5590f0d64af"
-        },
-        {
-          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/gc02m1_raw.ko",
-          "sha256": "0a5bf78f13f16ae5882154cb44f09e82d00368093abe548214ebdc5a13f1e254"
-        },
-        {
-          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/test-autofocus.py",
-          "sha256": "75aca71c96a382d6870c7e09465df74960010f4ca9f39232c83627122c1a9810"
-        },
-        {
-          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/gstreamer1.0-libcamera_0.7.0-1ubuntu2_arm64.deb",
-          "sha256": "b9d481295e2e60ec8307f955b755c767a7627a18352453bfe5c5864133e406a9"
-        },
-        {
-          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/libcamera-ipa_0.7.0-1ubuntu2_arm64.deb",
-          "sha256": "d5f2b806a3467f1b70cfd7fac4cc7aae6979d1d307d5909775769a4cadf3e1fa"
-        },
-        {
-          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/gc02m1_raw.c",
-          "sha256": "0b85acac9f4f87f17b6291ded6421c28ffca518a4e2190d0e32128e293983f81"
-        },
-        {
-          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/libcamera-tools_0.7.0-1ubuntu2_arm64.deb",
-          "sha256": "77c46c5364654b895a27cd8005a69e8d94abec46c1e43971918ae02f4d180338"
-        },
-        {
-          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/gstreamer1.0-libcamera_0.7.0-1ubuntu2+tb710fu20261117.3_arm64.deb",
-          "sha256": "e4b56874b9101b8a5d99e93f577257124a4a8b16c8b61e0452965f8af6b5643d"
-        },
-        {
-          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/test-photo-save.py",
-          "sha256": "79d52b7115f6fc55704e5d1032fdc0f681192644097a9c118584afafc657fde2"
-        },
-        {
-          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/libcamera-v4l2_0.7.0-1ubuntu2+tb710fu20261117.3_arm64.deb",
-          "sha256": "fe733c4ea932b5cab71f1cae7148611201b999356bff36deea44bcd64d7dcb8f"
-        },
-        {
-          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/tb_macro_registration.ko",
-          "sha256": "c1a397cebe1f00591e05f13a77ffcd2d274db6b9202ce993267c5657ab76a492"
-        },
-        {
-          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/tb-macro-hardware.py",
-          "sha256": "bf95127ad8427a8d44d3a95c4867116540e5897f9ff8d5f9f2c2b75c5b78d743"
-        },
-        {
-          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/50-camera-focus-owner.conf",
-          "sha256": "db78c083d0d1acc7d3942596cdc8c586697c2f6003f2aa4122159e58b8d37fd1"
-        },
-        {
-          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/libcamera0.7_0.7.0-1ubuntu2+tb710fu20261117.3_arm64.deb",
-          "sha256": "62c32af7eae35911c9c20f33cd74773b82ca58e5c3ced1ea019f0db619f6614b"
-        },
-        {
-          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/0005-simple-agc-unity-threshold.patch",
-          "sha256": "91bd771131605a944ecf5510fb10e664c8ef4e749388a69bd16e54d8380a0ef7"
-        },
-        {
-          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/tb710fu-macro-camera.service",
-          "sha256": "01af1434907eaeef4456ae5c1e66bbe23b00178c65782b64e366772bc2115a34"
-        },
-        {
-          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/tb_macro_registration.c",
-          "sha256": "eff0b97524d6895a97f55a0c05a30576b4501fe17d4fd5e13542e6fd78a76ae6"
-        },
-        {
-          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/0006-tb710fu-raw-q10-gain.patch",
-          "sha256": "9cbd134dcc971c0fce9d5f8943995cd1fbeb98e8226238ee52f5872c76533311"
-        },
-        {
-          "path": "contributions/kernel-offline-upgrade/attachments/flash-camera/STOCK-UI.md",
-          "sha256": "86946860fd7d6e356a179c7e736391b872e7df00b37a5db15215bf181c0f9cf3"
+          "sha256": "2300007e82f0707a92076a71636b1b3aa13f715bf6fcc32a4ff25663e08dbf57"
         }
       ]
     },

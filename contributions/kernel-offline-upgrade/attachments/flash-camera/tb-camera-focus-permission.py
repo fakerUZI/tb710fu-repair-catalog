@@ -2,7 +2,7 @@
 """Restrict the bounded lens DAC to the existing active local-seat policy."""
 import os,sys
 from pathlib import Path
-VERSION='7.2.6-tb710fu-20261117'
+VERSION=os.uname().release if os.uname().release in ('7.2.6-tb710fu-20261117', '7.2.6-tb710fu-20261118') else '7.2.6-tb710fu-20261118'
 FOCUS=Path('/sys/module/tb_focus_manual/parameters/position')
 def active_uid():
  sys.path.insert(0,'/usr/local/lib')
