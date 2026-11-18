@@ -582,6 +582,76 @@
           "sha256": "cf6ecb6c41c25d0a99844cb18d8ea25deba15264d4eb22e96ee64e49829d43ba"
         }
       ]
+    },
+    {
+      "id": "droidloom-window-navigation",
+      "title": "Droidloom 默认最大化与安卓手势导航",
+      "description": "为 TB710FU Ubuntu 26.04 ARM64 / GNOME 50 Wayland 上的 Droidloom 增加默认最大化、窗口调整预览与手势导航。在全屏或窗口模式中，短上滑或轻点小白条最小化当前安卓窗口，上滑停留后松开打开最近任务，左右边缘向内滑显示返回箭头。虚拟键盘优先接收触摸。已在平板验证相同扩展的窗口和手势行为，包装脚本实机只读预检通过。安装和回退详见附件。",
+      "device": "TB710FU",
+      "status": "community-review",
+      "risk": "当前桌面普通用户运行。会安装 GNOME 用户扩展并更新本机安卓扩展启用选择。新安装可能需注销并重新登录，当前会话的旧安卓控件可能提前停用。请先保存工作。支持 check、apply、rollback，回退保留旧版扩展和其他 GNOME 扩展设置。",
+      "script": {
+        "path": "contributions/droidloom-window-navigation/script.sh",
+        "sha256": "ab392e862565d6b30d746b5f4f23cd845607ebc020250cd9963d9dddc0673db2",
+        "requires_admin": false
+      },
+      "attachments": [
+        {
+          "path": "contributions/droidloom-window-navigation/attachments/README.md",
+          "sha256": "40cc30f5c7213f5a702ee8962b35fa5be89ab442e8590a024877872f1afa75b9"
+        },
+        {
+          "path": "contributions/droidloom-window-navigation/attachments/extension.js",
+          "sha256": "b9b05f825f928d5f1509d2f73fcd13470771351a2ff1605c60352780422b6e8a"
+        },
+        {
+          "path": "contributions/droidloom-window-navigation/attachments/install.py",
+          "sha256": "06475875dd6195946e85c9c148e465c5300d47e6707aff0c64359f79327234b3"
+        },
+        {
+          "path": "contributions/droidloom-window-navigation/attachments/metadata.json",
+          "sha256": "06bbeb4a2b073e3bf94f19019e803372ea4a88aa36cd596638be5000d06e56a5"
+        },
+        {
+          "path": "contributions/droidloom-window-navigation/attachments/navigation.js",
+          "sha256": "e98db074d6c1daea2126e39cdfae8ed9db08272d9d58c01bfaa7c83d83a06e5d"
+        },
+        {
+          "path": "contributions/droidloom-window-navigation/attachments/stylesheet.css",
+          "sha256": "3f94d545d67667b70876860d14bf53c8f575b7cf93b509391e56e1de22ed90f8"
+        }
+      ]
+    },
+    {
+      "id": "droidloom-window-memory",
+      "title": "Droidloom 窗口切换卡顿缓解",
+      "description": "缓解 TB710FU Ubuntu 26.04 ARM64 上 Droidloom 窗口切换时的 GNOME 卡顿。设置高优先级 3 GiB 压缩交换和更早的后台内存回收，保留磁盘交换后备。实机手动启用同样配置后连续 12 次全屏进出，最长 GNOME 回调间隔 80 毫秒。投稿脚本已做实机只读预检。",
+      "device": "TB710FU",
+      "status": "community-review",
+      "risk": "需要管理员权限。按需安装 Ubuntu 的 systemd-zram-generator，并写入系统启动配置。zram 使用部分 RAM 和 CPU。应用与回退在下次重启生效，脚本不主动重新初始化交换设备。遇到其他 zram0 配置或同名文件不同内容会停止，具体方法见附件。",
+      "script": {
+        "path": "contributions/droidloom-window-memory/script.sh",
+        "sha256": "ab392e862565d6b30d746b5f4f23cd845607ebc020250cd9963d9dddc0673db2",
+        "requires_admin": true
+      },
+      "attachments": [
+        {
+          "path": "contributions/droidloom-window-memory/attachments/60-tb710fu-droidloom-memory.conf",
+          "sha256": "3dcb8a7bed96c803cf47cbc9c3a36e3f568ff35de37eb9469f10c039c7a02eb5"
+        },
+        {
+          "path": "contributions/droidloom-window-memory/attachments/60-tb710fu-droidloom.conf",
+          "sha256": "6ca16b61889b9077dd4402852dd3b5c50fd5cac09403c4081bffebb7321acd37"
+        },
+        {
+          "path": "contributions/droidloom-window-memory/attachments/README.md",
+          "sha256": "9b0c19b8a884d932b041c92e8d5c84798af0d5ee9284c39db5184dee1c925366"
+        },
+        {
+          "path": "contributions/droidloom-window-memory/attachments/install.py",
+          "sha256": "a5f04116f6675c87525ee422346ca4fe30b178890103e93a0eba95d619de6397"
+        }
+      ]
     }
   ]
 }
