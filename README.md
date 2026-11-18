@@ -51,4 +51,4 @@
 
 ## TB710FU 修复助手
 
-Ubuntu 安装包 [下载 0.10.8（.deb）](packages/repair-assistant/tb710fu-repair-assistant_0.10.8_all.deb)。安装后从顶部“应用更新”检查新版。安装包的 SHA-256 和文件大小见[更新清单](packages/repair-assistant/latest.json)。
+Ubuntu 安装包 [下载 0.10.9（.deb）](packages/repair-assistant/tb710fu-repair-assistant_0.10.9_all.deb)。安装后从顶部“应用更新”检查新版。安装包的 SHA-256 和文件大小见[更新清单](packages/repair-assistant/latest.json)。
