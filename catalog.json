@@ -652,6 +652,29 @@
           "sha256": "a5f04116f6675c87525ee422346ca4fe30b178890103e93a0eba95d619de6397"
         }
       ]
+    },
+    {
+      "id": "terminal-hostname-fix",
+      "title": "终端 sudo「无法解析主机」修复",
+      "description": "终端执行 sudo 时出现「sudo: 无法解析主机：<主机名>: 名称或服务未知」，随后仍能正常执行。原因是系统主机名没有出现在 /etc/hosts 的解析条目里，sudo 反查主机名失败时打印该警告。\n\n应用向 /etc/hosts 追加一行 127.0.1.1 加当前主机名，不改动任何既有条目（例如设备原生的 tb710fu 映射保留不动）。主机名来自 gethostname，只接受常规字母数字与点连字符；文件在预检后被修改会拒绝写入，写入采用临时文件加原子替换，失败时自动用快照恢复。已存在映射时报告无需修改；主机名已指向其他地址时预检拒绝并提示人工确认，不覆盖既有解析。\n\n同一入口默认 check，apply 追加条目并快照，rollback 恢复原始 /etc/hosts。回退快照位于 /var/backups/tb710fu-terminal-hostname-fix/。验证方式：应用前后各执行一次 sudo 命令确认警告消失，getent hosts <主机名> 返回 127.0.1.1。",
+      "device": "TB710FU",
+      "status": "community-review",
+      "risk": "仅向 /etc/hosts 追加一行回环映射，不修改既有条目，风险低。已指向其他地址或文件非常规时拒绝执行。快照在 /var/backups/tb710fu-terminal-hostname-fix/，回退恢复原始文件内容。",
+      "script": {
+        "path": "contributions/terminal-hostname-fix/script.sh",
+        "sha256": "ab392e862565d6b30d746b5f4f23cd845607ebc020250cd9963d9dddc0673db2",
+        "requires_admin": true
+      },
+      "attachments": [
+        {
+          "path": "contributions/terminal-hostname-fix/attachments/README.md",
+          "sha256": "cb2e82c35b28d379ee8740ee7ad3cd92967b6ebfed84043626d159480a84daf1"
+        },
+        {
+          "path": "contributions/terminal-hostname-fix/attachments/install.py",
+          "sha256": "c2c8b768efc6735b47e277095d4b66941ed5645364e679fe8f4384979028d554"
+        }
+      ]
     }
   ]
 }
