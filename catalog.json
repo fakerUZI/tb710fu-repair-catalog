@@ -652,6 +652,33 @@
           "sha256": "a5f04116f6675c87525ee422346ca4fe30b178890103e93a0eba95d619de6397"
         }
       ]
+    },
+    {
+      "id": "full-virtual-keyboard",
+      "title": "完整虚拟键盘（Fcitx5 / WowType）",
+      "description": "适用于 TB710FU 的 Ubuntu 26.04 ARM64、GNOME Shell 50 Wayland。需要已安装并配置 Fcitx5、WowType 和 TB710FU 输入法服务。一次应用完整的七个虚拟键盘扩展、Kimpanel 模块及本地化以及 Fcitx5 启动配置，含中英文标点跟随、候选区、退格、符号分页和快捷键。组件与平板实测版本一致，整包在隔离目录验证应用、失败恢复和回退，平板核对了现有组件。应用后保存工作，注销再登录。",
+      "device": "TB710FU",
+      "status": "community-review",
+      "risk": "会更新当前用户的同名键盘扩展、Fcitx5 会话启动文件和预编辑开关。重载前可能暂时影响软键盘。备份仅保存在本机，使用 TB710FU_FIX_ACTION=rollback 回退。若受影响文件又被修改，自动回退会停止。无需管理员权限。",
+      "script": {
+        "path": "contributions/full-virtual-keyboard/script.sh",
+        "sha256": "d3661f0651d1af7dbf322b07c651821d9132b2388c341665aeb73b4dcf3c2ddc",
+        "requires_admin": false
+      },
+      "attachments": [
+        {
+          "path": "contributions/full-virtual-keyboard/attachments/install.py",
+          "sha256": "3f6cc96431dccb0c1d7d111416524d55eb0afe3738ca80d9e37ca49d3df60421"
+        },
+        {
+          "path": "contributions/full-virtual-keyboard/attachments/payload.zip",
+          "sha256": "b91fbbc6d9bca10841ada26e12af288cbdc51a9b4b0e91bc2b1a695eee72fa27"
+        },
+        {
+          "path": "contributions/full-virtual-keyboard/attachments/README.md",
+          "sha256": "f94020efe405f98a23ba93823381204b7c8e3fe6c86b65ee962451969ce7369d"
+        }
+      ]
     }
   ]
 }
