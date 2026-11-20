@@ -12,6 +12,10 @@
 
 提交真实修复应说明适用设备、系统版本、问题症状、依赖、风险、验证证据和回退方式，并经人工审核。不得提交设备备份、凭据、设备唯一标识、私人资料或已退役的前摄实验。涉及设备写入时必须先核实当前固件和 GPT；历史分区坐标不能直接使用。保留已工作的后摄适配。
 
+## 完整虚拟键盘
+
+[完整虚拟键盘（Fcitx5 / WowType）](contributions/full-virtual-keyboard/attachments/README.md)包含七个扩展、Fcitx5 启动配置、中文候选、退格和全扩展键盘。支持独立应用、检查和回退。
+
 ## 中文候选区与退格修复
 
 - `ime-preedit-backspace`：[中文拼音候选区与退格修复](contributions/ime-preedit-backspace/attachments/README.md)。适用于已有 TB710FU 候选区的 Ubuntu 26.04 / GNOME 50；核心来自历史实机修复，新安装包装尚待实机复核。
