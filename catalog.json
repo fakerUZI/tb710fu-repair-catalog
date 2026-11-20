@@ -413,61 +413,6 @@
       ]
     },
     {
-      "id": "ime-preedit-backspace",
-      "title": "中文拼音候选区与退格修复",
-      "description": "修复中文拼音不显示在屏幕键盘候选区、退格却删除已提交正文的问题。适用已配置 TB710FU 共享候选区的 Ubuntu 26.04 ARM64 / GNOME 50 Wayland、Fcitx 5、WowType 0.4.0、Kimpanel 92；缺少既有候选区或版本不匹配会退出，不自动下载组件。恢复历史 wowtype-osk v2，设置 Behavior/PreeditEnabledByDefault=False，并应用原 Kimpanel 触屏候选补丁；不会替换现有快捷键/剪贴板/布局扩展。以当前桌面用户运行，无需 sudo；TB710FU_FIX_ACTION=check 可只检查，默认 apply 应用，rollback 恢复最近私有快照。应用后自行注销重登。历史核心修复于2026-11-15经用户确认：候选区拼音和已提交中文均能正常删除。本次8项配置/回退测试、退格与Kimpanel回归、候选区预编辑回归、Kimpanel v92暂存补丁及幂等检查通过；新安装包装尚未重新在平板部署。详细操作和边界见附件README.md。",
-      "device": "TB710FU",
-      "status": "community-review",
-      "risk": "仅支持GNOME 50私有键盘API。Fcitx全局预编辑开关会改变其他应用的拼音显示方式；会更新当前用户的WowType桥接扩展、Kimpanel两个JS文件及所需扩展启用项。密码/PIN、锁屏、修改键组合维持原生处理，不记录实际输入内容，不修改服务、GTK_IM_MODULE、内核或分区。执行前结束组合输入并保存工作，完成后自行注销重登；脚本不主动注销或重启输入法。变更前将原相关配置、原用户扩展和启用列表备份到XDG_STATE_HOME/tb710fu-ime-preedit-backspace（默认~/.local/state下），目录权限700，备份仅留本机，不公开上传。设置TB710FU_FIX_ACTION=rollback并以同一用户运行可恢复最近快照；回退会覆盖其后对这些相关项目的改动。新安装包装本次仅离线验证，未重新实机部署。",
-      "script": {
-        "path": "contributions/ime-preedit-backspace/script.sh",
-        "sha256": "a68c7b5f0045ec2aa2fe9810301021bfc44647d46f4c94844e2d4fc149d0834e",
-        "requires_admin": false
-      },
-      "attachments": [
-        {
-          "path": "contributions/ime-preedit-backspace/attachments/repair.py",
-          "sha256": "f6db3cb8780245acfcbc195df435709a0e70b290fe9cf0b89e195124ea4f69ce"
-        },
-        {
-          "path": "contributions/ime-preedit-backspace/attachments/extension.js",
-          "sha256": "49e357ee9f4504d061fb2fcd610a16b1c673db147e24ad661893eeabb625fa1a"
-        },
-        {
-          "path": "contributions/ime-preedit-backspace/attachments/metadata.json",
-          "sha256": "4a1d9e749503ec497cd4bf1f38799f8282722c1622f840df8543185da1ad2e3d"
-        },
-        {
-          "path": "contributions/ime-preedit-backspace/attachments/patch-kimpanel.py",
-          "sha256": "8d3b1eaf0aa4f26f5f59d2d178b789eb28038c7bd8b9ead5a42f4b0288d7cb9c"
-        },
-        {
-          "path": "contributions/ime-preedit-backspace/attachments/kimpanel-stable-candidates.txt",
-          "sha256": "51f70cb8b7ec3623481ad75af0274dc299f6e8ceff93242984f348af2ca9dbaf"
-        },
-        {
-          "path": "contributions/ime-preedit-backspace/attachments/test-delete.cjs",
-          "sha256": "086876764c823c88e29908679a8294dd2163fef8ca29824d771f6c39bfd2143b"
-        },
-        {
-          "path": "contributions/ime-preedit-backspace/attachments/test-kimpanel-stable.cjs",
-          "sha256": "6b01f33ae785d7d3fbb58a6bccde3e5a45b479dcfc7923a680a986f5d28b7a3b"
-        },
-        {
-          "path": "contributions/ime-preedit-backspace/attachments/test-config.py",
-          "sha256": "d6f55655d104041caee2f083789f69ff8cc92e8def10030caf4cbee2d01e647f"
-        },
-        {
-          "path": "contributions/ime-preedit-backspace/attachments/README.md",
-          "sha256": "716966b8be45620637be03f8973bf7f00b902ff546c5724d879d22b205c73f0f"
-        },
-        {
-          "path": "contributions/ime-preedit-backspace/attachments/COPYING-kimpanel",
-          "sha256": "edaef632cbb643e4e7a221717a6c441a4c1a7c918e6e4d56debc3d8739b233f6"
-        }
-      ]
-    },
-    {
       "id": "touch-window-grip",
       "title": "手指拖动 / 缩放宽边框为无边框的 X11 窗口（Electron 等）",
       "description": "问题：平板上无法用一根手指拖动画布/窗口，也无法从边角缩放。WorkBuddy、微信这类 Electron / 无边框应用尤其明显。\n\n原因：无边框窗口的拖动靠 -webkit-app-region: drag，缩放靠 Chromium 的 resize 热区，二者都只识别鼠标事件；触摸会被当成普通点击交给页面。平板上没有物理鼠标，于是这条路径整体失效。\n\n做法：touch-window-grip 用 XInput2 被动触摸抓取（XIGrabTouchBegin），在触摸按下那一刻先做一次分流，再决定是否接管：\n  1) 距角落 54px 内 → 双轴缩放\n  2) 距边缘 18px 内 → 单轴缩放\n  3) 顶部 80px 条 → 移动窗口\n  4) 其余 → 立即 XIRejectTouch，原样交还给应用，保证点击、长按、滚动不被抢\n\n窗口尺寸受 WM_NORMAL_HINTS 的 min/max 夹取；每次按下都重新读取窗口几何，避免窗口被别的途径移动后错位。配置在 ~/.config/touch-window-grip/targets.json，按 WM_CLASS / 标题关键字匹配要接管的应用，可用 --add / --remove / --list 管理。自带 --selftest，会验证分类、移动、右/下/右下角缩放并复原。\n\n只对 XWayland / X11 窗口有效；原生 Wayland 客户端抓不到。\n\n用法：TB710FU_FIX_ACTION=check 只检查不改动，默认 apply 安装，rollback 停用服务并移除本包文件（你的 targets.json 会保留为 .bak 目录）。",

@@ -16,11 +16,6 @@
 
 [完整虚拟键盘（Fcitx5 / WowType）](contributions/full-virtual-keyboard/attachments/README.md)包含七个扩展、Fcitx5 启动配置、中文候选、退格和全扩展键盘。支持独立应用、检查和回退。
 
-## 中文候选区与退格修复
-
-- `ime-preedit-backspace`：[中文拼音候选区与退格修复](contributions/ime-preedit-backspace/attachments/README.md)。适用于已有 TB710FU 候选区的 Ubuntu 26.04 / GNOME 50；核心来自历史实机修复，新安装包装尚待实机复核。
-- [完整源码包](packages/ime-preedit-backspace-20261116.zip)及[包校验值](packages/SHA256SUMS)可供下载审查。仓库内的真实修复仍须逐项审查依赖、风险、哈希和适用版本，不能自动执行。
-
 ## 2026-11-16 代码审核
 
 [PR #8–#11 的修正、测试和回退边界](docs/REVIEW-20261116.md)。
@@ -38,10 +33,11 @@
 | `microphone-snap1`（原第 7 项） | 当前日期版 boot 已含 WCD/SoundWire DAI 1 采集链路；不再提供旧 snap1 镜像刷写入口。 |
 | `ath12k-stats-timeout-recovery`（原第 6 项） | 当前内核已含对应 vdev 计数补丁；移除旧版临时驱动重载入口，避免与正式内核修复重复。短期实测不等于全部 Wi-Fi 故障已解决。 |
 | `power-key-single-press` | 20261118 已包含单次按键亮屏和短按锁屏，沿用 ROM 中启用的电源键用户服务。原独立入口已退役，已安装独立修复的用户仍可从本机用 `tb-power-key-off` 回退对应的用户级安装。 |
+| `ime-preedit-backspace`（原第 02 项） | 当前 TB710FU 版本已集成中文拼音候选区与退格修复，独立条目和下载包已下架。 |
 
 内核升级会保留现有麦克风 ALSA 初始化服务及 WirePlumber 路由，不新建这些用户态文件；不能把“镜像已含采集链路”理解为在任意原始系统上自动完成全部音频配置。
 
-目录现有五项。第一项是 20261118 内核升级，其后为中文候选区与退格、窗口触控、DroidLoom 按需启动和 DroidLoom 扬声器音频。
+目录第一项为 20261118 内核升级。其余条目见 [当前修复清单](catalog.json)。
 
 已有相机和手电筒补充会随内核升级迁移到 20261118。首次安装补充仍使用第一项的 `camera-install` 或 `flash-install`。新版相机保留全分辨率，以连续预览和后台编码缩短拍照等待。[相机与手电筒](contributions/kernel-offline-upgrade/attachments/flash-camera/README.md)
 
