@@ -12,6 +12,7 @@ const PILL_WIDTH = 144;
 const PILL_HEIGHT = 7;
 const PILL_BOTTOM_MARGIN = 13;
 const EDGE_WIDTH = 22;
+const FOCUS_OUTSET = 10;
 const BACK_HEIGHT = 60;
 const MIN_BACK_SWIPE = 35;
 const MIN_UP_SWIPE = 24;
@@ -26,8 +27,10 @@ export class AndroidNavigation {
         this._keyboard = Clutter.get_default_backend().get_default_seat()
             .create_virtual_device(Clutter.InputDeviceType.KEYBOARD_DEVICE);
         this._bottom = this._addGestureTarget('bottom', '上滑最小化安卓窗口，上滑停住查看最近任务');
-        this._left = this._addGestureTarget('left', '从左侧向内滑动返回');
-        this._right = this._addGestureTarget('right', '从右侧向内滑动返回');
+        this._left = this._addGestureTarget('left', '从屏幕左侧向内滑动返回');
+        this._right = this._addGestureTarget('right', '从屏幕右侧向内滑动返回');
+        this._windowLeft = this._addGestureTarget('left', '从安卓窗口左侧向内滑动返回');
+        this._windowRight = this._addGestureTarget('right', '从安卓窗口右侧向内滑动返回');
         // Paint in its own chrome actor, independent of the transparent input targets.
         this._pill = new St.Widget({style_class: 'tb-android-nav-pill', reactive: false,
             visible: false, width: PILL_WIDTH, height: PILL_HEIGHT});
@@ -46,6 +49,11 @@ export class AndroidNavigation {
             [Main.keyboard, Main.keyboard.connect('visibility-changed', () => this.sync(this._window))],
             // The box remains visible throughout GNOME's show and hide animations.
             [keyboardBox, keyboardBox.connect('notify::visible', () => this.sync(this._window))],
+            [global.window_manager, global.window_manager.connect('map', () => this._syncFocusShadow())],
+            [global.window_manager, global.window_manager.connect('destroy', (_, actor) =>
+                this._syncFocusShadow(actor.meta_window))],
+            [global.workspace_manager, global.workspace_manager.connect('active-workspace-changed', () =>
+                this.sync(this._window))],
         ];
         const keyboardSwipe = Main.keyboard._bottomDragGesture;
         if (keyboardSwipe) {
@@ -73,23 +81,26 @@ export class AndroidNavigation {
 
     sync(window) {
         if (window !== this._window) {
-            this._clearGesture();
+            this._clearGesture(false);
             this._closeChooser();
+            this._clearFocusShadow();
         }
         this._window = window;
-        if (!window || window.minimized ||
+        if (!window || window.minimized || global.display.focus_window !== window ||
             Main.overview.visible || Main.sessionMode.isLocked || Main.keyboard.visible ||
             Main.layoutManager.keyboardBox.visible) {
             this._hide();
             return;
         }
         const monitorIndex = window.get_monitor();
-        const frame = window.is_fullscreen() ? Main.layoutManager.monitors[monitorIndex] : window.get_frame_rect();
-        if (!frame || monitorIndex < 0) {
+        const monitor = Main.layoutManager.monitors[monitorIndex];
+        if (!monitor) {
             this._hide();
             return;
         }
-        const area = window.is_fullscreen() ? frame : window.get_work_area_for_monitor(monitorIndex);
+        const fullscreen = window.is_fullscreen();
+        const frame = fullscreen ? monitor : window.get_frame_rect();
+        const area = fullscreen ? monitor : window.get_work_area_for_monitor(monitorIndex);
         const x = Math.max(frame.x, area.x);
         const y = Math.max(frame.y, area.y);
         const right = Math.min(frame.x + frame.width, area.x + area.width);
@@ -107,20 +118,89 @@ export class AndroidNavigation {
         this._pill.set_width(pillWidth);
         this._pill.set_position(x + Math.round((right - x - pillWidth) / 2),
             bottom - PILL_HEIGHT - PILL_BOTTOM_MARGIN);
-        this._left.set_position(x, y + BOTTOM_HEIGHT);
-        this._right.set_position(right - EDGE_WIDTH, y + BOTTOM_HEIGHT);
-        for (const edge of [this._left, this._right])
-            edge.set_size(EDGE_WIDTH, bottom - y - 2 * BOTTOM_HEIGHT);
+        const screenRight = monitor.x + monitor.width;
+        this._placeEdge(this._left, monitor.x, area.y, area.y + area.height);
+        this._placeEdge(this._right, screenRight - EDGE_WIDTH, area.y, area.y + area.height);
+        this._placeEdge(this._windowLeft, x, y, bottom, x - monitor.x >= EDGE_WIDTH);
+        this._placeEdge(this._windowRight, right - EDGE_WIDTH, y, bottom,
+            screenRight - right >= EDGE_WIDTH);
+        this._syncFocusShadow();
         for (const target of [this._bottom, this._left, this._right, this._pill])
             target.show();
         if (this._chooser)
             this._positionChooser();
     }
 
+    _placeEdge(actor, x, top, bottom, visible = true) {
+        actor.set_position(x, top + BOTTOM_HEIGHT);
+        actor.set_size(EDGE_WIDTH, bottom - top - 2 * BOTTOM_HEIGHT);
+        actor.visible = visible;
+    }
+
+    _syncFocusShadow(exclude = null) {
+        const window = this._window;
+        if (!this._bounds || !window || window === exclude ||
+            window !== global.display.focus_window || window.is_fullscreen() || window.is_maximized()) {
+            this._clearFocusShadow();
+            return;
+        }
+        const workspace = global.workspace_manager.get_active_workspace();
+        const multipleAndroidWindows = global.display.get_tab_list(Meta.TabList.NORMAL_ALL, workspace)
+            .some(other => other !== window && other !== exclude &&
+                other.get_window_type() === Meta.WindowType.NORMAL && !other.get_transient_for() &&
+                this._isAndroidWindow(other));
+        const actor = window.get_compositor_private();
+        if (!multipleAndroidWindows || !actor) {
+            this._clearFocusShadow();
+            return;
+        }
+        if (!this._focusShadow) {
+            this._focusShadow = new Clutter.Actor({
+                layout_manager: new Clutter.FixedLayout(), reactive: false,
+            });
+            // Separate clipped strips leave the entire application interior unpainted.
+            for (const side of ['top', 'bottom', 'left', 'right']) {
+                this._focusShadow.add_child(new St.Widget({
+                    style_class: `tb-android-focus-shadow ${side}`,
+                    reactive: false, clip_to_allocation: true,
+                }));
+            }
+            this._focusShadow.connect('destroy', () => this._focusShadow = null);
+            actor.add_child(this._focusShadow);
+        }
+        // Attach to the window actor so the ring shares its stacking and animations.
+        const rect = window.get_frame_rect();
+        const buffer = window.get_buffer_rect();
+        const transform = actor.get_child_transform();
+        const sx = transform.get_x_scale() || 1;
+        const sy = transform.get_y_scale() || 1;
+        this._focusShadow.set_scale(1 / sx, 1 / sy);
+        this._focusShadow.set_position((rect.x - buffer.x - FOCUS_OUTSET) / sx,
+            (rect.y - buffer.y - FOCUS_OUTSET) / sy);
+        const t = FOCUS_OUTSET;
+        const width = rect.width + 2 * t;
+        this._focusShadow.set_size(width, rect.height + 2 * t);
+        const [top, bottom, left, right] = this._focusShadow.get_children();
+        top.set_size(width, t);
+        bottom.set_position(0, t + rect.height);
+        bottom.set_size(width, t);
+        left.set_position(0, t);
+        left.set_size(t, rect.height);
+        right.set_position(t + rect.width, t);
+        right.set_size(t, rect.height);
+    }
+
+    _clearFocusShadow() {
+        this._focusShadow?.destroy();
+        this._focusShadow = null;
+    }
+
     _hide() {
         this._bounds = null;
         this._clearGesture(false);
-        for (const target of [this._bottom, this._left, this._right, this._pill])
+        this._clearFocusShadow();
+        for (const target of [this._bottom, this._left, this._right,
+            this._windowLeft, this._windowRight, this._pill])
             target.hide();
         this._closeChooser();
     }
@@ -159,15 +239,14 @@ export class AndroidNavigation {
             this._backPreview.hide();
             return;
         }
-        const bounds = this._bounds;
-        if (!bounds)
-            return;
+        const [edgeX, edgeY] = gesture.target.get_position();
+        const edgeBottom = edgeY + gesture.target.height;
         const fromLeft = gesture.edge === 'left';
         const progress = Math.min(1, travel / MIN_BACK_SWIPE);
         const width = Math.round(20 + 36 * progress);
         this._backPreview.set_width(width);
-        this._backPreview.set_position(fromLeft ? bounds.x : bounds.right - width,
-            Math.max(bounds.y, Math.min(bounds.bottom - BACK_HEIGHT,
+        this._backPreview.set_position(fromLeft ? edgeX : edgeX + EDGE_WIDTH - width,
+            Math.max(edgeY - BOTTOM_HEIGHT, Math.min(edgeBottom + BOTTOM_HEIGHT - BACK_HEIGHT,
                 Math.round(gesture.y - BACK_HEIGHT / 2))));
         this._backPreview.set_style_class_name(`tb-android-back-preview ${gesture.edge}`);
         if (progress === 1)
@@ -184,9 +263,9 @@ export class AndroidNavigation {
         const slot = event.get_event_sequence()?.get_slot() ?? null;
         const [x, y] = event.get_coords();
         if (type === E.TOUCH_BEGIN || (type === E.BUTTON_PRESS && event.get_button() === 1)) {
-            if (!this._gesture && this._bottom.visible) {
+            if (!this._gesture && this._bottom.visible && global.display.focus_window === this._window) {
                 this._clearGesture(false);
-                this._gesture = {edge, slot, x, y, lastX: x, lastY: y,
+                this._gesture = {target, window: this._window, edge, slot, x, y, lastX: x, lastY: y,
                     lastMove: GLib.get_monotonic_time(), travel: 0, maxDistance: 0,
                     grab: global.stage.grab(target)};
                 this._gesture.started = this._gesture.lastMove;
@@ -194,7 +273,7 @@ export class AndroidNavigation {
             return Clutter.EVENT_STOP;
         }
         const gesture = this._gesture;
-        if (!gesture || gesture.edge !== edge || gesture.slot !== slot)
+        if (!gesture || gesture.target !== target || gesture.slot !== slot)
             return Clutter.EVENT_PROPAGATE;
         if (type === E.TOUCH_CANCEL) {
             this._clearGesture();
@@ -234,18 +313,18 @@ export class AndroidNavigation {
                 (onPill && gesture.maxDistance < HOLD_SLOP && now - gesture.started < 300000))
                 this._minimize();
         } else if (gesture.travel >= MIN_BACK_SWIPE) {
-            this._back();
+            this._back(gesture.window);
         }
         return Clutter.EVENT_STOP;
     }
 
-    _back() {
+    _back(window) {
+        if (!this._bottom.visible || this._window !== window || global.display.focus_window !== window)
+            return;
         if (this._chooser) {
             this._closeChooser();
             return;
         }
-        if (!this._bottom.visible || global.display.focus_window !== this._window)
-            return;
         const time = GLib.get_monotonic_time();
         this._keyboard.notify_key(time, KEY_BACK, Clutter.KeyState.PRESSED);
         this._keyboard.notify_key(time, KEY_BACK, Clutter.KeyState.RELEASED);
@@ -315,7 +394,8 @@ export class AndroidNavigation {
         for (const [target, id] of this._signals)
             target.disconnect(id);
         this._hide();
-        for (const target of [this._bottom, this._left, this._right, this._pill, this._backPreview]) {
+        for (const target of [this._bottom, this._left, this._right, this._windowLeft,
+            this._windowRight, this._pill, this._backPreview]) {
             Main.layoutManager.removeChrome(target);
             target.destroy();
         }

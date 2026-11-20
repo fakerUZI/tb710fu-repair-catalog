@@ -46,6 +46,36 @@
     background-color: #536688;
 }
 
+.tb-android-focus-shadow {
+    background-color: transparent;
+    background-gradient-start: rgba(59, 132, 227, 0);
+    background-gradient-end: rgba(59, 132, 227, 0.57);
+}
+
+.tb-android-focus-shadow.top {
+    background-gradient-direction: vertical;
+    border-bottom: 1px solid #80baff;
+}
+
+.tb-android-focus-shadow.bottom {
+    background-gradient-direction: vertical;
+    background-gradient-start: rgba(59, 132, 227, 0.57);
+    background-gradient-end: rgba(59, 132, 227, 0);
+    border-top: 1px solid #80baff;
+}
+
+.tb-android-focus-shadow.left {
+    background-gradient-direction: horizontal;
+    border-right: 1px solid #80baff;
+}
+
+.tb-android-focus-shadow.right {
+    background-gradient-direction: horizontal;
+    background-gradient-start: rgba(59, 132, 227, 0.57);
+    background-gradient-end: rgba(59, 132, 227, 0);
+    border-left: 1px solid #80baff;
+}
+
 .tb-android-nav-choice {
     padding: 8px 12px;
     border-radius: 8px;

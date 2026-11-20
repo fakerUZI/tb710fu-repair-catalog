@@ -13,7 +13,6 @@
 // or droidloom changes are needed.
 
 import Clutter from 'gi://Clutter';
-import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Meta from 'gi://Meta';
 import St from 'gi://St';
@@ -36,48 +35,9 @@ function logMessage(message) {
     log(`[tb-android-windows] ${message}`);
 }
 
-// Read the package list from the catalog that droidloom-applications keeps in
-// the user's applications directory. Only managed entries are Android apps.
-function loadAndroidPackages() {
-    const packages = new Set();
-    const directory = GLib.build_filenamev([
-        GLib.get_user_data_dir(), 'applications',
-    ]);
-    let enumerator;
-    try {
-        enumerator = Gio.File.new_for_path(directory).enumerate_children(
-            'standard::name', Gio.FileQueryInfoFlags.NONE, null);
-    } catch (e) {
-        return packages;
-    }
-
-    let info;
-    while ((info = enumerator.next_file(null)) !== null) {
-        const name = info.get_name();
-        if (!name.startsWith('droidloom-') || !name.endsWith('.desktop'))
-            continue;
-        try {
-            const [ok, bytes] = GLib.file_get_contents(
-                GLib.build_filenamev([directory, name]));
-            if (!ok)
-                continue;
-            const text = new TextDecoder().decode(bytes);
-            if (!/^X-Droidloom-Managed=true$/m.test(text))
-                continue;
-            const match = text.match(/^X-Droidloom-Package=(.+)$/m);
-            if (match)
-                packages.add(match[1].trim());
-        } catch (e) {
-            // A race with catalog regeneration: ignore this file.
-        }
-    }
-    enumerator.close(null);
-    return packages;
-}
-
 export default class AndroidWindowControlsExtension extends Extension {
     enable() {
-        this._packages = loadAndroidPackages();
+        this._clientIdentity = new WeakMap();
         this._target = null;
         this._windowSignals = [];
         this._handles = null;
@@ -120,23 +80,8 @@ export default class AndroidWindowControlsExtension extends Extension {
             this._refreshMenu();
         });
 
-        // Keep the package set fresh when apps are installed or removed.
-        const directory = GLib.build_filenamev([
-            GLib.get_user_data_dir(), 'applications',
-        ]);
-        try {
-            this._fileMonitor = Gio.File.new_for_path(directory).monitor_directory(
-                Gio.FileMonitorFlags.NONE, null);
-            this._fileMonitorId = this._fileMonitor.connect('changed', () => {
-                this._packages = loadAndroidPackages();
-                this._syncTarget();
-            });
-        } catch (e) {
-            this._fileMonitor = null;
-        }
-
         this._syncTarget();
-        logMessage(`enabled, ${this._packages.size} Android packages`);
+        logMessage('enabled');
     }
 
     disable() {
@@ -148,6 +93,7 @@ export default class AndroidWindowControlsExtension extends Extension {
         global.window_manager.disconnect(this._mapId);
         this._mapId = 0;
         this._mappedWindows = null;
+        this._clientIdentity = null;
         if (this._focusId) {
             global.display.disconnect(this._focusId);
             this._focusId = 0;
@@ -155,13 +101,6 @@ export default class AndroidWindowControlsExtension extends Extension {
         if (this._monitorsChangedId) {
             Main.layoutManager.disconnect(this._monitorsChangedId);
             this._monitorsChangedId = 0;
-        }
-        if (this._fileMonitor) {
-            if (this._fileMonitorId)
-                this._fileMonitor.disconnect(this._fileMonitorId);
-            this._fileMonitor.cancel();
-            this._fileMonitor = null;
-            this._fileMonitorId = 0;
         }
         if (this._indicator) {
             this._indicator.destroy();
@@ -176,22 +115,9 @@ export default class AndroidWindowControlsExtension extends Extension {
         this._mappedWindows.add(window);
 
         if (window.get_window_type() !== Meta.WindowType.NORMAL || window.get_transient_for() ||
-            window.get_client_type() !== Meta.WindowClientType.WAYLAND ||
             window.is_fullscreen() || window.is_maximized() || !window.can_maximize())
             return;
-        const pid = window.get_pid();
-        if (pid <= 0)
-            return;
-
-        // The presenter owns every Android toplevel, even before its package
-        // appears in the desktop catalog.
-        let executable;
-        try {
-            executable = GLib.path_get_basename(GLib.file_read_link(`/proc/${pid}/exe`));
-        } catch (_) {
-            return;
-        }
-        if (executable === 'droidloom-wayland' || executable === 'droidloom-wayland (deleted)')
+        if (this._isAndroidWindow(window))
             window.maximize();
     }
 
@@ -245,17 +171,24 @@ export default class AndroidWindowControlsExtension extends Extension {
     }
 
     _isAndroidWindow(window) {
-        if (!window)
+        if (!window || window.get_client_type() !== Meta.WindowClientType.WAYLAND)
             return false;
-        const wmClass = window.get_wm_class();
-        if (!wmClass)
+        if (this._clientIdentity.has(window))
+            return this._clientIdentity.get(window);
+        const pid = window.get_pid();
+        if (pid <= 0)
             return false;
-        if (this._packages.has(wmClass))
-            return true;
-        // Catalog regeneration is asynchronous; droidloom also sets the title
-        // to the package name, which makes this a safe fallback.
-        return window.get_title() === wmClass &&
-            /^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z0-9_]+)+$/.test(wmClass);
+        // A native Ubuntu app can use a title that matches its own app ID.
+        // Route commands by the Wayland client's executable.
+        let executable;
+        try {
+            executable = GLib.path_get_basename(GLib.file_read_link(`/proc/${pid}/exe`));
+        } catch (_) {
+            return false;
+        }
+        const android = executable === 'droidloom-wayland' || executable === 'droidloom-wayland (deleted)';
+        this._clientIdentity.set(window, android);
+        return android;
     }
 
     _syncTarget() {
