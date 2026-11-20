@@ -12,6 +12,11 @@
 
 提交真实修复应说明适用设备、系统版本、问题症状、依赖、风险、验证证据和回退方式，并经人工审核。不得提交设备备份、凭据、设备唯一标识、私人资料或已退役的前摄实验。涉及设备写入时必须先核实当前固件和 GPT；历史分区坐标不能直接使用。保留已工作的后摄适配。
 
+## 完整虚拟键盘与安卓应用手势
+
+- [完整桌面修复](contributions/full-virtual-keyboard-android-gestures/attachments/README.md)在一个修复条目中提供 Fcitx5 / WowType 虚拟键盘、候选区、退格和 Droidloom 第 13 版手势。支持检查、应用和回退，面向已安装 Fcitx5、WowType 和 Droidloom 的 TB710FU Ubuntu 26.04 / GNOME 50。
+- [完整可审查源码](contributions/full-virtual-keyboard-android-gestures/source)与修复助手下载的整包逐文件对应。修复完成后需要注销并重新登录 GNOME。
+
 ## 中文候选区与退格修复
 
 - `ime-preedit-backspace`：[中文拼音候选区与退格修复](contributions/ime-preedit-backspace/attachments/README.md)。适用于已有 TB710FU 候选区的 Ubuntu 26.04 / GNOME 50；核心来自历史实机修复，新安装包装尚待实机复核。

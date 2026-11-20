@@ -652,6 +652,33 @@
           "sha256": "a5f04116f6675c87525ee422346ca4fe30b178890103e93a0eba95d619de6397"
         }
       ]
+    },
+    {
+      "id": "full-virtual-keyboard-android-gestures",
+      "title": "完整虚拟键盘与 Droidloom 安卓应用手势",
+      "description": "适用于 Lenovo TB710FU 的 Ubuntu 26.04 ARM64、GNOME Shell 50 Wayland。要求系统已安装并配置 Fcitx5、WowType、TB710FU 输入法服务和 Droidloom。一次应用完整的七个键盘扩展、Fcitx5 会话启动配置，以及 Droidloom 第 13 版窗口与手势扩展。包含中英文键帽联动、候选区恢复、退格、符号分页、焦点阴影、白条、最近任务和双侧返回手势。已有 TB710FU 平板验证这些组件。合并安装器在隔离环境验证应用与回退，并在平板执行只读检查。应用后保存工作并注销、重新登录。",
+      "device": "TB710FU",
+      "status": "community-review",
+      "risk": "会替换当前账户的同名桌面扩展和相关 Fcitx5 配置，并切换旧安卓手势扩展。扩展重新加载前可能暂时失去软键盘或手势。应用前在本机保存私有快照，可以使用 TB710FU_FIX_ACTION=rollback 回退。若后续又修改了受影响的文件，自动回退会停下来保留修改。修复无需管理员权限，不操作磁盘分区、固件或安卓应用数据。",
+      "script": {
+        "path": "contributions/full-virtual-keyboard-android-gestures/script.sh",
+        "sha256": "d3661f0651d1af7dbf322b07c651821d9132b2388c341665aeb73b4dcf3c2ddc",
+        "requires_admin": false
+      },
+      "attachments": [
+        {
+          "path": "contributions/full-virtual-keyboard-android-gestures/attachments/install.py",
+          "sha256": "a09b8eec7f9872cbf0de9ee2f8df722f5465e26dc8ac768d55547b584507bd68"
+        },
+        {
+          "path": "contributions/full-virtual-keyboard-android-gestures/attachments/payload.zip",
+          "sha256": "73e81b9a0428fff7013d8b968f7beff679f05aa9d540cb86bcd447367d9eb0b3"
+        },
+        {
+          "path": "contributions/full-virtual-keyboard-android-gestures/attachments/README.md",
+          "sha256": "afd637b9cf01bf959235552e46db56c4db3eca1018b1a9c93b20f1dcfd6d824a"
+        }
+      ]
     }
   ]
 }

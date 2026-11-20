@@ -1,0 +1,9 @@
+{
+  "uuid": "tb-android-outer-shadow@tb710fu",
+  "name": "TB710FU 安卓窗口控制",
+  "description": "安卓窗口默认最大化、焦点阴影和双侧返回手势。",
+  "shell-version": [
+    "50"
+  ],
+  "version": 13
+}
