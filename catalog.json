@@ -693,6 +693,29 @@
           "sha256": "f94020efe405f98a23ba93823381204b7c8e3fe6c86b65ee962451969ce7369d"
         }
       ]
+    },
+    {
+      "id": "terminal-hostname-fix",
+      "title": "终端 sudo「无法解析主机」修复",
+      "description": "适用于 TB710FU Ubuntu 26.04 ARM64。终端执行 sudo 时出现「无法解析主机」，且 /etc/hosts 缺少当前主机名映射时，可以使用此条目。应用向 /etc/hosts 追加一行 127.0.1.1 和当前主机名，并保留现有内容、所有者和权限。已有相同映射时无需修复；已有其他地址时会停止。\n\n在修复助手中以管理员权限应用。Bash 入口默认执行 check，使用 TB710FU_FIX_ACTION=apply 进行修复，或使用 TB710FU_FIX_ACTION=rollback 回退。应用后重新运行 sudo，并用 getent hosts 查询当前主机名。应用、重复运行和回退已在隔离的文件样例中验证。",
+      "device": "TB710FU",
+      "status": "community-review",
+      "risk": "将当前主机名指向回环地址 127.0.1.1。回退恢复应用前的内容，若应用后文件又有改动，则保留现有内容及快照供人工核对。快照保存在 /var/backups/tb710fu-terminal-hostname-fix/。",
+      "script": {
+        "path": "contributions/terminal-hostname-fix/script.sh",
+        "sha256": "15369f498f7720d4967a97e2858d8f7ad2e6fe4da7556bda1e26394deb7dbc28",
+        "requires_admin": true
+      },
+      "attachments": [
+        {
+          "path": "contributions/terminal-hostname-fix/attachments/README.md",
+          "sha256": "f6133923d71adb7147ffa308eec1946ce3335825fc7b5f7d1bf97cc56971631f"
+        },
+        {
+          "path": "contributions/terminal-hostname-fix/attachments/install.py",
+          "sha256": "0339119958b5005ec6490ed0641ceebfe251f88c88eb886d914d03209323c746"
+        }
+      ]
     }
   ]
 }
