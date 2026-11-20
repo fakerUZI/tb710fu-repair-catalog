@@ -661,6 +661,29 @@
           "sha256": "0339119958b5005ec6490ed0641ceebfe251f88c88eb886d914d03209323c746"
         }
       ]
+    },
+    {
+      "id": "torch-quick-settings",
+      "title": "恢复手电筒快捷设置入口",
+      "description": "适用于 TB710FU 的 GNOME Shell 50 Wayland 桌面。修复一键安装镜像已自带手电筒服务但快捷设置缺少磁贴的问题。先核对扩展文件与后台状态，再恢复目录可读权限并为当前桌面用户启用手电筒。应用后保存工作，注销并重新登录。",
+      "device": "TB710FU",
+      "status": "community-review",
+      "risk": "需要管理员权限调整系统扩展目录权限。回退恢复发起操作用户的手电筒启用选择，系统扩展目录保留 GNOME 正常读取所需的 0755 权限。只处理快捷设置手电筒，不开关 LED、不写入内核、固件或分区。",
+      "script": {
+        "path": "contributions/torch-quick-settings/script.sh",
+        "sha256": "d11a389898cc1d5f4d54934670b0f37aeb4dc85ae22b575a02feaec4a98ba44d",
+        "requires_admin": true
+      },
+      "attachments": [
+        {
+          "path": "contributions/torch-quick-settings/attachments/repair.py",
+          "sha256": "aad25a195d9cd295c91dae3426619d066fb99af964dbc78a35ea53efbe9ae16b"
+        },
+        {
+          "path": "contributions/torch-quick-settings/attachments/README.md",
+          "sha256": "4a0dbefcd9ff7150e2ac5ffa24b147afc5c992cef070cac099ed21a4eeaac493"
+        }
+      ]
     }
   ]
 }
