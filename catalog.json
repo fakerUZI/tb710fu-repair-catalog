@@ -652,6 +652,20 @@
           "sha256": "a5f04116f6675c87525ee422346ca4fe30b178890103e93a0eba95d619de6397"
         }
       ]
+    },
+    {
+      "id": "update-manager-machine-id",
+      "title": "修复 Ubuntu 软件更新器 machine-id 读取权限",
+      "description": "适用于运行 TB710FU 专用内核的 Ubuntu 26.04 ARM64。软件更新器（update-manager）初始化时读取 /etc/machine-id，桌面用户缺少读取权限时可能出现 PermissionError，导致更新窗口报错。此前曾在 TB710FU 实机上通过为当前用户添加读取 ACL 恢复更新器初始化。\n\n在修复助手以管理员权限运行，或者在平板的桌面用户终端使用 `sudo bash script.sh`。只读检查用 `sudo bash script.sh check`。脚本通过 pkexec 或 sudo 获取发起者 UID，以该用户身份实际打开文件验证。需要 Python 3、util-linux 和 acl；修复后重新打开软件更新器。\n\n只在需要时为该用户添加读取 ACL，保留文件内容、所有者和其他用户的有效权限。脚本无需联网，适用于已初始化、位于可写且支持 ACL 的文件系统上的 /etc/machine-id。遇到其他异常会退出并显示原因。\n\n验证：在 Ubuntu 26.04 ARM64 容器中模拟 TB710FU 内核检查，使用发行版自带的 UpdateManager 复现 PermissionError，并验证修复后更新器可以初始化。sudo、pkexec、重复执行、ACL 回退及容器重启后的读取检查均通过。本次提交的脚本尚未在平板上执行。",
+      "device": "TB710FU",
+      "status": "community-review",
+      "risk": "低风险。给当前发起操作的桌面用户增加读取权限。带 ACL 的文件在 stat 中可能显示为 0640，组位显示 ACL 掩码，原有组的有效权限仍按其 ACL 条目计算。文件保留时，ACL 在重启后继续生效。重装或镜像恢复换掉文件后，若症状复现，可再运行脚本。\n\n需要精确回退时，执行前在桌面用户终端运行 `(umask 077; set -C; sudo getfacl -pn /etc/machine-id > \"$HOME/machine-id.acl.before\")`，并将备份留在本机。回退时运行 `sudo setfacl --restore=\"$HOME/machine-id.acl.before\"`，然后用 `sudo bash script.sh check` 确认。回退可能使原来的更新器错误再次出现。",
+      "script": {
+        "path": "contributions/update-manager-machine-id/script.sh",
+        "sha256": "f8d6188641e93fcf17670dface7a8fe48027dcaea3ab5dbdfd76fb174f2e817d",
+        "requires_admin": true
+      },
+      "attachments": []
     }
   ]
 }
