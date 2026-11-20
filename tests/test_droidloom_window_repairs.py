@@ -18,7 +18,8 @@ def load_repair(kind):
 
 navigation = load_repair("navigation")
 memory = load_repair("memory")
-LEGACY = "tb-android-windows@tb710fu"
+LEGACY = "tb-android-window-defaults@tb710fu"
+KEYBOARD = "tb-osk-shortcuts@tb710fu"
 
 
 class WindowRepairTests(unittest.TestCase):
@@ -30,19 +31,23 @@ class WindowRepairTests(unittest.TestCase):
 
     def test_apply_and_rollback_restore_only_android_selection(self):
         extension = self.root / "extensions" / navigation.UUID
-        current = {"enabled-extensions": ["unrelated@host", LEGACY],
+        legacy_dir = extension.with_name(LEGACY)
+        legacy_dir.mkdir(parents=True)
+        (legacy_dir / "extension.js").write_text("old extension")
+        current = {"enabled-extensions": ["unrelated@host", LEGACY, KEYBOARD],
                    "disabled-extensions": [navigation.UUID, "another@host"]}
         payload = navigation.read_payload()
         with patch.multiple(navigation, settings=current.__getitem__, set_settings=current.__setitem__):
             navigation.apply(self.state, extension, payload)
             navigation.apply(self.state, extension, payload)
             self.assertTrue(navigation.matching(extension, payload))
-            self.assertEqual(current["enabled-extensions"], ["unrelated@host", navigation.UUID])
+            self.assertEqual(current["enabled-extensions"], ["unrelated@host", navigation.UUID, KEYBOARD])
             self.assertEqual(current["disabled-extensions"], ["another@host"])
             current["enabled-extensions"].append("added@host")
             navigation.rollback(self.state, extension, payload)
-        self.assertEqual(current["enabled-extensions"], ["unrelated@host", LEGACY, "added@host"])
+        self.assertEqual(current["enabled-extensions"], ["unrelated@host", LEGACY, KEYBOARD, "added@host"])
         self.assertEqual(current["disabled-extensions"], [navigation.UUID, "another@host"])
+        self.assertEqual((legacy_dir / "extension.js").read_text(), "old extension")
         self.assertFalse(extension.exists())
         self.assertFalse(self.state.exists())
 

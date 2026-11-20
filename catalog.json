@@ -585,11 +585,11 @@
     },
     {
       "id": "droidloom-window-navigation",
-      "title": "Droidloom 默认最大化与安卓手势导航",
-      "description": "为 TB710FU Ubuntu 26.04 ARM64 / GNOME 50 Wayland 上的 Droidloom 增加默认最大化、窗口调整预览与手势导航。在全屏或窗口模式中，短上滑或轻点小白条最小化当前安卓窗口，上滑停留后松开打开最近任务，左右边缘向内滑显示返回箭头。虚拟键盘优先接收触摸。已在平板验证相同扩展的窗口和手势行为，包装脚本实机只读预检通过。安装和回退详见附件。",
+      "title": "Droidloom 安卓窗口与手势（第 13 版）",
+      "description": "独立更新 Droidloom 安卓窗口与手势扩展到第 13 版。适用于已安装 Droidloom 的 TB710FU、Ubuntu 26.04 ARM64、GNOME Shell 50 Wayland。包含窗口默认最大化、焦点阴影、底部白条和最近任务、双侧返回手势与内置屏幕键盘避让。附件与平板启用版本一致，附件校验及隔离环境应用和回退均通过。",
       "device": "TB710FU",
       "status": "community-review",
-      "risk": "当前桌面普通用户运行。会安装 GNOME 用户扩展并更新本机安卓扩展启用选择。新安装可能需注销并重新登录，当前会话的旧安卓控件可能提前停用。请先保存工作。支持 check、apply、rollback，回退保留旧版扩展和其他 GNOME 扩展设置。",
+      "risk": "会调整当前用户的安卓窗口扩展选择。新扩展生效前手势可能暂时不可用，应用后保存工作并注销再登录。使用 TB710FU_FIX_ACTION=rollback 恢复之前的安卓扩展选择。旧版扩展目录和安卓应用数据保留，无需管理员权限。",
       "script": {
         "path": "contributions/droidloom-window-navigation/script.sh",
         "sha256": "ab392e862565d6b30d746b5f4f23cd845607ebc020250cd9963d9dddc0673db2",
@@ -597,28 +597,28 @@
       },
       "attachments": [
         {
-          "path": "contributions/droidloom-window-navigation/attachments/README.md",
-          "sha256": "40cc30f5c7213f5a702ee8962b35fa5be89ab442e8590a024877872f1afa75b9"
-        },
-        {
-          "path": "contributions/droidloom-window-navigation/attachments/extension.js",
-          "sha256": "b9b05f825f928d5f1509d2f73fcd13470771351a2ff1605c60352780422b6e8a"
-        },
-        {
           "path": "contributions/droidloom-window-navigation/attachments/install.py",
-          "sha256": "06475875dd6195946e85c9c148e465c5300d47e6707aff0c64359f79327234b3"
+          "sha256": "3864d913ab3c24cec81c413b10f7d17f8be64a72712fa54e361f661ff88260bb"
+        },
+        {
+          "path": "contributions/droidloom-window-navigation/attachments/README.md",
+          "sha256": "37e53dd38524575bbd3fd6a8803c32284666722fead212724a94fc9811392cf3"
         },
         {
           "path": "contributions/droidloom-window-navigation/attachments/metadata.json",
-          "sha256": "06bbeb4a2b073e3bf94f19019e803372ea4a88aa36cd596638be5000d06e56a5"
+          "sha256": "4a87614029b1cfbceda7e130563670035dcc387f9ddd6c0d472556cbc5eeb3ff"
+        },
+        {
+          "path": "contributions/droidloom-window-navigation/attachments/extension.js",
+          "sha256": "8d8ac1817c2b69309aa0b2d905504051a990e06ff80834693c086db1dabda022"
         },
         {
           "path": "contributions/droidloom-window-navigation/attachments/navigation.js",
-          "sha256": "e98db074d6c1daea2126e39cdfae8ed9db08272d9d58c01bfaa7c83d83a06e5d"
+          "sha256": "7f2b550ddc79dadd9009d2401c112d772e29be3d4199fb0c281672ab813d4235"
         },
         {
           "path": "contributions/droidloom-window-navigation/attachments/stylesheet.css",
-          "sha256": "3f94d545d67667b70876860d14bf53c8f575b7cf93b509391e56e1de22ed90f8"
+          "sha256": "fab0f776a0a695547b770132ad3d19893f4edee34f62e8778a54f239ef080c1e"
         }
       ]
     },

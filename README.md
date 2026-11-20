@@ -43,6 +43,10 @@
 
 [内核日期及构建规则](contributions/kernel-offline-upgrade/attachments/KERNEL-VERSIONING.md)
 
+## Droidloom 安卓窗口与手势
+
+[第 13 版安卓窗口与手势](contributions/droidloom-window-navigation/attachments/README.md)提供焦点阴影、底部白条、最近任务、双侧返回手势及屏幕键盘避让，支持独立应用、检查和回退。
+
 ## USB-C 直连 SSD 测试候选（目标 SSD 尚未实测）
 
 [Issue #19 的测试说明与恢复步骤](contributions/usb-c-ucsi-host-candidate/attachments/README.md)。提供保持 UCSI 绑定的单次 host 协商候选、只读采样和可并行的独立 UCSI tracing。已复核软件逻辑；macOS 与 Linux ARM64 隔离环境各 32 项测试、平板只读检查通过。**目标 SSD 尚未实测，真实 host/trace 管理员路径也未验证，不宣称故障已修复。**

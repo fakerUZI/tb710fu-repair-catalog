@@ -9,9 +9,10 @@ import subprocess
 import sys
 import tempfile
 
-UUID = "tb-android-window-defaults@tb710fu"
+UUID = "tb-android-outer-shadow@tb710fu"
 FAMILY = {
-    UUID, "tb-android-windows@tb710fu", "tb-android-fullscreen@tb710fu",
+    UUID, "tb-android-window-defaults@tb710fu", "tb-android-focus-edges@tb710fu",
+    "tb-android-windows@tb710fu", "tb-android-fullscreen@tb710fu",
     "tb-android-navigation@tb710fu", "tb-android-window-navigation@tb710fu",
     "tb-android-gestures@tb710fu", "tb-android-gestures-osk@tb710fu",
     "tb-android-gesture-feedback@tb710fu", "tb-android-navigation-controls@tb710fu",
@@ -141,7 +142,7 @@ def paths():
     home = Path.home()
     share = Path(os.environ.get("XDG_DATA_HOME") or home / ".local/share")
     state = Path(os.environ.get("XDG_STATE_HOME") or home / ".local/state")
-    return share / "gnome-shell/extensions" / UUID, state / "tb710fu-droidloom-window-navigation"
+    return share / "gnome-shell/extensions" / UUID, state / "tb710fu-droidloom-window-navigation-v13"
 
 
 def preflight(require_droidloom):
