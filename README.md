@@ -2,11 +2,9 @@
 
 此目录供修复助手读取。`catalog.json` 中每条问题包括标题、说明、设备、状态、脚本相对路径、SHA-256、是否需要管理员权限及风险。`contributions/` 中的社区修复须按各自适用范围、验证边界和风险单独审核。
 
-清单第一项为唯一的 [TB710FU 日期内核升级](contributions/kernel-offline-upgrade/attachments/KERNEL-README.md)。20261118 接受无日期旧版和早于目标的标准日期版（包含 20261117）。升级器兼容已知 A/B 优先级、重试次数及成功位差异，并保留布局、固件、启动镜像和关键属性校验。以后发布的标准日期必须严格递增。
+清单第 01 项为「一键升级」。修复助手 0.10.12 起可直接点击「一键升级」。0.10.11 可先下载第 01 项再运行。
 
-原第二项 Snap 用户态独立修复/验证与第三项 snap1 网络模块修复已从目录及当前仓库移除，相关功能统一由当前日期版内核入口提供。
-
-内核更新统一使用目录第一项，默认只读 check；`TB710FU_KERNEL_ACTION=install` 执行备份、安装和 boot 写入。客户端须下载并核验全部新日期版附件，通过 `TB710FU_ATTACHMENTS_DIR` 传给唯一 Bash 入口。安装前须展示风险并取得用户授权；不自动重启，成功后保存工作并手动重启。
+一键升级会先刷新仓库并清理失效脚本缓存。它依据修复助手保存的安装记录和版本指纹跳过已安装且未更新的条目。确认本次清单后，所选修复会按顺序下载、校验和应用，成功项逐条保存记录。手动安装的项目可在确认页取消勾选。各修复的回退方式见条目说明。
 
 客户端接入前应固定可信仓库及修订版本，对清单进行格式校验，限制相对路径，验证脚本哈希，展示完整脚本及风险，并在用户确认后执行。哈希仅保证与所取清单一致，不能证明清单本身可信；远程内容不得自动执行。
 
@@ -33,9 +31,9 @@
 
 内核升级会保留现有麦克风 ALSA 初始化服务及 WirePlumber 路由，不新建这些用户态文件；不能把“镜像已含采集链路”理解为在任意原始系统上自动完成全部音频配置。
 
-目录第一项为 20261118 内核升级。其余条目见 [当前修复清单](catalog.json)。
+原 20261118 日期内核升级已下架。当前可用条目见 [修复清单](catalog.json)；旧版方案见 [内核升级资料](contributions/kernel-offline-upgrade/attachments/KERNEL-README.md)。
 
-已有相机和手电筒补充会随内核升级迁移到 20261118。首次安装补充仍使用第一项的 `camera-install` 或 `flash-install`。新版相机保留全分辨率，以连续预览和后台编码缩短拍照等待。[相机与手电筒](contributions/kernel-offline-upgrade/attachments/flash-camera/README.md)
+相机和手电筒补充的安装与回退说明见 [相机与手电筒](contributions/kernel-offline-upgrade/attachments/flash-camera/README.md)。日常补光灯修复可从清单中的「后摄补光灯与手电筒快捷开关修复」运行。
 
 [内核日期及构建规则](contributions/kernel-offline-upgrade/attachments/KERNEL-VERSIONING.md)
 

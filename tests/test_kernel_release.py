@@ -152,11 +152,11 @@ class UpgradeGate(unittest.TestCase):
     def test_readonly_check_can_report_already_target(self):
         self.assembler.check_release(self.spec, self.installer, 'check', self.plan['target_version'])
 
-    def test_sole_kernel_entry_is_first_and_old_payloads_are_gone(self):
+    def test_kernel_upgrades_are_retired_from_catalog_and_archived_bundle_is_intact(self):
         catalog = json.loads((ROOT / 'catalog.json').read_text())
         entries = [x for x in catalog['issues'] if 'kernel' in x['id'] and 'upgrade' in x['id']]
-        self.assertEqual(len(entries), 1)
-        self.assertEqual(catalog['issues'][0]['id'], 'kernel-offline-upgrade')
+        self.assertEqual(entries, [])
+        self.assertEqual(catalog['issues'][0]['id'], 'one-click-upgrade')
         self.assertFalse((ROOT / 'contributions/snap-kernel-offline-upgrade').exists())
         spec = json.loads((BASE/'bundle-parts.json').read_text())
         self.assertEqual(spec['format'], 2)
