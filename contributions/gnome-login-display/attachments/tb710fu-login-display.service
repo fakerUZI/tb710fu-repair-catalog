@@ -1,0 +1,13 @@
+[Unit]
+Description=Recover the TB710FU display after GNOME login
+PartOf=graphical-session.target
+After=graphical-session-pre.target
+
+[Service]
+Type=exec
+ExecStart=/usr/bin/python3 -I %h/.local/libexec/tb710fu-login-display.py
+RuntimeMaxSec=60
+TimeoutStopSec=8
+
+[Install]
+WantedBy=graphical-session.target
