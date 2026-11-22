@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.tb710fu.screen-gestures" path="/org/tb710fu/screen-gestures/">
+    <key name="double-tap-to-wake" type="b">
+      <default>false</default>
+      <summary>Double tap to wake the built-in display</summary>
+    </key>
+    <key name="desktop-click-to-lock" type="b">
+      <default>false</default>
+      <summary>Lock with a double click on the empty desktop</summary>
+    </key>
+  </schema>
+</schemalist>

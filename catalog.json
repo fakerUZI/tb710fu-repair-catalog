@@ -661,6 +661,73 @@
           "sha256": "0339119958b5005ec6490ed0641ceebfe251f88c88eb886d914d03209323c746"
         }
       ]
+    },
+    {
+      "id": "screen-gestures",
+      "title": "TB710FU 屏幕手势（双击亮屏与双击桌面锁屏）",
+      "description": "为已验证的 TB710FU Ubuntu 26.04 ARM64 / GNOME Wayland / 7.2.6-tb710fu-20261118（60/120/144 Hz 模块基线）增加两个独立开关：双击亮屏、双击桌面空白处锁屏。下载后以管理员权限运行，保存工作并重启，然后打开「设置 → 隐私与安全 → 锁屏 → 屏幕手势」。依赖当前匹配的 GNOME 设置 50.3、DING 50.26.04.8ubuntu、Python GI、systemd 与 kmod。双击亮屏适用于系统仍在运行的熄屏状态。实机验证了两次双击亮屏、独立开关和最终桌面进程加载，桌面双击及单击不锁屏通过逻辑测试。投稿安装与回退路径做了隔离测试。详细限制及源码见 README.md。",
+      "device": "TB710FU",
+      "status": "community-review",
+      "risk": "需要管理员权限，会在 Ubuntu 文件系统中安装匹配的触控及面板模块、更新桌面点击处理、增加 GNOME 偏好和后台服务。安装前只读核对当前 GPT、活动固件、内核配置、模块及桌面包；boot、DTBO 和 GPT 仅用于只读核验。启用双击亮屏会在普通熄屏期间保留触控供电，增加待机消耗。安装成功后请手动重启。首次启动驱动检查失败会恢复旧文件并重启一次。手动回退：以 TB710FU_FIX_ACTION=rollback 运行本项，或运行 sudo /usr/bin/python3 -I /var/backups/tb710fu-screen-gestures/install.py rollback，随后手动重启。版本或文件哈希不匹配时应停止安装。",
+      "script": {
+        "path": "contributions/screen-gestures/script.sh",
+        "sha256": "e1bdf02a997ae724f294d675a96f2b16df8876ea2515c9837157ca047ba9ef61",
+        "requires_admin": true
+      },
+      "attachments": [
+        {
+          "path": "contributions/screen-gestures/attachments/install.py",
+          "sha256": "72983831ea30d2c69d3cf301f3535687fcff761121c632de6ee429c0a6e8b008"
+        },
+        {
+          "path": "contributions/screen-gestures/attachments/spec.json",
+          "sha256": "18551fb95a4371eda499c2f6505021d2bfa61b39270e76e080ca9cf51d5011d4"
+        },
+        {
+          "path": "contributions/screen-gestures/attachments/nvt_36xxx.ko",
+          "sha256": "36c1359b7013a6a2cdde36b1433291074d5c66b7c3eb59c271012e85d75551fa"
+        },
+        {
+          "path": "contributions/screen-gestures/attachments/panel-nt36532-wqhd-dual-dsi-dsc.ko",
+          "sha256": "c5818c95508d04600bbd6b6b166a3d148e68e4f5346ad15eeba96e10135ae6b8"
+        },
+        {
+          "path": "contributions/screen-gestures/attachments/desktopGrid.js",
+          "sha256": "f097845ce3d7ada216f571b2ce36a429dc36178eef4901c40a1eabe29cc5aa25"
+        },
+        {
+          "path": "contributions/screen-gestures/attachments/tb-session-permissions.py",
+          "sha256": "1e254ebebb4366ee03793e5bb218a3e29d3d6cde9e0700e9bd7ebb7ac2408484"
+        },
+        {
+          "path": "contributions/screen-gestures/attachments/org.tb710fu.screen-gestures.gschema.xml",
+          "sha256": "f1f8193be596519f6d947f302339838e0c8c4acd96b86a44eca60f915f9d699e"
+        },
+        {
+          "path": "contributions/screen-gestures/attachments/double-tap-wake.py",
+          "sha256": "9d670338da793a769bd39ad2e6d1694dbb27cdf22cfdc58121db6e18cb2dd92d"
+        },
+        {
+          "path": "contributions/screen-gestures/attachments/tb710fu-double-tap-wake.service",
+          "sha256": "b93799140c4675b52c7704bfa15908343d20e3daee3af60013db74414706faba"
+        },
+        {
+          "path": "contributions/screen-gestures/attachments/gnome-control-center",
+          "sha256": "2d429272d4393674ffe13b2f6d42a65dfd2998c0b6bb871a2bef597acd69ef57"
+        },
+        {
+          "path": "contributions/screen-gestures/attachments/settings-user.py",
+          "sha256": "b454070dba29898c11781c5b8f1256a9b1a6efdd0579875bb9607a371ff605f7"
+        },
+        {
+          "path": "contributions/screen-gestures/attachments/README.md",
+          "sha256": "69585a13c9a15c9c3bab271e3de481499da477765ae4756eaf37732f466c2d50"
+        },
+        {
+          "path": "contributions/screen-gestures/attachments/screen-gestures-sources.tar.xz",
+          "sha256": "05a39eb5a2275c192962af6dddbc3cea40987c60867acff473411627fbbf1759"
+        }
+      ]
     }
   ]
 }

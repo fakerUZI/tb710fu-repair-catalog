@@ -1,0 +1,12 @@
+[Unit]
+Description=TB710FU double-tap screen wake
+After=graphical-session-pre.target
+PartOf=graphical-session.target
+
+[Service]
+ExecStart=/usr/bin/python3 -I /usr/local/libexec/tb710fu-double-tap-wake
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=graphical-session.target
