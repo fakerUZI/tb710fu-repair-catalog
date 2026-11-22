@@ -717,7 +717,7 @@
       "risk": "以普通用户权限安装登录服务。生效时屏幕可能短暂熄灭。适用于 GNOME 与内核仍有响应的显示故障。安装后请保存工作并注销重登。支持只读检查和回退。",
       "script": {
         "path": "contributions/gnome-login-display/script.sh",
-        "sha256": "d9e047bd860917fadd1c8d2bed7b5e011686156239b6309f94b122d39c4c655b",
+        "sha256": "6e020d811b4bff6339894f568f969e493f79fffab32b6aa665cd6e260a2e7937",
         "requires_admin": false
       },
       "attachments": [

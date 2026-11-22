@@ -24,25 +24,29 @@ case ${TB710FU_FIX_ACTION:-apply} in
         compatible_file "$program" "$assets/login-display.py"
         compatible_file "$unit_path" "$assets/$unit"
         /usr/bin/python3 -I "$assets/login-display.py" --check
-        created=()
+        new_program=no
         new_unit=no
         cleanup() {
             local code=$?
             if (( code )); then
-                if [[ $new_unit == yes ]]; then systemctl --user disable "$unit" || true; fi
-                for path in "${created[@]}"; do rm -f -- "$path"; done
+                if [[ $new_unit == yes ]]; then
+                    systemctl --user disable "$unit" || true
+                    rm -f -- "$unit_path"
+                fi
+                if [[ $new_program == yes ]]; then rm -f -- "$program"; fi
                 systemctl --user daemon-reload || true
             fi
         }
         trap cleanup EXIT
         if [[ ! -f $program ]]; then
-            install -D -m 0755 -- "$assets/login-display.py" "$program"
-            created+=("$program")
+            new_program=yes
+            mkdir -p -- "${program%/*}"
+            install -m 0755 -- "$assets/login-display.py" "$program"
         fi
         if [[ ! -f $unit_path ]]; then
-            install -D -m 0644 -- "$assets/$unit" "$unit_path"
-            created+=("$unit_path")
             new_unit=yes
+            mkdir -p -- "${unit_path%/*}"
+            install -m 0644 -- "$assets/$unit" "$unit_path"
         fi
         systemctl --user daemon-reload
         systemctl --user enable "$unit"
