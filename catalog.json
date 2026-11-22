@@ -569,6 +569,29 @@
           "sha256": "675bbce405f9006bb4299f6504ab63d4a4aeef6632d6e78825d711a9f1e4c6bd"
         }
       ]
+    },
+    {
+      "id": "flash-portable-runtime",
+      "title": "后摄补光灯启动修复",
+      "description": "适用于已安装相机和手电筒组件的 TB710FU Ubuntu ARM64（20261117／20261118）。修复启动菜单更新或存储容量不同导致的「当前 boot 不匹配」「当前 GPT 布局不匹配」。运行时核对机型、PM8550 实际设备树、驱动 ABI、附件和电流限值。默认应用，支持只读检查和回退。20261118 实机通过安装、回退、重新加载驱动和开关补光灯；20261117 及其他存储容量未实机测试。",
+      "device": "TB710FU",
+      "status": "community-review",
+      "risk": "需要管理员权限。替换补光灯启动脚本并启动相关服务，原脚本保存在 /var/lib/tb710fu-flash-portable/original.py。关闭相机和手电筒后应用。脚本只改文件系统中的补光灯组件，不刷写分区。TB710FU_FIX_ACTION=rollback 可恢复原脚本，并在下次启动服务时生效。",
+      "script": {
+        "path": "contributions/flash-portable-runtime/script.sh",
+        "sha256": "0be03de075e07c217d8d8db2fc3fc774faef6da006e8dc1d647eb1f4b9277370",
+        "requires_admin": true
+      },
+      "attachments": [
+        {
+          "path": "contributions/flash-portable-runtime/attachments/tb-flash-hardware.py",
+          "sha256": "ac5f04188b619d44f51f62c9b071c50e7cb7d8e1f86090f2a881985dc3302553"
+        },
+        {
+          "path": "contributions/flash-portable-runtime/attachments/README.md",
+          "sha256": "11506b38bfb6440d6ba248d7569f47e5dd3babf789780e19de090026724c48e4"
+        }
+      ]
     }
   ]
 }
