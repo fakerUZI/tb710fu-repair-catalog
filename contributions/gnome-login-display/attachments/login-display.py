@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-"""Reinitialize the built-in 144 Hz panel once after GNOME login."""
+"""Recover the built-in panel after GNOME login and 60 Hz unlock."""
 import argparse
 import fcntl
 import os
@@ -15,6 +15,8 @@ SAVER = "org.gnome.ScreenSaver"
 SAVER_PATH = "/org/gnome/ScreenSaver"
 PROPERTIES = "org.freedesktop.DBus.Properties"
 DRM = Path("/sys/class/drm")
+BACKLIGHT = Path("/sys/class/backlight/sy7758-backlight")
+LOGIN_RATES = (60, 144)
 ON, OFF = 0, 3
 
 
@@ -38,7 +40,7 @@ def active_session():
     return None
 
 
-def panel_144(state):
+def panel_mode(state, rates):
     serial, monitors, logical, _props = state
     if len(monitors) != 1 or len(logical) != 1:
         return None
@@ -49,9 +51,10 @@ def panel_144(state):
     current = [mode for mode in modes if mode[6].get("is-current")]
     if len(current) != 1 or tuple(current[0][1:3]) != (3200, 2000):
         return None
-    if abs(current[0][3] - 144) >= 0.1:
-        return None
-    return serial, spec[0]
+    for rate in rates:
+        if abs(current[0][3] - rate) < 0.1:
+            return serial, spec[0], rate
+    return None
 
 
 def panel_status(connector):
@@ -75,9 +78,6 @@ class SessionBus:
 
     def state(self):
         return self.call(DISPLAY, DISPLAY_PATH, DISPLAY, "GetCurrentState")
-
-    def mode(self):
-        return self.call(DISPLAY, DISPLAY_PATH, PROPERTIES, "Get", "(ss)", (DISPLAY, "PowerSaveMode"))[0]
 
     def set_mode(self, mode):
         self.call(DISPLAY, DISPLAY_PATH, PROPERTIES, "Set", "(ssv)",
@@ -113,6 +113,26 @@ def cycle(bus, dpms, transient_errors):
             raise RuntimeError("内屏未报告 DPMS On")
 
 
+def restore_backlight():
+    power = BACKLIGHT / "bl_power"
+    brightness = BACKLIGHT / "brightness"
+    if not power.is_file() or not brightness.is_file():
+        return
+    if power.read_text().strip() == "0" and int(brightness.read_text()) > 0:
+        return
+    subprocess.run(("/usr/local/bin/tb-backlight-power", "on"), timeout=3,
+                   check=True, stdout=subprocess.DEVNULL)
+    if power.read_text().strip() != "0" and int(brightness.read_text()) > 0:
+        power.write_text("0\n")
+
+
+def restore_panel(bus, dpms, rate, event, transient_errors):
+    cycle(bus, dpms, transient_errors)
+    if active_session() and not bus.locked():
+        restore_backlight()
+    print(f"TB710FU display recovered: {event}, {rate} Hz, DPMS On.", flush=True)
+
+
 def recover(bus, last_session, transient_errors):
     deadline = time.monotonic() + 42
     previous = None
@@ -121,22 +141,20 @@ def recover(bus, last_session, transient_errors):
         try:
             session = active_session()
             if session and last_session.exists() and last_session.read_text().strip() == session:
-                print("本次登录已经尝试过屏幕恢复。")
-                return
+                return False
             if session and not bus.locked():
                 state = bus.state()
-                candidate = panel_144(state)
+                candidate = panel_mode(state, LOGIN_RATES)
                 key = (session, state[0], candidate)
                 now = time.monotonic()
                 if key != previous:
                     previous, stable_since = key, now
                 elif now - stable_since >= (1.5 if candidate else 5):
                     if candidate is None:
-                        print("当前未使用单独的 144 Hz 内屏，跳过显示恢复。")
-                        return
+                        print("当前未使用单独的 60 / 144 Hz 内屏，跳过登录恢复。", flush=True)
+                        return False
                     dpms = panel_status(candidate[1])
-                    if (dpms and bus.mode() == ON and dpms.read_text().strip() == "On"
-                            and active_session() == session and not bus.locked()):
+                    if dpms and active_session() == session and not bus.locked():
                         break
             else:
                 previous = None
@@ -144,11 +162,65 @@ def recover(bus, last_session, transient_errors):
             previous = None
         time.sleep(0.45)
     else:
-        print("没有等到已解锁且可用的 GNOME 内屏，跳过显示恢复。")
-        return
+        print("没有等到已解锁且可用的 GNOME 内屏，跳过登录恢复。", flush=True)
+        return False
     last_session.write_text(session + "\n")
-    cycle(bus, dpms, transient_errors)
-    print("144 Hz 内屏完成登录后的 DPMS 恢复。")
+    restore_panel(bus, dpms, candidate[2], "login", transient_errors)
+    return True
+
+
+class UnlockRecovery:
+    def __init__(self, bus, GLib, transient_errors):
+        self.bus = bus
+        self.glib = GLib
+        self.errors = transient_errors
+        self.was_locked = False
+        self.pending = None
+        self.deadline = 0
+        self.last_recovery = float("-inf")
+
+    def listen(self):
+        self.bus.bus.signal_subscribe(
+            SAVER, SAVER, "ActiveChanged", SAVER_PATH, None,
+            self.bus.gio.DBusSignalFlags.NONE, self.changed,
+        )
+        try:
+            self.was_locked = self.bus.locked()
+        except self.errors:
+            pass
+
+    def changed(self, _bus, _sender, _path, _interface, _signal, arguments):
+        locked = arguments.unpack()[0]
+        if locked:
+            self.was_locked = True
+            if self.pending is not None:
+                self.glib.source_remove(self.pending)
+                self.pending = None
+        elif self.was_locked:
+            self.was_locked = False
+            self.deadline = time.monotonic() + 4
+            self.pending = self.glib.timeout_add(350, self.after_unlock)
+
+    def after_unlock(self):
+        if time.monotonic() < self.deadline and time.monotonic() - self.last_recovery >= 3:
+            try:
+                if self.bus.locked():
+                    self.pending = None
+                    return self.glib.SOURCE_REMOVE
+                if not active_session():
+                    return self.glib.SOURCE_CONTINUE
+                candidate = panel_mode(self.bus.state(), (60,))
+                dpms = panel_status(candidate[1]) if candidate else None
+            except self.errors:
+                return self.glib.SOURCE_CONTINUE
+            if dpms:
+                self.last_recovery = time.monotonic()
+                try:
+                    restore_panel(self.bus, dpms, candidate[2], "unlock", self.errors)
+                except (*self.errors, RuntimeError) as error:
+                    print(f"TB710FU unlock display recovery failed: {error}", flush=True)
+        self.pending = None
+        return self.glib.SOURCE_REMOVE
 
 
 def interrupted(_number, _frame):
@@ -162,17 +234,34 @@ def main():
     from gi.repository import Gio, GLib
     bus = SessionBus(Gio, GLib)
     if args.check:
-        eligible = panel_144(bus.state())
-        print("当前桌面符合 144 Hz 单内屏条件。" if eligible else
+        eligible = panel_mode(bus.state(), LOGIN_RATES)
+        print(f"当前桌面符合 {eligible[2]} Hz 单内屏条件。" if eligible else
               "当前桌面无需显示恢复，下次登录会重新检测。")
         return
-    for signum in (signal.SIGINT, signal.SIGTERM):
+    signals = (signal.SIGINT, signal.SIGTERM)
+    for signum in signals:
         signal.signal(signum, interrupted)
     runtime = Path(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}"))
     with (runtime / "tb710fu-login-display.lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        recover(bus, runtime / "tb710fu-login-display.session",
-                (GLib.Error, OSError, subprocess.SubprocessError))
+        errors = (GLib.Error, OSError, ValueError, subprocess.SubprocessError)
+        unlock = UnlockRecovery(bus, GLib, errors)
+        unlock.listen()
+        try:
+            if recover(bus, runtime / "tb710fu-login-display.session", errors):
+                unlock.last_recovery = time.monotonic()
+        except (*errors, RuntimeError) as error:
+            print(f"TB710FU login display recovery failed: {error}", flush=True)
+        loop = GLib.MainLoop()
+
+        def stop():
+            loop.quit()
+            return GLib.SOURCE_REMOVE
+
+        for signum in signals:
+            signal.signal(signum, signal.SIG_DFL)
+            GLib.unix_signal_add(GLib.PRIORITY_HIGH, signum, stop)
+        loop.run()
 
 
 if __name__ == "__main__":
