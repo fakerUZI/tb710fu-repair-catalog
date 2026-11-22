@@ -675,14 +675,14 @@
     },
     {
       "id": "flash-portable-runtime",
-      "title": "后摄补光灯启动修复",
-      "description": "适用于已安装相机和手电筒组件的 TB710FU Ubuntu ARM64（20261117／20261118）。修复启动菜单更新或存储容量不同导致的「当前 boot 不匹配」「当前 GPT 布局不匹配」。运行时核对机型、PM8550 实际设备树、驱动 ABI、附件和电流限值。默认应用，支持只读检查和回退。20261118 实机通过安装、回退、重新加载驱动和开关补光灯；20261117 及其他存储容量未实机测试。",
+      "title": "后摄补光灯与手电筒快捷开关修复",
+      "description": "适用于已安装相机和手电筒组件的 TB710FU Ubuntu ARM64（20261117／20261118）。修复不同启动镜像或存储容量造成的补光灯启动失败，并补齐 GNOME 右上角「手电筒」开关。请在平板解锁并登录本机桌面后应用。首次恢复扩展可能需注销并重新登录。",
       "device": "TB710FU",
       "status": "community-review",
-      "risk": "需要管理员权限。替换补光灯启动脚本并启动相关服务，原脚本保存在 /var/lib/tb710fu-flash-portable/original.py。关闭相机和手电筒后应用。脚本只改文件系统中的补光灯组件，不刷写分区。TB710FU_FIX_ACTION=rollback 可恢复原脚本，并在下次启动服务时生效。",
+      "risk": "需要管理员权限。启动手电筒服务，并为当前桌面账号启用对应 GNOME 扩展。原补光灯脚本备份保留在平板本地。请先关闭相机或手电筒。支持只读检查及启动脚本回退，可在 GNOME「扩展」中单独停用快捷开关。",
       "script": {
         "path": "contributions/flash-portable-runtime/script.sh",
-        "sha256": "0be03de075e07c217d8d8db2fc3fc774faef6da006e8dc1d647eb1f4b9277370",
+        "sha256": "cdf4e010b1cbcce2891aa2b67abf460a4d7ca8aea1123693ce6c83faf80a1d55",
         "requires_admin": true
       },
       "attachments": [
@@ -692,7 +692,19 @@
         },
         {
           "path": "contributions/flash-portable-runtime/attachments/README.md",
-          "sha256": "11506b38bfb6440d6ba248d7569f47e5dd3babf789780e19de090026724c48e4"
+          "sha256": "3c568f14ff85335d07e03b19a845f5778dd229cc1a9d9f900b48ee7bfef0bb27"
+        },
+        {
+          "path": "contributions/flash-portable-runtime/attachments/torch-quick-settings.py",
+          "sha256": "49a2abae8382b1164b5143168c7b7078a6652048cb1efdbfa284ab4d3e938668"
+        },
+        {
+          "path": "contributions/flash-portable-runtime/attachments/torch-extension.js",
+          "sha256": "7a5ed13170542a1e64e6f81be3f6009861d188e3f046e7ad4b8f2d9024f1bfd1"
+        },
+        {
+          "path": "contributions/flash-portable-runtime/attachments/torch-metadata.json",
+          "sha256": "c089bf83605a2844e7b11987be03075d412b3ab806cfad7363f60025c53f7d91"
         }
       ]
     }
