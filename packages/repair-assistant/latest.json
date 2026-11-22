@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "version": "0.10.14",
-  "path": "packages/repair-assistant/tb710fu-repair-assistant_0.10.14_all.deb",
-  "sha256": "45f5e86005d5388a2ccf9925de05f582cfb5103809ef79ce7a51e5e4d473974c",
-  "size": 34168
+  "version": "0.10.15",
+  "path": "packages/repair-assistant/tb710fu-repair-assistant_0.10.15_all.deb",
+  "sha256": "98d31350a994a094ca0288915fb8c6cb9076ba79536d1b2b638e82f55d13856b",
+  "size": 35462
 }
