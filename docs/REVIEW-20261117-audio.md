@@ -6,10 +6,6 @@
 
 音频规则内容与原投稿逐字节一致。28 项隔离测试在 macOS 和 ARM64 Linux 上通过，覆盖只读检查、平台限制、首次/重复安装、原有同名规则保留、用户改动、链接拒绝、服务/音量/静音失败恢复、等待超时、会话停止与节点消失后的回退、快照损坏及状态提交失败。没有访问真实音频设备，没有在平板运行安装或回退。
 
-测试命令：
+[当时审核的测试文件](https://github.com/fakerUZI/tb710fu-repair-catalog/blob/c068dc317595fa74f2053e6f6497e764c955f3cf/contributions/droidloom-speaker-audio/attachments/test-repair.py)保存在 Git 历史中。
 
-```sh
-python3 contributions/droidloom-speaker-audio/attachments/test-repair.py
-```
-
-原方案的实机观察和本次安装器的隔离测试分别保留边界，继续使用 community-review，不声明已完成整机重启、同时录音或长期稳定性验证。
+此条目当时仅适用于 Snap1。2026-11-22 BOOTFIX 使用 20261118 内核并内置播放时钟配置，目录已下架该独立脚本。

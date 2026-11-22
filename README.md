@@ -12,10 +12,6 @@
 
 提交真实修复应说明适用设备、系统版本、问题症状、依赖、风险、验证证据和回退方式，并经人工审核。不得提交设备备份、凭据、设备唯一标识、私人资料或已退役的前摄实验。涉及设备写入时必须先核实当前固件和 GPT；历史分区坐标不能直接使用。保留已工作的后摄适配。
 
-## 完整虚拟键盘
-
-[完整虚拟键盘（Fcitx5 / WowType）](contributions/full-virtual-keyboard/attachments/README.md)包含七个扩展、Fcitx5 启动配置、中文候选、退格和全扩展键盘。支持独立应用、检查和回退。
-
 ## 2026-11-16 代码审核
 
 [PR #8–#11 的修正、测试和回退边界](docs/REVIEW-20261116.md)。
@@ -43,9 +39,18 @@
 
 [内核日期及构建规则](contributions/kernel-offline-upgrade/attachments/KERNEL-VERSIONING.md)
 
-## Droidloom 安卓窗口与手势
+## 2026-11-22 BOOTFIX 收录调整
 
-[第 13 版安卓窗口与手势](contributions/droidloom-window-navigation/attachments/README.md)提供焦点阴影、底部白条、最近任务、双侧返回手势及屏幕键盘避让，支持独立应用、检查和回退。
+以最新 BOOTFIX 的已校验 rootfs 为准，下架以下旧条目及独立导入包。旧文件可通过 Git 历史查询。
+
+| 已下架条目 | 原因 |
+| --- | --- |
+| `droidloom-speaker-audio` | 脚本只接受 Snap1 内核。BOOTFIX 使用 20261118，已内置 WirePlumber 播放时钟配置。 |
+| `droidloom-r42-game-compat` | BOOTFIX 内置 Droidloom 49。旧脚本只识别 28、42 或全新安装，实机只读检查已确认拒绝 49。 |
+| `droidloom-on-demand-launch` | 已内置按需启动器和已启用的启动器监听服务。 |
+| `droidloom-window-navigation` | 包内的第 13 版扩展与该条目的四个运行文件哈希一致。 |
+| `droidloom-window-memory` | 包内已安装 zram 生成器，3 GiB zram 和内存水位配置与条目逐字节一致。 |
+| `full-virtual-keyboard` | 包内已内置七个扩展。旧条目会把当前账号的快捷键扩展从第 20 版换回第 18 版。 |
 
 ## USB-C 直连 SSD 测试候选（目标 SSD 尚未实测）
 

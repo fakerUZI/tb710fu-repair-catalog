@@ -1,9 +1,0 @@
-Kimpanel 92 is based on wengxt's GNOME Kimpanel project.
-Source: https://github.com/wengxt/gnome-shell-extension-kimpanel
-License: GPL-2.0, see COPYING-kimpanel.
-This version adds TB710FU touch candidate and password-focus handling.
-The corresponding locale catalogs are in source/translations/kimpanel.
-
-The WowType GNOME theme and voice-overlay sources are from Gloridust's WowType.
-Source: https://github.com/Gloridust/WowType
-Upstream offers MIT or Apache-2.0 for the code. This bundle uses Apache-2.0.
