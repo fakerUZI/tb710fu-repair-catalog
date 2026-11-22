@@ -143,7 +143,7 @@ def main(action):
     if os.geteuid() != 0:
         raise ValueError("应用及回退需要管理员权限")
     if action == "apply":
-        BACKUP.mkdir(mode=0o700, exist_ok=True)
+        BACKUP.mkdir(mode=0o700, parents=True, exist_ok=True)
     directory = BACKUP.lstat()
     if not stat.S_ISDIR(directory.st_mode) or directory.st_uid != 0 or directory.st_mode & 0o077:
         raise ValueError("回退目录必须由管理员独占")

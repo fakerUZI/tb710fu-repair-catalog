@@ -70,6 +70,11 @@ def install_extension(shell_version):
             f"随包扩展未声明支持 GNOME Shell {shell_version}")
     require(all(data is None or data == payload[name] for name, data in current.items()),
             "扩展文件不完整且与随包版本不同，需要核对已安装的版本")
+    previous_umask = os.umask(0o022)
+    try:
+        EXTENSIONS.mkdir(parents=True, exist_ok=True)
+    finally:
+        os.umask(previous_umask)
     with tempfile.TemporaryDirectory(prefix=".tb710fu-torch-", dir=EXTENSIONS) as staging:
         stage = Path(staging)
         for name in FILES:

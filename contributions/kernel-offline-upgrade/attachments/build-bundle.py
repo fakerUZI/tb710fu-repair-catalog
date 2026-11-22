@@ -46,7 +46,7 @@ def main():
     assert actual == required, (sorted(required-actual), sorted(actual-required))
     expected = json.loads((here/'release-inputs.json').read_text())
     assert set(expected) == required
-    args.output.mkdir(mode=0o700)
+    args.output.mkdir(mode=0o700, parents=True)
     for name in sorted(required):
         p = args.inputs/name
         assert p.is_file() and not p.is_symlink() and sha(p) == expected[name], name
@@ -72,6 +72,7 @@ def main():
                 info.mode=0o644
                 with f.open('rb') as stream:
                     tf.addfile(info,stream)
+    args.parts_dir.mkdir(parents=True, exist_ok=True)
     parts=[]
     with archive.open('rb') as stream:
         while chunk := stream.read(8*1024*1024):

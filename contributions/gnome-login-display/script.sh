@@ -38,7 +38,9 @@ case ${TB710FU_FIX_ACTION:-apply} in
         compatible_file "$program" "$assets/login-display.py" "$previous_program"
         compatible_file "$unit_path" "$assets/$unit" "$previous_unit"
         /usr/bin/python3 -I "$assets/login-display.py" --check
-        backup=$(mktemp -d "${XDG_RUNTIME_DIR:-/tmp}/tb-login-repair.XXXXXXXX")
+        runtime=${XDG_RUNTIME_DIR:-/tmp}
+        [[ -d $runtime ]] || runtime=/tmp
+        backup=$(mktemp -d "$runtime/tb-login-repair.XXXXXXXX")
         changed=no
         was_enabled=no
         systemctl --user is-enabled --quiet "$unit" && was_enabled=yes

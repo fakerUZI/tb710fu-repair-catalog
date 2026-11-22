@@ -51,7 +51,9 @@ def main():
     body=header+packed+bytes((-len(packed))%4096)
     info=subprocess.check_output([sys.executable,str(a.avbtool),'info_image','--image',str(a.baseline)],text=True)
     salt=re.search(r'Salt:\s+([0-9a-f]+)',info)[1];rollback=re.search(r'Rollback Index:\s+(\d+)',info)[1]
-    a.output.write_bytes(body)
+    a.output.parent.mkdir(parents=True, exist_ok=True)
+    with a.output.open('xb') as output:
+        output.write(body)
     cmd=[sys.executable,str(a.avbtool),'add_hash_footer','--image',str(a.output),'--partition_name','boot','--partition_size',str(len(image)),'--key',str(a.test_key),'--algorithm','SHA256_RSA4096','--rollback_index',rollback,'--salt',salt]
     for k,v in dict(re.findall(r"Prop: (\S+) -> '([^']*)'",info)).items():cmd+=['--prop',k+':'+v]
     subprocess.run(cmd,check=True)

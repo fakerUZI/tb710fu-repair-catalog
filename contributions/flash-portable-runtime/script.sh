@@ -40,6 +40,8 @@ case $action in
         current=$(digest "$target")
         if [[ $current != "$expected" ]]; then
             [[ ! -e $backup_dir && ! -L $backup_dir ]] || fail '已存在旧备份。请先核对当前补光灯组件。'
+            # Keep the shared parent traversable while the backup stays private.
+            (umask 022; mkdir -p -- "${backup_dir%/*}")
             mkdir -m 0700 -- "$backup_dir"
             if ! install -o root -g root -m 0700 -- "$target" "$backup"; then
                 rm -f -- "$backup"

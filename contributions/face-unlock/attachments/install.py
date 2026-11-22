@@ -154,13 +154,13 @@ def install(apply):
         return
     changes = {name for name, (target, mode) in FILES.items()
                if original[name] != sources[name] or stat.S_IMODE(target.stat().st_mode) != mode}
+    if changes and BACKUP.exists():
+        raise RuntimeError("已有修复备份，请先核对当前安装文件再回退或重试")
+    STATE.mkdir(mode=0o700, parents=True, exist_ok=True)
+    if stat.S_IMODE(STATE.stat().st_mode) != 0o700:
+        raise RuntimeError("人脸资料目录必须仅允许管理员访问")
     if changes:
-        if BACKUP.exists():
-            raise RuntimeError("已有修复备份，请先核对当前安装文件再回退或重试")
-        STATE.mkdir(mode=0o700, exist_ok=True)
-        if stat.S_IMODE(STATE.stat().st_mode) != 0o700:
-            raise RuntimeError("人脸资料目录必须仅允许管理员访问")
-        BACKUP.mkdir(mode=0o700)
+        BACKUP.mkdir(mode=0o700, parents=True)
         state = {"changes": {}, "had_pam_helpers": all(original[name] is not None for name in
                                                      ("face-unlock.py", "pam-face-unlock", "manage"))}
         try:

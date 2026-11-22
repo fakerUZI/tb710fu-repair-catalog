@@ -44,7 +44,7 @@
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/build-bundle.py",
-          "sha256": "c04b46cb41cb8c7a6208f49fa9dbf5c9f85e40f668d58f49bc42751777f499a2"
+          "sha256": "34045b5dd7713967eedcca0d88a14973a1616179ab914254d43f2b603c3c8013"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/build-kernel.sh",
@@ -388,7 +388,7 @@
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/pack-kernel.py",
-          "sha256": "d44504b76859a7992c705743f8c196e7b703854becb12440657b9055d29bd3bd"
+          "sha256": "364edf7f53dcd18e5e9094ffd40d06ffb26011bd9ac0f387d363fe62cba02a4c"
         },
         {
           "path": "contributions/kernel-offline-upgrade/attachments/release-inputs.json",
@@ -476,7 +476,7 @@
         },
         {
           "path": "contributions/terminal-hostname-fix/attachments/install.py",
-          "sha256": "0339119958b5005ec6490ed0641ceebfe251f88c88eb886d914d03209323c746"
+          "sha256": "3e897f0431c49cd81ce3dd1777be32138960c860a66743c774afc4b8ab42882d"
         }
       ]
     },
@@ -519,7 +519,7 @@
         },
         {
           "path": "contributions/screen-gestures/attachments/install.py",
-          "sha256": "803c41d4088ac5da71f31172d519dc9e93790c4b30f8179ac0e7d78c3cbc649c"
+          "sha256": "ef2c8d27da940cee2b2e2376e3c2570efaa38762162ecef99b7e19046e6aa9ae"
         },
         {
           "path": "contributions/screen-gestures/attachments/nvt_36xxx.ko",
@@ -602,7 +602,7 @@
         },
         {
           "path": "contributions/face-unlock/attachments/install.py",
-          "sha256": "327c82c1060f6901ed1858759cb24107042750640069043a531fc89056a7ac14"
+          "sha256": "6804d75f7020750623051b49c84130610668b337726c23af3bcb4d230889f863"
         },
         {
           "path": "contributions/face-unlock/attachments/manage",
@@ -682,7 +682,7 @@
       "risk": "需要管理员权限。启动手电筒服务，并为当前桌面账号启用对应 GNOME 扩展。原补光灯脚本备份保留在平板本地。请先关闭相机或手电筒。支持只读检查及启动脚本回退，可在 GNOME「扩展」中单独停用快捷开关。",
       "script": {
         "path": "contributions/flash-portable-runtime/script.sh",
-        "sha256": "cdf4e010b1cbcce2891aa2b67abf460a4d7ca8aea1123693ce6c83faf80a1d55",
+        "sha256": "3cc9705634802e26f96445dd21a09211cacc41ac4c003dc64bc43e39b02bfc9d",
         "requires_admin": true
       },
       "attachments": [
@@ -696,7 +696,7 @@
         },
         {
           "path": "contributions/flash-portable-runtime/attachments/torch-quick-settings.py",
-          "sha256": "49a2abae8382b1164b5143168c7b7078a6652048cb1efdbfa284ab4d3e938668"
+          "sha256": "b7fc23c3aa9eff1c2b4f0ff2ae631426ca348f314da973cad6065b96e8a58ce0"
         },
         {
           "path": "contributions/flash-portable-runtime/attachments/torch-extension.js",
@@ -717,7 +717,7 @@
       "risk": "普通用户权限。恢复画面时屏幕可能短暂熄灭，保留原有显示模式和布局。适用于 GNOME 与内核仍有响应的故障。装好后请保存工作并注销重登。支持只读检查和回退。",
       "script": {
         "path": "contributions/gnome-login-display/script.sh",
-        "sha256": "e9a983e9c92cee1268d1bfb953b5393dd13b3fe01013c2ef7733e4bad7cd78f7",
+        "sha256": "5eed4d1539737c30bf28aba87b08346412f4dfd055453fa3f0a3885841fb51bf",
         "requires_admin": false
       },
       "attachments": [

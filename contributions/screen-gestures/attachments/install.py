@@ -72,6 +72,7 @@ def boot_id():
 
 
 def put(path, data, mode):
+    path.parent.mkdir(parents=True, exist_ok=True)
     fd, name = tempfile.mkstemp(prefix=".tb710fu-gestures-", dir=path.parent)
     try:
         with os.fdopen(fd, "wb") as output:
@@ -278,7 +279,7 @@ WantedBy=multi-user.target
     files = {}
     state = {"staged_boot": boot_id(), "files": files, "new_build_ids": spec["new_build_ids"],
              "wake_was_enabled": global_wake_enabled(), "drivers": drivers}
-    BASE.mkdir(mode=0o700)
+    BASE.mkdir(mode=0o700, parents=True)
     try:
         for number, (path, (data, _mode)) in enumerate(replacements.items()):
             entry = {"sha256": sha(data)}
@@ -299,7 +300,6 @@ WantedBy=multi-user.target
         if drivers:
             DRIVERS.mkdir(parents=True, exist_ok=True)
         for path, (data, mode) in replacements.items():
-            path.parent.mkdir(parents=True, exist_ok=True)
             put(path, data, mode)
         indexes(drivers)
         if drivers:
@@ -329,7 +329,6 @@ def add_launchers(state, launchers):
         for path, (data, mode) in launchers.items():
             if path.exists():
                 continue
-            path.parent.mkdir(parents=True, exist_ok=True)
             put(path, data, mode)
             created.append(path)
             state["files"][str(path)] = {"sha256": sha(data)}

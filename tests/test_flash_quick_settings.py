@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import os
 from pathlib import Path
 import subprocess
 import tempfile
@@ -20,6 +21,17 @@ class TorchQuickSettingsTests(unittest.TestCase):
         self.target = self.folder / torch.UUID
         self.enterContext(patch.object(torch, "EXTENSIONS", self.folder))
         self.command = ("/usr/sbin/runuser", "-u", "tablet-user")
+
+    def test_creates_missing_shared_directories_under_restrictive_umask(self):
+        extensions = self.folder / "gnome-shell" / "extensions"
+        with patch.object(torch, "EXTENSIONS", extensions):
+            previous_umask = os.umask(0o077)
+            try:
+                self.assertTrue(torch.install_extension("50"))
+            finally:
+                os.umask(previous_umask)
+        for path in (extensions.parent, extensions, extensions / torch.UUID):
+            self.assertEqual(path.stat().st_mode & 0o777, 0o755)
 
     def test_recovers_missing_extension_and_keeps_existing_code(self):
         self.assertTrue(torch.install_extension("50"))
