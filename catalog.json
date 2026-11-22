@@ -6,8 +6,8 @@
       "title": "一键升级",
       "device": "TB710FU",
       "status": "community-review",
-      "description": "刷新仓库并清理已下架、缺失或旧版本的下载缓存。对照安装记录跳过已安装且无更新的修复。确认清单后自动下载、校验并按顺序应用所选修复。成功项立即记录，再运行时可继续失败或未完成的项目。",
-      "risk": "需要网络及 TB710FU 修复助手 0.10.11 或更新版本。可逐项取消勾选；管理员授权、硬件条件和回退方式以所选条目的说明为准。GNOME 显示相关项目可能短暂熄屏。安装记录用于识别已装版本，手动安装的项目可在清单中取消勾选。",
+      "description": "刷新仓库并清理失效缓存。确认所选修复后，先下载和校验脚本与附件，再按顺序执行。本次批量执行中的管理员修复只需要一次系统授权，普通用户修复沿用当前账号。成功项逐条记录，重试时跳过已安装且未更新的项目。",
+      "risk": "需要网络及 TB710FU 修复助手 0.10.15 或更新版本。可逐项取消勾选；各修复的适用条件和回退方式见各条目说明。GNOME 显示相关项目可能短暂熄屏。",
       "script": {
         "path": "contributions/one-click-upgrade/script.sh",
         "sha256": "de1957e5ff66bbd909c8d807605f5a0d28629b4edd0b6bde187e5aa761d28b74",
@@ -16,7 +16,7 @@
       "attachments": [
         {
           "path": "contributions/one-click-upgrade/attachments/upgrade.py",
-          "sha256": "f34ff1678e899f19e70a6ee5dbae74688ced320c8f4236f4fbffe26baad8028b"
+          "sha256": "abac4e01677695b3f695435e84df89bcf5172b59bef7d6a79295c333389fe26d"
         }
       ]
     },
