@@ -58,4 +58,6 @@
 
 ## TB710FU 修复助手
 
-Ubuntu 安装包 [下载 0.10.13（.deb）](packages/repair-assistant/tb710fu-repair-assistant_0.10.13_all.deb)。已安装的用户可以从顶部「应用更新」获取新版。安装包的 SHA-256 和文件大小见[更新清单](packages/repair-assistant/latest.json)。
+Ubuntu 安装包 [下载 0.10.14（.deb）](packages/repair-assistant/tb710fu-repair-assistant_0.10.14_all.deb)。从 0.10.14 起，点击顶部「更新修复助手」会自动下载并校验新版。通过系统密码提示授权后，安装完成会自动重新打开修复助手。0.10.13 及更早版本可用原有的「应用更新」下载安装包，并手动安装一次。安装包的 SHA-256 和文件大小见[更新清单](packages/repair-assistant/latest.json)。
+
+刷入 BOOTFIX 后遇到 Snap 初始化冲突、anacron 缺少目录，或关机时微距服务报错，可更新仓库并运行「BOOTFIX 安装后服务修复」。
