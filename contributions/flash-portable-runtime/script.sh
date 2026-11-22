@@ -57,6 +57,7 @@ case $action in
         systemctl is-active --quiet tb710fu-flash-hardware.service
         systemctl is-active --quiet tb710fu-torch.service
         echo '补光灯启动修复已应用，手电筒服务运行正常。'
+        /usr/bin/python3 -I "$TB710FU_ATTACHMENTS_DIR/torch-quick-settings.py"
         ;;
     rollback)
         [[ $(digest "$target") == "$expected" ]] || fail '当前组件已被修改，拒绝覆盖'
