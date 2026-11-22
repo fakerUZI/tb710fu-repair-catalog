@@ -1,0 +1,34 @@
+#!/bin/sh
+set -eu
+
+[ "$(id -u)" = 0 ] || exit 1
+case "${1:-}" in enable|disable) ;; *) exit 2 ;; esac
+pam=/etc/pam.d/gdm-password
+rule='auth sufficient pam_exec.so type=auth quiet quiet_log stdout seteuid /usr/local/lib/tb710fu-face-unlock/pam-face-unlock'
+exec 9>/run/lock/tb710fu-face-pam.lock
+flock -x 9
+if [ ! -f "$pam" ] || [ -L "$pam" ]; then
+    printf '%s\n' '找不到 GDM 密码配置。' >&2
+    exit 1
+fi
+if [ "$1" = enable ] && [ "$(grep -Ec '^@include[[:blank:]]+common-auth[[:blank:]]*$' "$pam")" -ne 1 ]; then
+    printf '%s\n' '找不到唯一的 GDM 密码入口，未启用人脸解锁。' >&2
+    exit 1
+fi
+candidate=$(mktemp /etc/pam.d/.tb710fu-face.XXXXXXXX)
+trap 'rm -f -- "$candidate"' EXIT HUP INT TERM
+awk -v mode="$1" -v rule="$rule" '
+    $0 == rule { next }
+    mode == "enable" && /^@include[[:blank:]]+common-auth[[:blank:]]*$/ { print rule }
+    { print }
+' "$pam" > "$candidate"
+if ! cmp -s "$pam" "$candidate"; then
+    chown --reference="$pam" "$candidate"
+    chmod --reference="$pam" "$candidate"
+    mv -fT -- "$candidate" "$pam"
+fi
+if [ "$1" = enable ]; then
+    printf '%s\n' '已启用人脸解锁。锁屏后打开密码页，正视前置相机。'
+else
+    printf '%s\n' '已关闭人脸解锁。'
+fi

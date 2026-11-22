@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 """Install the TB710FU screen gestures and guard their first boot."""
-import gzip
+import fcntl
 import hashlib
 import json
 import os
@@ -18,9 +18,11 @@ BASE = Path("/var/backups/tb710fu-screen-gestures")
 DRIVERS = Path("/lib/modules", KERNEL, "updates/tb710fu-screen-gestures")
 UNIT = "tb710fu-screen-gestures-guard.service"
 USER_UNIT = "tb710fu-double-tap-wake.service"
+LAUNCHER_FILES = ("gesture-settings.py", "tb710fu-gesture-settings.desktop")
 DING = Path("/usr/share/gnome-shell/extensions/ding@rastersoft.com/app/desktopGrid.js")
 PERMISSIONS = Path("/usr/local/sbin/tb-session-permissions.py")
 SCHEMAS = Path("/usr/share/glib-2.0/schemas")
+TAPS = Path("/sys/module/nvt_36xxx/parameters/dt2w_taps")
 CONTROL = Path("/sys/bus/mipi-dsi/devices/ae94000.dsi.0/dt2w_enabled")
 SETTINGS_BIN = Path("/usr/local/libexec/tb710fu-screen-gestures-settings")
 SETTINGS_HELPER = Path("/usr/local/libexec/tb710fu-screen-gestures-settings-user.py")
@@ -30,13 +32,13 @@ PANEL = "panel_nt36532_wqhd_dual_dsi_dsc"
 DESTINATIONS = {
     "nvt_36xxx.ko": (DRIVERS / "nvt_36xxx.ko", 0o644),
     "panel-nt36532-wqhd-dual-dsi-dsc.ko": (DRIVERS / "panel-nt36532-wqhd-dual-dsi-dsc.ko", 0o644),
-    "desktopGrid.js": (DING, 0o644),
-    "tb-session-permissions.py": (PERMISSIONS, 0o755),
     "org.tb710fu.screen-gestures.gschema.xml": (SCHEMAS / "org.tb710fu.screen-gestures.gschema.xml", 0o644),
     "double-tap-wake.py": (Path("/usr/local/libexec/tb710fu-double-tap-wake"), 0o755),
     USER_UNIT: (Path("/etc/systemd/user", USER_UNIT), 0o644),
     "gnome-control-center": (SETTINGS_BIN, 0o755),
     "settings-user.py": (SETTINGS_HELPER, 0o644),
+    "gesture-settings.py": (Path("/usr/local/libexec/tb710fu-gesture-settings"), 0o755),
+    "tb710fu-gesture-settings.desktop": (Path("/usr/local/share/applications/tb710fu-gesture-settings.desktop"), 0o644),
 }
 
 
@@ -82,48 +84,46 @@ def put(path, data, mode):
         Path(name).unlink(missing_ok=True)
 
 
-def verify_firmware(spec):
-    require(b"lenovo,tb710fu" in Path("/proc/device-tree/compatible").read_bytes().split(b"\0"),
-            "Expected Lenovo TB710FU")
-    release = Path("/etc/os-release").read_text().splitlines()
-    require("ID=ubuntu" in release and any(line in ("VERSION_ID=26.04", 'VERSION_ID="26.04"')
-                                            for line in release)
-            and os.uname().machine == "aarch64", "Ubuntu 26.04 ARM64 is required")
-    require("androidboot.slot_suffix=_a" in Path("/proc/cmdline").read_text().split(),
-            "Unexpected firmware slot")
-    config = gzip.decompress(Path("/proc/config.gz").read_bytes())
-    require(sha(config) == spec["config_sha256"], "Running kernel configuration changed")
-
-    disks = sorted(Path("/sys/class/block").glob("sd?"))
-    require(len(disks) == 6, "Expected six UFS LUNs")
-    labels = {}
-    for disk in disks:
-        table = json.loads(run("/usr/sbin/sfdisk", "--json", f"/dev/{disk.name}"))["partitiontable"]
-        require(table["label"] == "gpt" and table.get("partitions"), f"Invalid GPT on {disk.name}")
-        for partition in table["partitions"]:
-            labels.setdefault(partition.get("name"), []).append(Path(partition["node"]))
-    for label in ("boot_a", *spec["firmware_sha256"]):
-        node = Path("/dev/disk/by-partlabel", label).resolve(strict=True)
-        require(labels.get(label) == [node] and stat.S_ISBLK(node.stat().st_mode),
-                f"GPT label does not match {label}")
-        if label == "boot_a":
-            with node.open("rb") as image:
-                require(image.read(8) == b"ANDROID!", "Unexpected active boot image format")
-        else:
-            require(file_sha(node) == spec["firmware_sha256"][label], f"Firmware changed for {label}")
-
-
-def verify_baseline(spec):
+def needs_modules(spec):
+    if CONTROL.is_file() and TAPS.is_file():
+        return False
+    require(os.uname().release == KERNEL,
+            f"当前内核缺少双击亮屏接口，附件仅对应 {KERNEL}")
     for module, expected in spec["originals"].items():
         installed = Path(run("/usr/sbin/modinfo", "-F", "filename", module))
         require(build_id(module) == expected["id"] and file_sha(installed) == expected["sha256"],
-                f"Running or installed baseline changed for {module}")
+                f"{module} 当前驱动版本与替换附件的基线不同")
+    return True
+
+
+def has_settings_version(spec):
     for package, version in spec["packages"].items():
-        require(run("/usr/bin/dpkg-query", "-W", "-f=${Version}", package) == version,
-                f"Package version changed for {package}")
-    for path, digest in spec["edits"].items():
-        file = Path(path)
-        require(not file.is_symlink() and file_sha(file) == digest, f"Installed file changed: {path}")
+        result = subprocess.run(("/usr/bin/dpkg-query", "-W", "-f=${Version}", package),
+                                capture_output=True, text=True, timeout=5)
+        if result.returncode != 0 or result.stdout.strip() != version:
+            return False
+    return True
+
+
+def patched(data, patch):
+    # Match each hunk with its exact context so edits outside the gesture code survive.
+    hunks = []
+    for line in patch.splitlines(keepends=True):
+        if line.startswith(b"@@ "):
+            hunks.append(([], []))
+        elif hunks:
+            old, new = hunks[-1]
+            if line[:1] in (b" ", b"-"):
+                old.append(line[1:])
+            if line[:1] in (b" ", b"+"):
+                new.append(line[1:])
+    for old_lines, new_lines in hunks:
+        old, new = b"".join(old_lines), b"".join(new_lines)
+        if data.count(new) == 1:
+            continue
+        require(data.count(old) == 1, "找不到原有手势代码接口，或该处已被其他补丁修改")
+        data = data.replace(old, new, 1)
+    return data
 
 
 def desktop_account():
@@ -151,9 +151,13 @@ def user_settings(account, action):
                "/usr/bin/python3", "-I", str(SETTINGS_HELPER), action, *args)
 
 
-def verify_payload(here, spec):
+def verify_payload(here, spec, drivers, native_settings, names=DESTINATIONS):
     replacements = {}
-    for name, (target, mode) in DESTINATIONS.items():
+    for name in names:
+        target, mode = DESTINATIONS[name]
+        if (name.endswith(".ko") and not drivers
+                or name in ("gnome-control-center", "settings-user.py") and not native_settings):
+            continue
         source = here / name
         data = source.read_bytes()
         require(sha(data) == spec["files"][name], f"Payload verification failed for {name}")
@@ -164,15 +168,22 @@ def verify_payload(here, spec):
     return replacements
 
 
-def indexes():
-    run("/usr/sbin/depmod", "-a", KERNEL)
+def indexes(drivers):
+    if drivers:
+        run("/usr/sbin/depmod", "-a", KERNEL)
     run("/usr/bin/glib-compile-schemas", "--strict", str(SCHEMAS))
 
 
-def clean_units():
-    if Path("/etc/systemd/system", UNIT).is_file():
+def global_wake_enabled():
+    result = subprocess.run((SYSTEMCTL, "--global", "is-enabled", USER_UNIT),
+                            capture_output=True, text=True, timeout=5)
+    return result.stdout.strip() == "enabled"
+
+
+def clean_units(state):
+    if state.get("drivers", True) and Path("/etc/systemd/system", UNIT).is_file():
         run(SYSTEMCTL, "disable", UNIT)
-    if Path("/etc/systemd/user", USER_UNIT).is_file():
+    if not state.get("wake_was_enabled") and Path("/etc/systemd/user", USER_UNIT).is_file():
         run(SYSTEMCTL, "--global", "disable", USER_UNIT)
 
 
@@ -189,19 +200,20 @@ def rollback():
 
     if state.get("settings_account") and SETTINGS_HELPER.is_file():
         user_settings(state["settings_account"], "rollback")
-    clean_units()
+    clean_units(state)
     for name, entry in state["files"].items():
         path = Path(name)
         if "original" in entry:
             put(path, (BASE / entry["original"]).read_bytes(), entry["original_mode"])
         else:
             path.unlink(missing_ok=True)
-    if DRIVERS.exists():
+    drivers = state.get("drivers", True)
+    if drivers and DRIVERS.exists():
         try:
             DRIVERS.rmdir()
         except OSError:
             pass
-    indexes()
+    indexes(drivers)
     run(SYSTEMCTL, "daemon-reload")
     retired = BASE.with_name(f"{BASE.name}-rolled-back-{time.time_ns()}")
     BASE.rename(retired)
@@ -211,21 +223,44 @@ def rollback():
 def install(check=False):
     here = Path(__file__).resolve().parent
     spec = json.loads((here / "spec.json").read_text())
-    replacements = verify_payload(here, spec)
-    verify_firmware(spec)
+    require(not BASE.is_symlink(), "手势备份路径异常")
     if BASE.is_dir():
         state = json.loads((BASE / "state.json").read_text())
-        require(state["new_build_ids"] == spec["new_build_ids"], "A different screen gestures build is installed")
         for name, entry in state["files"].items():
-            require(file_sha(Path(name)) == entry["sha256"], f"Installed file changed: {name}")
-        print("屏幕手势已安装。可在「设置 → 隐私与安全 → 锁屏」分别启用。", flush=True)
+            path = Path(name)
+            # Package updates can change DING and unrelated power permissions code.
+            if path in (DING, PERMISSIONS):
+                continue
+            require(path.is_file() and file_sha(path) == entry["sha256"], f"手势安装文件有变化：{name}")
+        for path in (DING, PERMISSIONS):
+            require(gesture_edit(here, spec, path)[0] == path.read_bytes(),
+                    f"已安装的手势代码被其他更新覆盖：{path}")
+        launchers = verify_payload(here, spec, False, False, LAUNCHER_FILES)
+        missing = {path: payload for path, payload in launchers.items()
+                   if str(path) not in state["files"]}
+        for path, (data, _mode) in missing.items():
+            require(not path.is_symlink() and (not path.exists() or path.read_bytes() == data),
+                    f"已有其他程序使用此路径：{path}")
+        if missing and not check:
+            add_launchers(state, missing)
+        print("屏幕手势检查通过。可在「设置 → 隐私与安全 → 锁屏」或应用菜单中的「屏幕手势」操作。",
+              flush=True)
         return
-    verify_baseline(spec)
+
+    drivers = needs_modules(spec)
+    native_settings = has_settings_version(spec)
     account = desktop_account()
-    rule = "".join(f"override {module} {KERNEL} updates/tb710fu-screen-gestures\n"
-                   for module in (TOUCH, PANEL))
-    replacements[Path("/etc/depmod.d/95-tb710fu-screen-gestures.conf")] = (rule.encode(), 0o644)
-    replacements[Path("/etc/systemd/system", UNIT)] = (f"""[Unit]
+    require(os.access("/usr/local/bin/tb-backlight-power", os.X_OK), "缺少双击亮屏所需的背光控制")
+    run("/usr/bin/python3", "-I", "-c",
+        "import gi; gi.require_version('Gtk', '4.0'); from gi.repository import Gio, Gtk")
+    replacements = verify_payload(here, spec, drivers, native_settings)
+    for path in (DING, PERMISSIONS):
+        replacements[path] = gesture_edit(here, spec, path)
+    if drivers:
+        rule = "".join(f"override {module} {KERNEL} updates/tb710fu-screen-gestures\n"
+                       for module in (TOUCH, PANEL))
+        replacements[Path("/etc/depmod.d/95-tb710fu-screen-gestures.conf")] = (rule.encode(), 0o644)
+        replacements[Path("/etc/systemd/system", UNIT)] = (f"""[Unit]
 Description=Verify TB710FU screen gestures on the first boot
 After=local-fs.target
 [Service]
@@ -234,45 +269,88 @@ ExecStart=/usr/bin/python3 -I {BASE}/install.py guard
 [Install]
 WantedBy=multi-user.target
 """.encode(), 0o644)
-    for path in (BASE, DRIVERS, *replacements):
-        if str(path) not in spec["edits"]:
-            require(not path.exists() and not path.is_symlink(), f"Unexpected existing file: {path}")
+    for path in replacements:
+        require(not path.is_symlink() and (not path.exists() or path.is_file()), f"异常安装路径：{path}")
 
-    print("Verified current GPT, firmware, drivers, and Ubuntu desktop packages.", flush=True)
+    print("屏幕手势的触控接口、驱动与桌面组件检查通过。", flush=True)
     if check:
         return
-    BASE.mkdir(mode=0o700)
     files = {}
     state = {"staged_boot": boot_id(), "files": files, "new_build_ids": spec["new_build_ids"],
-             "settings_account": account}
-    for number, (path, (data, _mode)) in enumerate(replacements.items()):
-        entry = {"sha256": sha(data)}
-        if str(path) in spec["edits"]:
-            old = path.read_bytes()
-            require(sha(old) == spec["edits"][str(path)], f"Original changed during staging: {path}")
-            entry.update(original=f"original-{number}", original_sha256=sha(old),
-                         original_mode=stat.S_IMODE(path.stat().st_mode))
-            put(BASE / entry["original"], old, 0o600)
-        files[str(path)] = entry
-    put(BASE / "state.json", json.dumps(state).encode(), 0o600)
-    put(BASE / "install.py", Path(__file__).read_bytes(), 0o700)
+             "wake_was_enabled": global_wake_enabled(), "drivers": drivers}
+    BASE.mkdir(mode=0o700)
     try:
-        DRIVERS.mkdir(parents=True)
+        for number, (path, (data, _mode)) in enumerate(replacements.items()):
+            entry = {"sha256": sha(data)}
+            if path.exists():
+                old = path.read_bytes()
+                entry.update(original=f"original-{number}", original_sha256=sha(old),
+                             original_mode=stat.S_IMODE(path.stat().st_mode))
+                put(BASE / entry["original"], old, 0o600)
+            files[str(path)] = entry
+        put(BASE / "state.json", json.dumps(state).encode(), 0o600)
+        put(BASE / "install.py", Path(__file__).read_bytes(), 0o700)
+    except Exception:
+        for path in BASE.iterdir():
+            path.unlink()
+        BASE.rmdir()
+        raise
+    try:
+        if drivers:
+            DRIVERS.mkdir(parents=True, exist_ok=True)
         for path, (data, mode) in replacements.items():
+            path.parent.mkdir(parents=True, exist_ok=True)
             put(path, data, mode)
-        indexes()
-        for module, name in ((TOUCH, "nvt_36xxx.ko"), (PANEL, "panel-nt36532-wqhd-dual-dsi-dsc.ko")):
-            selected = Path(run("/usr/sbin/modinfo", "-k", KERNEL, "-F", "filename", module))
-            require(selected.resolve() == (DRIVERS / name).resolve(), f"depmod did not select {module}")
-        run(SYSTEMCTL, "daemon-reload")
-        run(SYSTEMCTL, "enable", UNIT)
+        indexes(drivers)
+        if drivers:
+            for module, name in ((TOUCH, "nvt_36xxx.ko"), (PANEL, "panel-nt36532-wqhd-dual-dsi-dsc.ko")):
+                selected = Path(run("/usr/sbin/modinfo", "-k", KERNEL, "-F", "filename", module))
+                require(selected.resolve() == (DRIVERS / name).resolve(), f"depmod did not select {module}")
+            run(SYSTEMCTL, "daemon-reload")
+            run(SYSTEMCTL, "enable", UNIT)
         run(SYSTEMCTL, "--global", "enable", USER_UNIT)
-        user_settings(account, "apply")
+        if native_settings:
+            try:
+                if user_settings(account, "apply") == "installed":
+                    state["settings_account"] = account
+                    put(BASE / "state.json", json.dumps(state).encode(), 0o600)
+            except RuntimeError as error:
+                print(f"已有或无法更新的 GNOME 设置入口，请使用应用菜单：{error}", flush=True)
         os.sync()
     except Exception:
         rollback()
         raise
-    print("屏幕手势已安装。请保存工作后重启，再在「设置 → 隐私与安全 → 锁屏」启用。", flush=True)
+    print("屏幕手势已安装。请保存工作后重启，再打开应用菜单中的「屏幕手势」分别启用。", flush=True)
+
+
+def add_launchers(state, launchers):
+    created = []
+    try:
+        for path, (data, mode) in launchers.items():
+            if path.exists():
+                continue
+            path.parent.mkdir(parents=True, exist_ok=True)
+            put(path, data, mode)
+            created.append(path)
+            state["files"][str(path)] = {"sha256": sha(data)}
+        put(BASE / "state.json", json.dumps(state).encode(), 0o600)
+    except OSError:
+        for path in created:
+            path.unlink()
+        raise
+
+
+def gesture_edit(here, spec, path):
+    require(path.is_file() and not path.is_symlink(), f"缺少桌面组件：{path}")
+    name = {DING: "desktop-icons.patch", PERMISSIONS: "session-permissions.patch"}[path]
+    patch = (here / name).read_bytes()
+    require(sha(patch) == spec["files"][name], f"附件验证失败：{name}")
+    data = path.read_bytes()
+    # Recognize the previous catalog payload directly as well as exact hunks.
+    baseline = {DING: "desktopGrid.js", PERMISSIONS: "tb-session-permissions.py"}[path]
+    if sha(data) != spec["files"][baseline]:
+        data = patched(data, patch)
+    return data, stat.S_IMODE(path.stat().st_mode)
 
 
 def guard():
@@ -296,15 +374,22 @@ def guard():
 
 
 if __name__ == "__main__":
-    require(os.geteuid() == 0 and os.uname().release == KERNEL, "Expected root on the verified kernel")
-    match sys.argv[1:]:
-        case ["apply"]:
-            install()
-        case ["check"]:
+    require(os.geteuid() == 0, "需要管理员权限")
+    action, = sys.argv[1:]
+    try:
+        if action == "check":
             install(check=True)
-        case ["guard"]:
-            guard()
-        case ["rollback"]:
-            rollback()
-        case _:
-            raise SystemExit("usage: install.py check|apply|guard|rollback")
+        else:
+            with open("/run/lock/tb710fu-screen-gestures.lock", "w") as lock:
+                fcntl.flock(lock, fcntl.LOCK_EX)
+                match action:
+                    case "apply":
+                        install()
+                    case "guard":
+                        guard()
+                    case "rollback":
+                        rollback()
+                    case _:
+                        raise RuntimeError("usage: install.py check|apply|guard|rollback")
+    except (RuntimeError, OSError, subprocess.SubprocessError) as error:
+        raise SystemExit(f"屏幕手势：{error}") from None

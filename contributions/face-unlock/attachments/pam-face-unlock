@@ -1,0 +1,8 @@
+#!/bin/sh
+[ "${PAM_TYPE:-}" = auth ] && [ "${PAM_SERVICE:-}" = gdm-password ] &&
+    [ -z "${PAM_RHOST:-}" ] && [ -n "${PAM_USER:-}" ] || exit 1
+
+exec /usr/bin/timeout --kill-after=1s 12s /usr/bin/env -i \
+    PATH=/usr/sbin:/usr/bin:/sbin:/bin LANG=C.UTF-8 \
+    /usr/bin/python3 -I /usr/local/lib/tb710fu-face-unlock/face-unlock.py \
+    authenticate "$PAM_USER" "$PPID" 2>/dev/null

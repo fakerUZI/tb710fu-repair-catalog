@@ -1,0 +1,10 @@
+#!/bin/sh
+set -eu
+[ "$#" -eq 1 ] && [ -n "${PKEXEC_UID:-}" ] && [ "$(id -u)" -eq 0 ] || exit 1
+case "$1" in
+    enroll-preview) deadline=70s ;;
+    enroll|enable|disable|forget) deadline=34s ;;
+    *) exit 2 ;;
+esac
+exec /usr/bin/timeout --kill-after=1s "$deadline" /usr/bin/python3 -I \
+    /usr/local/lib/tb710fu-face-unlock/face-unlock.py settings "$1"
