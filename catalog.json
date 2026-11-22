@@ -710,28 +710,28 @@
     },
     {
       "id": "gnome-login-display",
-      "title": "TB710FU GNOME 登录黑屏恢复（144 Hz 内屏）",
-      "description": "用于开机或注销重登后，内屏卡在假锁屏、背光亮但桌面没有画面。安装后下次登录，在已解锁的本机 GNOME Wayland 会话里，为单独使用的 144 Hz 内屏短暂熄屏并恢复一次。保留刷新率和显示布局。接有外屏或使用其他刷新率时跳过。",
+      "title": "TB710FU GNOME 登录与解锁黑屏恢复（60 / 144 Hz 内屏）",
+      "description": "用于开机或注销重登后卡在假锁屏、背光亮但没有画面，以及 60 Hz 下解锁后画面没有恢复。安装后等待下一次 GNOME Wayland 登录，本机会话已解锁时对单独运行的 60 Hz 或 144 Hz 内屏短暂熄屏并恢复一次。普通锁屏解锁时也为 60 Hz 内屏执行一次恢复。外接屏与其他刷新率跳过。",
       "device": "TB710FU",
       "status": "community-review",
-      "risk": "以普通用户权限安装登录服务。生效时屏幕可能短暂熄灭。适用于 GNOME 与内核仍有响应的显示故障。安装后请保存工作并注销重登。支持只读检查和回退。",
+      "risk": "普通用户权限。恢复画面时屏幕可能短暂熄灭，保留原有显示模式和布局。适用于 GNOME 与内核仍有响应的故障。装好后请保存工作并注销重登。支持只读检查和回退。",
       "script": {
         "path": "contributions/gnome-login-display/script.sh",
-        "sha256": "6e020d811b4bff6339894f568f969e493f79fffab32b6aa665cd6e260a2e7937",
+        "sha256": "e9a983e9c92cee1268d1bfb953b5393dd13b3fe01013c2ef7733e4bad7cd78f7",
         "requires_admin": false
       },
       "attachments": [
         {
           "path": "contributions/gnome-login-display/attachments/README.md",
-          "sha256": "944214d2d7ddd65a3c5b15c86a6ef3f202888124eae728e95b8d138ac588b66c"
+          "sha256": "397ef622ea695487fb3a69f3fb424cfce6deaffb05d3d54c6acefd03349e49ce"
         },
         {
           "path": "contributions/gnome-login-display/attachments/login-display.py",
-          "sha256": "a8f184424d0bf9b6710ecb98d7ac344f11436d27f908711865f59c4eda1ec134"
+          "sha256": "d7af96f553cb06e017cb2f452ea69cf3cdee7544e8c0d0cea5398b3f95039478"
         },
         {
           "path": "contributions/gnome-login-display/attachments/tb710fu-login-display.service",
-          "sha256": "a9727d57b9270e9a17486d5f26ea2c40fe73f3923e60349c5715acb3bdab2af9"
+          "sha256": "948be023eacf7ac48cc39020951cc604a0c6e7167afacd3c7fa56774be9536a8"
         }
       ]
     }

@@ -26,16 +26,16 @@ class LoginDisplayTests(unittest.TestCase):
         self.bus = Mock()
         self.bus.locked.return_value = False
         self.bus.state.return_value = monitor_state()
-        self.bus.mode.return_value = display.ON
         root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         self.stamp = root / "session"
         self.dpms = root / "dpms"
         self.dpms.write_text("On")
 
     def test_refresh_and_external_display_boundaries(self):
-        self.assertEqual(display.panel_144(monitor_state(143.9999)), (4, "DSI-1"))
-        self.assertIsNone(display.panel_144(monitor_state(120)))
-        self.assertIsNone(display.panel_144(monitor_state(external=True)))
+        self.assertEqual(display.panel_mode(monitor_state(143.9999), display.LOGIN_RATES), (4, "DSI-1", 144))
+        self.assertEqual(display.panel_mode(monitor_state(59.9999), display.LOGIN_RATES), (4, "DSI-1", 60))
+        self.assertIsNone(display.panel_mode(monitor_state(120), display.LOGIN_RATES))
+        self.assertIsNone(display.panel_mode(monitor_state(external=True), display.LOGIN_RATES))
 
     def test_wake_even_if_panel_does_not_confirm_off(self):
         with patch.object(display, "wait_dpms", side_effect=[False, True]):
@@ -56,11 +56,64 @@ class LoginDisplayTests(unittest.TestCase):
                 patch.object(display, "panel_status", return_value=self.dpms), \
                 patch.object(display.time, "sleep"), \
                 patch.object(display.time, "monotonic", side_effect=range(0, 55, 2)), \
-                patch.object(display, "cycle") as cycle:
+                patch.object(display, "restore_panel") as restore:
             for _ in range(2):
                 display.recover(self.bus, self.stamp, (OSError,))
-        cycle.assert_called_once_with(self.bus, self.dpms, (OSError,))
+        restore.assert_called_once_with(self.bus, self.dpms, 144, "login", (OSError,))
         self.assertEqual(self.stamp.read_text(), "session-4\n")
+
+    def test_login_recovers_60_hz_even_when_drm_reports_off(self):
+        self.bus.state.return_value = monitor_state(60)
+        self.dpms.write_text("Off")
+        with patch.object(display, "active_session", return_value="login-60"), \
+                patch.object(display, "panel_status", return_value=self.dpms), \
+                patch.object(display.time, "sleep"), \
+                patch.object(display.time, "monotonic", side_effect=range(0, 55, 2)), \
+                patch.object(display, "restore_panel") as restore:
+            self.assertTrue(display.recover(self.bus, self.stamp, (OSError,)))
+        restore.assert_called_once_with(self.bus, self.dpms, 60, "login", (OSError,))
+
+    def unlock_recovery(self):
+        glib = Mock(SOURCE_REMOVE=False, SOURCE_CONTINUE=True)
+        glib.timeout_add.return_value = 1
+        return display.UnlockRecovery(self.bus, glib, (OSError,))
+
+    def screen_saver_changed(self, recovery, locked):
+        arguments = Mock()
+        arguments.unpack.return_value = (locked,)
+        recovery.changed(None, None, None, None, None, arguments)
+
+    def test_unlock_recovers_once_at_60_hz(self):
+        self.bus.state.return_value = monitor_state(60)
+        recovery = self.unlock_recovery()
+        for locked in (True, False, False):
+            self.screen_saver_changed(recovery, locked)
+        recovery.glib.timeout_add.assert_called_once()
+        with patch.object(display, "active_session", return_value="sess"), \
+                patch.object(display, "panel_status", return_value=self.dpms), \
+                patch.object(display, "restore_panel") as restore:
+            self.assertFalse(recovery.after_unlock())
+        restore.assert_called_once_with(self.bus, self.dpms, 60, "unlock", (OSError,))
+
+    def test_unlock_waits_for_logind_and_cancels_if_locked_again(self):
+        recovery = self.unlock_recovery()
+        self.screen_saver_changed(recovery, True)
+        self.screen_saver_changed(recovery, False)
+        with patch.object(display, "active_session", return_value=None):
+            self.assertTrue(recovery.after_unlock())
+        self.screen_saver_changed(recovery, True)
+        recovery.glib.source_remove.assert_called_once_with(1)
+
+    def test_unlock_skips_other_modes_even_when_screen_is_dark(self):
+        recovery = self.unlock_recovery()
+        self.dpms.write_text("Off")
+        self.screen_saver_changed(recovery, True)
+        self.screen_saver_changed(recovery, False)
+        with patch.object(display, "active_session", return_value="sess"), \
+                patch.object(display, "panel_status", return_value=self.dpms), \
+                patch.object(display, "restore_panel") as restore:
+            self.assertFalse(recovery.after_unlock())
+        restore.assert_not_called()
 
     def test_dual_screen_does_not_cycle(self):
         self.bus.state.return_value = monitor_state(external=True)
