@@ -546,6 +546,29 @@
           "sha256": "05a39eb5a2275c192962af6dddbc3cea40987c60867acff473411627fbbf1759"
         }
       ]
+    },
+    {
+      "id": "dp-refresh-profiles",
+      "title": "DP 外接屏刷新率自动切换",
+      "description": "适用 TB710FU、Ubuntu 26.04、GNOME Wayland、7.2.6-tb710fu-20261118。内屏 144Hz 接 DP 外屏时可能黑屏或灰屏。此条目保存 GNOME 的配对配置，接上同一台 DP 显示器时内屏切到 120Hz，外屏保持当前分辨率并选约 60Hz；拔掉时恢复原来保存的单屏刷新率。请先保存单屏设置，登录后接上一台 DP 外屏，使用“加入显示”。以普通用户运行，并在 GNOME 弹窗点“保留更改”。需要系统 Python 3 和 PyGObject。已实测同一台 2560×1440 显示器的原生配置和拔插切换；投稿脚本在平板上通过只读检查，写入和回退流程使用隔离测试验证。详见附件。",
+      "device": "TB710FU",
+      "status": "community-review",
+      "risk": "应用时可能短暂熄屏或闪黑，GNOME 会要求确认；画面异常时等待自动恢复。写入范围为当前账号的 GNOME 显示配置及一份私有回退记录。回退仅在显示配置仍与本条目确认写入的版本一致时恢复原文件，随后须注销并重新登录。若后来修改过显示配置，脚本会保留现有改动和备份，请用 GNOME 显示设置还原。保存的配置属于当前账号及显示器配对。",
+      "script": {
+        "path": "contributions/dp-refresh-profiles/script.sh",
+        "sha256": "658a75c008ef392cc470dadda1d420be6a0c824463b6f54ccd22efff7b0df4e0",
+        "requires_admin": false
+      },
+      "attachments": [
+        {
+          "path": "contributions/dp-refresh-profiles/attachments/display-profiles.py",
+          "sha256": "ea56f92f55b90d454721c10dcd7fc826491644d126d385f84c706c73e3211388"
+        },
+        {
+          "path": "contributions/dp-refresh-profiles/attachments/README.md",
+          "sha256": "675bbce405f9006bb4299f6504ab63d4a4aeef6632d6e78825d711a9f1e4c6bd"
+        }
+      ]
     }
   ]
 }
