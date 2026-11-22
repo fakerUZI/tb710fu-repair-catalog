@@ -15,7 +15,9 @@ import time
 
 KERNEL = "7.2.6-tb710fu-20261118"
 BASE = Path("/var/backups/tb710fu-screen-gestures")
-DRIVERS = Path("/lib/modules", KERNEL, "updates/tb710fu-screen-gestures")
+DRIVER_SUBDIR = "updates/tb710fu-screen-gestures"
+DRIVERS = Path("/lib/modules", KERNEL, DRIVER_SUBDIR)
+DEPMOD_CONF = Path("/etc/depmod.d/95-tb710fu-screen-gestures.conf")
 UNIT = "tb710fu-screen-gestures-guard.service"
 USER_UNIT = "tb710fu-double-tap-wake.service"
 LAUNCHER_FILES = ("gesture-settings.py", "tb710fu-gesture-settings.desktop")
@@ -29,9 +31,9 @@ SETTINGS_HELPER = Path("/usr/local/libexec/tb710fu-screen-gestures-settings-user
 SYSTEMCTL = "/usr/bin/systemctl"
 TOUCH = "nvt_36xxx"
 PANEL = "panel_nt36532_wqhd_dual_dsi_dsc"
+MODULE_FILES = {TOUCH: "nvt_36xxx.ko", PANEL: "panel-nt36532-wqhd-dual-dsi-dsc.ko"}
 DESTINATIONS = {
-    "nvt_36xxx.ko": (DRIVERS / "nvt_36xxx.ko", 0o644),
-    "panel-nt36532-wqhd-dual-dsi-dsc.ko": (DRIVERS / "panel-nt36532-wqhd-dual-dsi-dsc.ko", 0o644),
+    **{name: (DRIVERS / name, 0o644) for name in MODULE_FILES.values()},
     "org.tb710fu.screen-gestures.gschema.xml": (SCHEMAS / "org.tb710fu.screen-gestures.gschema.xml", 0o644),
     "double-tap-wake.py": (Path("/usr/local/libexec/tb710fu-double-tap-wake"), 0o755),
     USER_UNIT: (Path("/etc/systemd/user", USER_UNIT), 0o644),
@@ -175,6 +177,54 @@ def indexes(drivers):
     run("/usr/bin/glib-compile-schemas", "--strict", str(SCHEMAS))
 
 
+def driver_override(*, legacy=False):
+    # depmod matches the module's basename, including its original hyphens.
+    version = KERNEL if legacy else f"^{KERNEL.replace('.', '[.]')}$"
+    names = MODULE_FILES if legacy else (Path(name).stem for name in MODULE_FILES.values())
+    return "".join(f"override {name} {version} {DRIVER_SUBDIR}\n" for name in names).encode()
+
+
+def installed_hashes(path, entry):
+    hashes = {entry["sha256"]}
+    if path == DEPMOD_CONF and entry["sha256"] == sha(driver_override(legacy=True)):
+        # An interrupted update may have written the rule before the receipt.
+        hashes.add(sha(driver_override()))
+    return hashes
+
+
+def verify_driver_selection():
+    for module, name in MODULE_FILES.items():
+        selected = Path(run("/usr/sbin/modinfo", "-k", KERNEL, "-F", "filename", module))
+        expected = DRIVERS / name
+        require(selected.resolve() == expected.resolve(),
+                f"depmod 为 {module} 选中了 {selected}，预期 {expected}")
+
+
+def update_driver_override(state):
+    entry = state["files"].get(str(DEPMOD_CONF))
+    old_hash = sha(driver_override(legacy=True))
+    if entry is None or entry["sha256"] != old_hash:
+        return
+    current = DEPMOD_CONF.read_bytes()
+    require(sha(current) in installed_hashes(DEPMOD_CONF, entry), "屏幕手势的 depmod 规则已被修改")
+    replacement = driver_override()
+    # Refresh the saved rollback entry point before changing its managed configuration.
+    put(BASE / "install.py", Path(__file__).read_bytes(), 0o700)
+    if current != replacement:
+        put(DEPMOD_CONF, replacement, 0o644)
+    try:
+        run("/usr/sbin/depmod", "-a", KERNEL)
+        verify_driver_selection()
+        entry["sha256"] = sha(replacement)
+        put(BASE / "state.json", json.dumps(state).encode(), 0o600)
+    except Exception:
+        entry["sha256"] = old_hash
+        if current != replacement:
+            put(DEPMOD_CONF, current, 0o644)
+            run("/usr/sbin/depmod", "-a", KERNEL)
+        raise
+
+
 def global_wake_enabled():
     result = subprocess.run((SYSTEMCTL, "--global", "is-enabled", USER_UNIT),
                             capture_output=True, text=True, timeout=5)
@@ -192,7 +242,7 @@ def rollback():
     state = json.loads((BASE / "state.json").read_text())
     for name, entry in state["files"].items():
         path = Path(name)
-        acceptable = {entry["sha256"], entry.get("original_sha256")}
+        acceptable = installed_hashes(path, entry) | {entry.get("original_sha256")}
         require(not path.is_symlink() and (not path.exists() or file_sha(path) in acceptable),
                 f"File changed since installation: {path}")
         if "original" in entry:
@@ -232,7 +282,8 @@ def install(check=False):
             # Package updates can change DING and unrelated power permissions code.
             if path in (DING, PERMISSIONS):
                 continue
-            require(path.is_file() and file_sha(path) == entry["sha256"], f"手势安装文件有变化：{name}")
+            require(not path.is_symlink() and path.is_file() and file_sha(path) in installed_hashes(path, entry),
+                    f"手势安装文件有变化：{name}")
         for path in (DING, PERMISSIONS):
             require(gesture_edit(here, spec, path)[0] == path.read_bytes(),
                     f"已安装的手势代码被其他更新覆盖：{path}")
@@ -242,8 +293,10 @@ def install(check=False):
         for path, (data, _mode) in missing.items():
             require(not path.is_symlink() and (not path.exists() or path.read_bytes() == data),
                     f"已有其他程序使用此路径：{path}")
-        if missing and not check:
-            add_launchers(state, missing)
+        if not check:
+            update_driver_override(state)
+            if missing:
+                add_launchers(state, missing)
         print("屏幕手势检查通过。可在「设置 → 隐私与安全 → 锁屏」或应用菜单中的「屏幕手势」操作。",
               flush=True)
         return
@@ -258,9 +311,7 @@ def install(check=False):
     for path in (DING, PERMISSIONS):
         replacements[path] = gesture_edit(here, spec, path)
     if drivers:
-        rule = "".join(f"override {module} {KERNEL} updates/tb710fu-screen-gestures\n"
-                       for module in (TOUCH, PANEL))
-        replacements[Path("/etc/depmod.d/95-tb710fu-screen-gestures.conf")] = (rule.encode(), 0o644)
+        replacements[DEPMOD_CONF] = (driver_override(), 0o644)
         replacements[Path("/etc/systemd/system", UNIT)] = (f"""[Unit]
 Description=Verify TB710FU screen gestures on the first boot
 After=local-fs.target
@@ -303,9 +354,7 @@ WantedBy=multi-user.target
             put(path, data, mode)
         indexes(drivers)
         if drivers:
-            for module, name in ((TOUCH, "nvt_36xxx.ko"), (PANEL, "panel-nt36532-wqhd-dual-dsi-dsc.ko")):
-                selected = Path(run("/usr/sbin/modinfo", "-k", KERNEL, "-F", "filename", module))
-                require(selected.resolve() == (DRIVERS / name).resolve(), f"depmod did not select {module}")
+            verify_driver_selection()
             run(SYSTEMCTL, "daemon-reload")
             run(SYSTEMCTL, "enable", UNIT)
         run(SYSTEMCTL, "--global", "enable", USER_UNIT)

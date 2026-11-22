@@ -495,7 +495,7 @@
       "attachments": [
         {
           "path": "contributions/screen-gestures/attachments/README.md",
-          "sha256": "71024b1970045eb52ca78317d68a2d0af3c3829cb33a254515fb1d9eb53f43bb"
+          "sha256": "6b8af5e13412bbbe3374dc3a24d681a536b4176048756d518db5635e0168c1a5"
         },
         {
           "path": "contributions/screen-gestures/attachments/desktop-icons.patch",
@@ -519,7 +519,7 @@
         },
         {
           "path": "contributions/screen-gestures/attachments/install.py",
-          "sha256": "ef2c8d27da940cee2b2e2376e3c2570efaa38762162ecef99b7e19046e6aa9ae"
+          "sha256": "c80a1ba4b9c0abb844868fb11030bf505a19b6222a0fa7dcbd83b63cebb0da8f"
         },
         {
           "path": "contributions/screen-gestures/attachments/nvt_36xxx.ko",
