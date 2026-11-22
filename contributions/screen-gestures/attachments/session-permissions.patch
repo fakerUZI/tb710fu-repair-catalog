@@ -1,0 +1,24 @@
+--- a/tb-session-permissions.py
++++ b/tb-session-permissions.py
+@@ -10,6 +10,7 @@
+ from tb710fu_session import active_user
+ 
+ BACKLIGHT = Path('/sys/class/backlight/sy7758-backlight')
++GESTURES = Path('/sys/bus/mipi-dsi/devices/ae94000.dsi.0/dt2w_enabled')
+ 
+ 
+ def key_devices():
+@@ -52,4 +53,13 @@
+                     os.chown(p, owner, -1)
+             except OSError as exc:
+                 print(f'backlight access: {exc}', flush=True)
++        try:
++            owner = uid if uid is not None else 0
++            if GESTURES.exists() and GESTURES.stat().st_uid != owner:
++                # Revoke the old owner's access before clearing their preference.
++                os.chown(GESTURES, 0, -1)
++                GESTURES.write_text('0\n')
++                os.chown(GESTURES, owner, -1)
++        except OSError as exc:
++            print(f'double tap access: {exc}', flush=True)
+         time.sleep(2)

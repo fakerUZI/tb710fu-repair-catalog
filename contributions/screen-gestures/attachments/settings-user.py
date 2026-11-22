@@ -130,6 +130,7 @@ def apply(binary_path):
         rollback()
         raise
     refresh_bus()
+    print("installed")
 
 
 if __name__ == "__main__":

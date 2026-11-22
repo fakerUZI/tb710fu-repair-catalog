@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Screen Gestures
+Name[zh_CN]=屏幕手势
+Exec=/usr/local/libexec/tb710fu-gesture-settings
+Icon=preferences-desktop-display
+Categories=Settings;

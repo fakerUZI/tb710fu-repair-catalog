@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.tb710fu.face-unlock" path="/org/tb710fu/face-unlock/">
+    <key name="keep-awake-while-looking" type="b">
+      <default>false</default>
+      <summary>Keep the screen on while looking</summary>
+      <description>Use brief front-camera checks before the desktop would go idle.</description>
+    </key>
+  </schema>
+</schemalist>

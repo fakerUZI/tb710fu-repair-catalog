@@ -1,9 +1,4 @@
 {
-  "config_sha256": "2930add704f3c7fd10285916ed7a3256e0c8b7e9ca18f536813194a2cb557e1f",
-  "firmware_sha256": {
-    "vendor_boot_a": "0a3c13edf9af8c315906b784aead9cd40b8fb35ce4f583df6c64fb50065be34c",
-    "dtbo_a": "408901bcf1c6862f226f218996cf2c0089e219f6c406d9c857df9482924a7873"
-  },
   "originals": {
     "nvt_36xxx": {
       "id": "5f5097dc2a00e51aed9d44a360d30c8513487a42",
@@ -12,10 +7,6 @@
     "panel_nt36532_wqhd_dual_dsi_dsc": {
       "id": "171dd0ff911d4eb4cc57f1a7695e6494ffb37991",
       "sha256": "20ed8fe6db6e66155fe55213ae555f66642024fe8bc344993456557396a037b8"
-    },
-    "msm": {
-      "id": "ecea4d20d5cf83454c58ff735fe7180f7cbfd7a9",
-      "sha256": "9f446170d027f12c22d9120d4e67a2cf621cbe4d3154628e68a6aa5d3537dffa"
     }
   },
   "new_build_ids": {
@@ -24,12 +15,7 @@
   },
   "packages": {
     "gnome-control-center": "1:50.3-0ubuntu0.2",
-    "gnome-control-center-data": "1:50.3-0ubuntu0.2",
-    "gnome-shell-ubuntu-extensions": "50.26.04.8ubuntu"
-  },
-  "edits": {
-    "/usr/share/gnome-shell/extensions/ding@rastersoft.com/app/desktopGrid.js": "dc33a1645918f3d4a498c047a79ce5409e411f5a6968436a470c1b9a1b1fbbd0",
-    "/usr/local/sbin/tb-session-permissions.py": "03f6a97205227988eda16a44ab744f4acd2b327fe2a19b6f36635b05deabe647"
+    "gnome-control-center-data": "1:50.3-0ubuntu0.2"
   },
   "files": {
     "nvt_36xxx.ko": "36c1359b7013a6a2cdde36b1433291074d5c66b7c3eb59c271012e85d75551fa",
@@ -39,7 +25,11 @@
     "org.tb710fu.screen-gestures.gschema.xml": "f1f8193be596519f6d947f302339838e0c8c4acd96b86a44eca60f915f9d699e",
     "double-tap-wake.py": "9d670338da793a769bd39ad2e6d1694dbb27cdf22cfdc58121db6e18cb2dd92d",
     "tb710fu-double-tap-wake.service": "b93799140c4675b52c7704bfa15908343d20e3daee3af60013db74414706faba",
-    "settings-user.py": "b454070dba29898c11781c5b8f1256a9b1a6efdd0579875bb9607a371ff605f7",
-    "gnome-control-center": "2d429272d4393674ffe13b2f6d42a65dfd2998c0b6bb871a2bef597acd69ef57"
+    "settings-user.py": "cd5f1cbcfac792e8f2ad9867eac292c28bde74ee786d9b4b736c2f9233b6a8ca",
+    "gnome-control-center": "2d429272d4393674ffe13b2f6d42a65dfd2998c0b6bb871a2bef597acd69ef57",
+    "desktop-icons.patch": "49d561c4f901efadd2db95e7400088f2129ca26bb873ea1f66c43dc86560eb48",
+    "session-permissions.patch": "2e8743aa395a2815360ec7525a357a7d7ff7689761b0396f582424604e2d6fc1",
+    "gesture-settings.py": "62863cfedf500b98e85b2d42685d5c4ad8596ac02cc5e03d928437addb0303f9",
+    "tb710fu-gesture-settings.desktop": "5baf14a428a6d9b37345e53a338b970e16697bbb61c11d2809ff43880519b778"
   }
 }

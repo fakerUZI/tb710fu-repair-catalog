@@ -1,0 +1,115 @@
+--- a/app/desktopGrid.js
++++ b/app/desktopGrid.js
+@@ -19,6 +19,7 @@
+ 'use strict';
+ const Gtk = imports.gi.Gtk;
+ const Gdk = imports.gi.Gdk;
++const Gio = imports.gi.Gio;
+ 
+ const Prefs = imports.preferences;
+ const Enums = imports.enums;
+@@ -40,6 +41,10 @@
+         this._desktopManager = desktopManager;
+         this._desktopName = desktopName;
+         this._asDesktop = asDesktop;
++        const schema = Gio.SettingsSchemaSource.get_default()?.lookup('org.tb710fu.screen-gestures', true);
++        this._gestureSettings = asDesktop && schema ? new Gio.Settings({settings_schema: schema}) : null;
++        this._backgroundLockPress = null;
++        this._backgroundLockClick = null;
+         this._desktopDescription = desktopDescription;
+         this.updateWindowGeometry();
+         this.updateUnscaledHeightWidthMargins();
+@@ -114,16 +119,37 @@
+         this.connectSignal(this._eventBox, 'button-press-event', (actor, event) => {
+             let [a, x, y] = event.get_coords();
+             [x, y] = this.coordinatesLocalToGlobal(x, y);
++            // GDK may emit a second, synthetic double-button event for one press.
++            if (event.get_event_type() === Gdk.EventType.BUTTON_PRESS) {
++                this._backgroundLockPress = this._canLockFromBackground(event, x, y) ?
++                    {x, y, time: event.get_time()} : null;
++                if (!this._backgroundLockPress)
++                    this._backgroundLockClick = null;
++            }
+             this._desktopManager.onPressButton(x, y, event, this);
+             return false;
+         });
+         this.connectSignal(this._eventBox, 'motion-notify-event', (actor, event) => {
+             let [a, x, y] = event.get_coords();
+             [x, y] = this.coordinatesLocalToGlobal(x, y);
++            if (this._backgroundLockPress &&
++                Math.hypot(x - this._backgroundLockPress.x, y - this._backgroundLockPress.y) > 8) {
++                this._backgroundLockPress = null;
++                this._backgroundLockClick = null;
++            }
+             this._desktopManager.onMotion(x, y);
+         });
+         this.connectSignal(this._eventBox, 'button-release-event', (actor, event) => {
++            const press = this._backgroundLockPress;
++            this._backgroundLockPress = null;
+             this._desktopManager.onReleaseButton(this);
++            if (!press)
++                return false;
++
++            let [, x, y] = event.get_coords();
++            [x, y] = this.coordinatesLocalToGlobal(x, y);
++            this._handleBackgroundLockClick(event, x, y, press);
++            return false;
+         });
+ 
+         this.connectSignal(this._window, 'key-press-event', (window, event) => {
+@@ -185,6 +211,55 @@
+         this._maxRows =  Math.floor(this._height / (Prefs.get_desired_height() + 4 * elementSpacing));
+         this._elementWidth = Math.floor(this._width / this._maxColumns);
+         this._elementHeight = Math.floor(this._height / this._maxRows);
++    }
++
++    _handleBackgroundLockClick(event, x, y, press) {
++        const previous = this._backgroundLockClick;
++        this._backgroundLockClick = null;
++        const time = event.get_time();
++        if (((time - press.time) >>> 0) > 500 ||
++            Math.hypot(x - press.x, y - press.y) > 8 ||
++            !this._canLockFromBackground(event, x, y))
++            return;
++
++        const device = event.get_source_device();
++        const touch = device?.get_source() === Gdk.InputSource.TOUCHSCREEN;
++        const settings = Gtk.Settings.get_for_screen(this._eventBox.get_screen());
++        const interval = touch ? Math.max(400, settings.gtk_double_click_time) : settings.gtk_double_click_time;
++        const distance = touch ? Math.max(24, settings.gtk_double_click_distance) : settings.gtk_double_click_distance;
++        if (!previous || previous.device !== device ||
++            ((press.time - previous.time) >>> 0) > interval ||
++            Math.abs(x - previous.x) > distance || Math.abs(y - previous.y) > distance) {
++            this._backgroundLockClick = {x, y, time, device};
++            return;
++        }
++
++        Gio.DBus.session.call('org.gnome.ScreenSaver', '/org/gnome/ScreenSaver',
++            'org.gnome.ScreenSaver', 'Lock', null, null, Gio.DBusCallFlags.NONE,
++            5000, null, (bus, result) => {
++                try {
++                    bus.call_finish(result);
++                } catch (error) {
++                    logError(error, 'Could not lock from the desktop');
++                }
++            });
++    }
++
++    _canLockFromBackground(event, x, y) {
++        const modifiers = Gdk.ModifierType.SHIFT_MASK | Gdk.ModifierType.CONTROL_MASK |
++            Gdk.ModifierType.MOD1_MASK | Gdk.ModifierType.SUPER_MASK |
++            Gdk.ModifierType.BUTTON2_MASK | Gdk.ModifierType.BUTTON3_MASK;
++        if (!this._gestureSettings?.get_boolean('desktop-click-to-lock') ||
++            event.get_button()[1] !== Gdk.BUTTON_PRIMARY ||
++            (event.get_state()[1] & modifiers) ||
++            Gtk.get_event_widget(event) !== this._eventBox)
++            return false;
++
++        // The event box can also receive events propagated by children.
++        return !Object.values(this._fileItems).some(([, , item]) =>
++            [item.iconRectangle, item.labelRectangle].some(rect => rect &&
++                x >= rect.x && x < rect.x + rect.width &&
++                y >= rect.y && y < rect.y + rect.height));
+     }
+ 
+     updateGridRectangle() {

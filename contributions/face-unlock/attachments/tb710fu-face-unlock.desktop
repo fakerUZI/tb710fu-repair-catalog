@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Face Unlock
+Name[zh_CN]=人脸解锁
+Exec=/usr/local/libexec/tb710fu-face-settings
+Icon=changes-prevent-symbolic
+Categories=Settings;
