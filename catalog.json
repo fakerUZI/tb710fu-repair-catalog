@@ -44,6 +44,29 @@
       ]
     },
     {
+      "id": "suspend-restore",
+      "title": "恢复系统挂起（s2idle）",
+      "device": "TB710FU",
+      "status": "community-review",
+      "description": "恢复 GNOME 电源菜单的挂起。按当前系统状态启用内核的 mem / s2idle 挂起，并解除 sleep.target 和 suspend.target 的标准屏蔽。支持检查、应用和回退。已在 TB710FU 实测挂起、唤醒和解锁后亮度恢复。",
+      "risk": "需要管理员权限。应用后可手动测试挂起，现有空闲或合盖挂起策略会按系统设置生效。首次测试前请保存工作。",
+      "script": {
+        "path": "contributions/suspend-restore/script.sh",
+        "sha256": "a220c84cc456b6cb1b231575a1f86fc905c4ae8ca35980acdc66d6d0805379fc",
+        "requires_admin": true
+      },
+      "attachments": [
+        {
+          "path": "contributions/suspend-restore/attachments/install.py",
+          "sha256": "dd9be6817f15e53a0b648f0a1707312d62274a981d76aa91e8f7e6fb4a4a675a"
+        },
+        {
+          "path": "contributions/suspend-restore/attachments/README.md",
+          "sha256": "954609dc38e336d69946436640b6efcc0593b92ac650ec2f29ce980e4e3d1414"
+        }
+      ]
+    },
+    {
       "id": "touch-window-grip",
       "title": "手指拖动 / 缩放宽边框为无边框的 X11 窗口（Electron 等）",
       "description": "问题：平板上无法用一根手指拖动画布/窗口，也无法从边角缩放。WorkBuddy、微信这类 Electron / 无边框应用尤其明显。\n\n原因：无边框窗口的拖动靠 -webkit-app-region: drag，缩放靠 Chromium 的 resize 热区，二者都只识别鼠标事件；触摸会被当成普通点击交给页面。平板上没有物理鼠标，于是这条路径整体失效。\n\n做法：touch-window-grip 用 XInput2 被动触摸抓取（XIGrabTouchBegin），在触摸按下那一刻先做一次分流，再决定是否接管：\n  1) 距角落 54px 内 → 双轴缩放\n  2) 距边缘 18px 内 → 单轴缩放\n  3) 顶部 80px 条 → 移动窗口\n  4) 其余 → 立即 XIRejectTouch，原样交还给应用，保证点击、长按、滚动不被抢\n\n窗口尺寸受 WM_NORMAL_HINTS 的 min/max 夹取；每次按下都重新读取窗口几何，避免窗口被别的途径移动后错位。配置在 ~/.config/touch-window-grip/targets.json，按 WM_CLASS / 标题关键字匹配要接管的应用，可用 --add / --remove / --list 管理。自带 --selftest，会验证分类、移动、右/下/右下角缩放并复原。\n\n只对 XWayland / X11 窗口有效；原生 Wayland 客户端抓不到。\n\n用法：TB710FU_FIX_ACTION=check 只检查不改动，默认 apply 安装，rollback 停用服务并移除本包文件（你的 targets.json 会保留为 .bak 目录）。",

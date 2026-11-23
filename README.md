@@ -63,3 +63,5 @@ Ubuntu 安装包 [下载 0.10.16（.deb）](packages/repair-assistant/tb710fu-re
 0.10.16 在顶部新增「GitHub 节点」。默认直连，可切换到本机 HTTP 代理或预设 HTTPS 下载镜像，也可添加自定义节点并测试连接。下载镜像用于脚本、附件及更新包，版本和校验清单仍通过 GitHub 官方获取。预设本机代理和两个镜像已在 TB710FU 上通过脚本及安装包下载校验。
 
 刷入 BOOTFIX 后遇到 Snap 初始化冲突、anacron 缺少目录，或关机时微距服务报错，可更新仓库并运行「BOOTFIX 安装后服务修复」。
+
+Ubuntu 电源菜单缺少「挂起」时，可更新仓库并运行[恢复系统挂起（s2idle）](contributions/suspend-restore/attachments/README.md)。
