@@ -1,4 +1,4 @@
-from contextlib import redirect_stdout
+from contextlib import nullcontext, redirect_stdout
 import errno
 from io import StringIO
 from pathlib import Path
@@ -14,6 +14,7 @@ ATTACHMENTS = Path(__file__).resolve().parents[1] / "contributions/pogo-keyboard
 sys.path.insert(0, str(ATTACHMENTS))
 try:
     import pogo_trial as pogo
+    import pogo_install as install
     from gnome_shortcuts import GnomeShortcuts
 finally:
     sys.path.pop(0)
@@ -160,7 +161,7 @@ class BindingTests(unittest.TestCase):
                     patch.object(started, "gpio_bound", side_effect=lambda: state),
                     patch.object(started, "set_gpio_bound", side_effect=set_bound),
                     patch.object(started, "build_firmware", return_value=b"fixture"),
-                    patch.object(pogo, "FIRMWARE", firmware),
+                    patch.object(started, "firmware", firmware),
                     patch.object(pogo, "report_module_failure"),
                     patch.object(pogo.subprocess, "run", side_effect=command),
                 ):
@@ -294,6 +295,96 @@ class GnomeShortcutTests(unittest.TestCase):
         self.assertEqual(self.values[self.fullscreen], "['<Alt>F12', 'XF86FullScreen']")
         self.shortcuts.restore()
         self.assertEqual(self.values, {self.fullscreen: "['<Alt>F12']"})
+
+
+class InstallationTests(unittest.TestCase):
+    def setUp(self):
+        root = Path(self.enterContext(TemporaryDirectory()))
+        self.prefix = root / "lib" / "pogo"
+        self.unit = root / install.UNIT
+        self.firmware = root / "firmware" / "pogo-keyboard.dtbo"
+        self.dtbo = root / "run" / "pogo-keyboard.dtbo"
+        self.assets = root / "assets"
+        for name in install.PAYLOAD:
+            path = self.assets / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(f"original {name}")
+        self.active = self.enabled = self.fail_start = False
+        self.enterContext(patch.multiple(install, PREFIX=self.prefix, UNIT_PATH=self.unit, DTBO=self.dtbo))
+        self.enterContext(patch.multiple(pogo, ROOT=self.assets, FIRMWARE=self.firmware))
+        self.enterContext(patch.object(install, "check_install"))
+        self.enterContext(patch.object(install, "reload_units"))
+        self.enterContext(patch.object(install, "setup_shortcuts"))
+        self.enterContext(patch.object(install, "restore_shortcuts"))
+        self.enterContext(patch.object(install, "systemctl", side_effect=self.systemctl))
+        self.enterContext(redirect_stdout(StringIO()))
+
+    def systemctl(self, action, check=True):
+        if action == "start":
+            self.assertTrue(self.unit.is_file())
+            self.assertEqual(self.firmware.readlink(), self.dtbo)
+            if self.fail_start:
+                self.fail_start = False
+                raise subprocess.CalledProcessError(1, ["systemctl", "start"])
+            self.active = True
+        if action == "stop":
+            self.active = False
+        if action in ("enable", "disable"):
+            self.enabled = action == "enable"
+        return self.active if action == "is-active" else True
+
+    def test_install_is_immediate_idempotent_and_reversible(self):
+        install.apply()
+        self.assertTrue(self.active and self.enabled)
+        self.assertTrue(install.installed_unit())
+        self.assertEqual(self.firmware.readlink(), self.dtbo)
+        self.assertFalse(self.dtbo.exists())  # Service generates it only in /run.
+        install.apply()
+        install.rollback()
+        self.assertFalse(self.active or self.enabled)
+        self.assertFalse(self.unit.exists() or self.prefix.exists() or self.firmware.is_symlink())
+
+    def test_failed_first_start_leaves_no_autoload_or_files(self):
+        self.fail_start = True
+        with self.assertRaises(subprocess.CalledProcessError):
+            install.apply()
+        self.assertFalse(self.active or self.enabled)
+        self.assertFalse(self.unit.exists() or self.prefix.exists() or self.firmware.is_symlink())
+
+    def test_failed_upgrade_restores_previous_running_service(self):
+        install.apply()
+        (self.assets / install.UNIT).write_text("new service")
+        self.fail_start = True
+        with self.assertRaises(subprocess.CalledProcessError):
+            install.apply()
+        self.assertEqual(self.unit.read_text(), f"original {install.UNIT}")
+        self.assertTrue(self.active and self.enabled and install.installed_unit())
+
+    def test_preserves_a_firmware_file_owned_by_another_installer(self):
+        self.firmware.parent.mkdir()
+        self.firmware.write_text("unmanaged")
+        with self.assertRaisesRegex(RuntimeError, "其他程序"):
+            install.apply()
+        self.assertEqual(self.firmware.read_text(), "unmanaged")
+        self.assertFalse(self.unit.exists())
+
+    def test_service_signals_ready_after_uart_start_and_cleans_up_on_stop(self):
+        self.firmware.parent.mkdir()
+        self.firmware.symlink_to(self.dtbo)
+        order = []
+        with (
+            patch.object(install, "lock", return_value=nullcontext()),
+            patch.object(install.signal, "signal"),
+            patch.object(install.signal, "pause", side_effect=SystemExit(0)),
+            patch.object(pogo, "Trial") as create,
+            patch.object(install, "notify_ready", side_effect=lambda: order.append("ready")),
+            self.assertRaises(SystemExit),
+        ):
+            trial = create.return_value
+            trial.start.side_effect = lambda _: order.append("start")
+            trial.stop.side_effect = lambda: order.append("stop")
+            install.serve()
+        self.assertEqual(order, ["start", "ready", "stop"])
 
 
 if __name__ == "__main__":

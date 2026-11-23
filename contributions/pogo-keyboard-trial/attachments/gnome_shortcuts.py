@@ -26,7 +26,9 @@ def read_array(value):
 
 
 class GnomeShortcuts:
-    def __init__(self, account):
+    prefix = ()
+
+    def __init__(self, account, private_runtime=None):
         uid = account.pw_uid
         runtime = f"/run/user/{uid}"
         self.options = {
@@ -38,6 +40,10 @@ class GnomeShortcuts:
                 "DBUS_SESSION_BUS_ADDRESS": f"unix:path={runtime}/bus",
             },
         }
+        if private_runtime is not None:
+            self.options["env"]["XDG_RUNTIME_DIR"] = private_runtime
+            del self.options["env"]["DBUS_SESSION_BUS_ADDRESS"]
+            self.prefix = ("/usr/bin/dbus-run-session", "--")
         self.state = STATE / f"shortcuts-{uid}.json"
 
     @classmethod
@@ -64,7 +70,7 @@ class GnomeShortcuts:
 
     def run(self, command, *args):
         return subprocess.check_output(
-            [f"/usr/bin/{command}", *args], text=True, stderr=subprocess.PIPE,
+            [*self.prefix, f"/usr/bin/{command}", *args], text=True, stderr=subprocess.PIPE,
             timeout=4, **self.options,
         ).strip()
 
