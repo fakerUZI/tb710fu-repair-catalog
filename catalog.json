@@ -505,6 +505,25 @@
           "sha256": "3a8f856fb0dd8e980433db757fcb9efd1e139d783da2e18d6b1665962e101a29"
         }
       ]
+    },
+    {
+      "id": "steam-chinese-fonts",
+      "title": "Steam 中文与表情字体修复（单独安装）",
+      "description": "仅供单独安装。适用于 TB710FU 上 Ubuntu 26.04 的 ARM64 Steam Snap。修复 Steam 界面中的中文缺字、方框或部分表情缺失。复制系统已有的 Noto CJK 常规、粗体和 Noto Color Emoji 到当前用户的 Steam 字体目录。运行后请完全退出并重新打开 Steam。Ubuntu 26.04.1、Steam Snap 修订 290 实机验证显示，Steam 界面进程重开后已加载中文字体。",
+      "device": "TB710FU",
+      "status": "manual-install",
+      "risk": "不进入一键升级。需已有 Steam Snap、fontconfig、fonts-noto-cjk 和 fonts-noto-color-emoji；本脚本无需管理员权限。约占 50 MB，只写当前用户的 Steam 字体目录和字体缓存。支持 check 和 rollback。回退移除通过内容核验的专用字体，完成后请重开 Steam。",
+      "script": {
+        "path": "contributions/steam-chinese-fonts/script.sh",
+        "sha256": "c537bf7224bf2630b025b25c7533dedc02fcee0b4b05632e849738822db8c904",
+        "requires_admin": false
+      },
+      "attachments": [
+        {
+          "path": "contributions/steam-chinese-fonts/attachments/README.md",
+          "sha256": "0ad55c10cb31cba6ac6acac2629ca1365002c4e893d070daf75b1d3a75402c4d"
+        }
+      ]
     }
   ]
 }
