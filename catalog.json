@@ -474,6 +474,29 @@
           "sha256": "a97c8ef1a98b0ce29aa4fc540d1e2e89044a6eb57ce150ec3eb65c05099e062d"
         }
       ]
+    },
+    {
+      "id": "speaker-playback-headroom",
+      "title": "修复内置扬声器播放爆音与无声",
+      "description": "适用于 TB710FU 上使用 PipeWire 与 WirePlumber 0.5 的 Ubuntu 26.04，处理 Chrome 等应用经内置扬声器播放时的爆音、断音，以及播放仍在继续但扬声器无声的情况。把内置扬声器的播放缓冲余量设为 960 帧并重新打开音频通道。实机验证环境为 7.2.6-tb710fu-20261118；应用相同配置后，Chrome 连续监测 45 秒，错误计数未增长，扬声器硬件指针持续推进。用户复测最大音量时声音大致正常。安装后可播放原歌曲检查。",
+      "device": "TB710FU",
+      "status": "community-review",
+      "risk": "无需管理员权限。只在当前用户目录添加一条 WirePlumber 扬声器规则。重建音频路由时，播放和录音会短暂中断，内置扬声器缓冲延迟可能增加。应用失败时恢复原配置。支持 TB710FU_FIX_ACTION=check 只读检查和 rollback 移除这条规则。此配置缓解播放卡顿，Q6APM 驱动修复需单独验证。",
+      "script": {
+        "path": "contributions/speaker-playback-headroom/script.sh",
+        "sha256": "65374028e6037605e2de69b04fda3ab98e0918c18940f1af9d7658c67e9b7cba",
+        "requires_admin": false
+      },
+      "attachments": [
+        {
+          "path": "contributions/speaker-playback-headroom/attachments/98-tb710fu-speaker-headroom.conf",
+          "sha256": "01c8602493d072b81e75db96e55eb8768e5bd3d242768aa4c31b176f0ebbe3fe"
+        },
+        {
+          "path": "contributions/speaker-playback-headroom/attachments/README.md",
+          "sha256": "3a8f856fb0dd8e980433db757fcb9efd1e139d783da2e18d6b1665962e101a29"
+        }
+      ]
     }
   ]
 }
