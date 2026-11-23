@@ -417,7 +417,7 @@ static int lenovo_kb_tty_write(const char *buf, size_t count)
 	if(ret < 0){
 		lenovo_kb_enable_uart_tx(0);
 		kb_err("err:%d!\n", ret);
-		return -1;
+		return ret;
 	}
 	queue_delayed_work(lenovo_kb_core->lenovo_kb_workqueue, &kb_txen_off_work,
 			   msecs_to_jiffies(ret * 10 * 1000 / 115200 + 5));
@@ -1022,7 +1022,9 @@ static int lenovo_kb_get_dts_info(struct lenovo_keyboard_data *core)
 
         /* less important */
         core->lid_gpio = kb_gpio(&core->plat_dev->dev, "lid", GPIOD_IN);
-        if (!gpio_is_valid(core->lid_gpio))
+        if (core->lid_gpio == -ENOENT)
+                core->lid_gpio = -1;
+        else if (!gpio_is_valid(core->lid_gpio))
                 kb_err("lid_gpio is not valid %d\n", core->lid_gpio);
 
         kb_info("end\n");
@@ -1159,7 +1161,62 @@ static void lenovo_kb_restore_work(struct work_struct *work)
 #include <linux/namei.h>
 #include <linux/termios.h>
 
-#define KB_UART_SYSFS "/sys/bus/platform/devices/a9c000.serial"
+#define KB_UART_NODE "/soc@0/geniqup@ac0000/serial@a9c000"
+#define KB_UART_BAUD 921600
+
+static int lenovo_kb_find_tty(struct device *dev, void *data)
+{
+	struct device **ttydev = data;
+
+	if (dev->class && !strcmp(dev->class->name, "tty") && dev->devt &&
+	    strstarts(dev_name(dev), "ttyHS")) {
+		*ttydev = get_device(dev);
+		return 1;
+	}
+
+	/* Serial core inserts its own controller and port below the platform device. */
+	return device_for_each_child(dev, data, lenovo_kb_find_tty);
+}
+
+static struct file *lenovo_kb_open_tty(char *path, size_t size)
+{
+	struct device_node *node;
+	struct device *controller, *ttydev = NULL;
+	struct path node_path;
+	struct inode *inode;
+	struct file *file;
+	int ret;
+
+	node = of_find_node_by_path(KB_UART_NODE);
+	if (!node)
+		return ERR_PTR(-ENOENT);
+	controller = bus_find_device_by_of_node(&platform_bus_type, node);
+	of_node_put(node);
+	if (!controller)
+		return ERR_PTR(-ENODEV);
+
+	device_for_each_child(controller, &ttydev, lenovo_kb_find_tty);
+	put_device(controller);
+	if (!ttydev)
+		return ERR_PTR(-ENODEV);
+
+	snprintf(path, size, "/dev/%s", dev_name(ttydev));
+	ret = kern_path(path, LOOKUP_FOLLOW, &node_path);
+	if (ret) {
+		file = ERR_PTR(ret);
+		goto put_tty;
+	}
+
+	inode = d_inode(node_path.dentry);
+	if (S_ISCHR(inode->i_mode) && inode->i_rdev == ttydev->devt)
+		file = dentry_open(&node_path, O_RDWR | O_NOCTTY | O_NONBLOCK, current_cred());
+	else
+		file = ERR_PTR(-ENODEV);
+	path_put(&node_path);
+put_tty:
+	put_device(ttydev);
+	return file;
+}
 
 static int lenovo_kb_rx_thread(void *data)
 {
@@ -1192,66 +1249,63 @@ static void lenovo_kb_txen_off(struct work_struct *w)
 static void lenovo_kb_tty_work_fn(struct work_struct *w)
 {
 	static const char wake[] = {0x7e, 0x7e, 0x7e, 0x7e};
-	struct file *f = ERR_PTR(-ENOENT);
-	struct path uart, parent;
+	struct file *f;
+	struct device *dev;
 	struct tty_struct *tty;
 	struct ktermios t;
-	char path[32];
-	char syspath[64];
-	bool matches;
-	int i;
+	char path[32] = "serial@a9c000";
+	const char *stage = "find and open tty";
+	int ret;
 
 	if (kb_stopping || !lenovo_kb_core || lenovo_kb_core->file_client)
 		return;
-	if (kern_path(KB_UART_SYSFS, LOOKUP_FOLLOW, &uart))
+	dev = &lenovo_kb_core->plat_dev->dev;
+	f = lenovo_kb_open_tty(path, sizeof(path));
+	if (IS_ERR(f)) {
+		ret = PTR_ERR(f);
 		goto retry;
-
-	for (i = 0; i < CONFIG_SERIAL_QCOM_GENI_UART_PORTS; i++) {
-		snprintf(syspath, sizeof(syspath),
-			 "/sys/class/tty/ttyHS%d/device", i);
-		if (kern_path(syspath, LOOKUP_FOLLOW, &parent))
-			continue;
-		matches = path_equal(&uart, &parent);
-		path_put(&parent);
-		if (!matches)
-			continue;
-
-		snprintf(path, sizeof(path), "/dev/ttyHS%d", i);
-		f = filp_open(path, O_RDWR | O_NOCTTY | O_NONBLOCK, 0);
-		break;
 	}
-	path_put(&uart);
-	if (IS_ERR(f))
-		goto retry;
 	/* keep O_NONBLOCK: the rx thread polls so kthread_stop can break out */
 	tty = ((struct tty_file_private *)f->private_data)->tty;
 	memset(&t, 0, sizeof(t));
-	t.c_cflag = B921600 | CS8 | CREAD | CLOCAL;
+	t.c_cflag = CS8 | CREAD | CLOCAL;
+	tty_termios_encode_baud_rate(&t, KB_UART_BAUD, KB_UART_BAUD);
 	t.c_cc[VMIN] = 1;
 	t.c_cc[VTIME] = 0;
-	tty_set_termios(tty, &t);
+	stage = "configure tty";
+	ret = tty_set_termios(tty, &t);
+	if (ret)
+		goto close;
+
+	stage = "create RX thread";
 	kb_rx_thread = kthread_create(lenovo_kb_rx_thread, NULL, "lenovo_kb_rx");
 	if (IS_ERR(kb_rx_thread)) {
+		ret = PTR_ERR(kb_rx_thread);
 		kb_rx_thread = NULL;
-		filp_close(f, NULL);
-		goto retry;
+		goto close;
 	}
+	stage = "send wake bytes";
 	lenovo_kb_core->file_client = f;
-	if (lenovo_kb_tty_write(wake, sizeof(wake)) != sizeof(wake)) {
+	ret = lenovo_kb_tty_write(wake, sizeof(wake));
+	if (ret != sizeof(wake)) {
 		kthread_stop(kb_rx_thread);
 		kb_rx_thread = NULL;
 		cancel_delayed_work(&kb_txen_off_work);
 		lenovo_kb_enable_uart_tx(0);
 		lenovo_kb_core->file_client = NULL;
-		filp_close(f, NULL);
-		goto retry;
+		if (ret >= 0)
+			ret = -EIO;
+		goto close;
 	}
 	wake_up_process(kb_rx_thread);
 	WRITE_ONCE(kb_transport_ready, true);
-	kb_info("%s opened, rx thread started\n", path);
+	dev_info(dev, "Pogo UART %s opened at %d baud, wake bytes sent\n", path, KB_UART_BAUD);
 	return;
 
+close:
+	filp_close(f, NULL);
 retry:
+	dev_err_ratelimited(dev, "Pogo UART %s: %s failed: %pe\n", path, stage, ERR_PTR(ret));
 	if (!kb_stopping)
 		queue_delayed_work(lenovo_kb_core->lenovo_kb_workqueue,
 				   &kb_tty_work, msecs_to_jiffies(2000));

@@ -425,7 +425,7 @@
       "title": "磁吸键盘实机测试（60 秒）",
       "device": "TB710FU",
       "status": "hardware-test",
-      "description": "磁吸键盘供电修订测试版。适用于 7.2.6-tb710fu-20261118 内核和联想原装三触点磁吸键盘。适配 PM8550B 的 3.296 V 档位，保留 GNOME 全屏、左侧平铺和功能键日志。请单独运行，测试 60 秒后自动清理。",
+      "description": "磁吸键盘串口修订测试版。适用于 7.2.6-tb710fu-20261118 内核和联想原装三触点磁吸键盘。按设备树控制器查找 UART，保留供电修复、GNOME 全屏和左侧平铺及功能键日志。请单独运行，测试 60 秒后自动清理。",
       "risk": "本条目待带键盘实测，从列表单独运行。开始前请保存工作。原先已绑定时会短暂重绑音量键和合盖检测。系统若卡住可重启，测试模块没有开机服务。",
       "script": {
         "path": "contributions/pogo-keyboard-trial/script.sh",
@@ -435,7 +435,7 @@
       "attachments": [
         {
           "path": "contributions/pogo-keyboard-trial/attachments/README.md",
-          "sha256": "4bdafd90ee098d857ba5755a3775df5653fc672bbbedf5c7ea23bdd6bb21f94b"
+          "sha256": "214d98c90f7b1af70461b089e7fefdd00ea43210b65f5016acc1029cb71c6b58"
         },
         {
           "path": "contributions/pogo-keyboard-trial/attachments/build_overlay.py",
@@ -443,7 +443,7 @@
         },
         {
           "path": "contributions/pogo-keyboard-trial/attachments/driver/lenovo_keyboard.ko",
-          "sha256": "1276843ae8aca63ab900b80bcd2c64a15e626180c0577419fccae0d825d4d253"
+          "sha256": "b0a6e2654f4e595163f94a50954572caab742edf744b731df136e9422147da05"
         },
         {
           "path": "contributions/pogo-keyboard-trial/attachments/driver/tb_pogo_overlay.ko",
