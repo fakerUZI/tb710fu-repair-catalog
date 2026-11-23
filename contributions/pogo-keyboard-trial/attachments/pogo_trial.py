@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Supervised TB710FU trial. The original keys are rebound on every exit."""
+"""Supervised TB710FU trial with restoration of the original key binding."""
 
 import argparse
 import fcntl
@@ -18,7 +18,7 @@ from build_overlay import make_dts
 
 ROOT = Path(__file__).resolve().parent
 TREE = Path("/sys/firmware/devicetree/base")
-GPIO_DEVICE = Path("/sys/bus/platform/devices/gpio-keys")
+PLATFORM_DEVICES = Path("/sys/bus/platform/devices")
 GPIO_DRIVER = Path("/sys/bus/platform/drivers/gpio-keys")
 KEYBOARD_READY = Path("/sys/bus/platform/devices/lenovo,lenovo_keyboard/transport_ready")
 INPUTS = Path("/sys/class/input")
@@ -37,16 +37,47 @@ class Trial:
         self.loaded = []
         self.created_firmware = False
         self.touched_keys = False
+        self.gpio_device = None
+        self.original_gpio_bound = None
+
+    def find_gpio_keys(self, tree):
+        expected = (tree / "gpio-keys").resolve()
+        status = expected / "status"
+        if status.is_file() and status.read_bytes().rstrip(b"\0") not in (b"ok", b"okay"):
+            raise RuntimeError("设备树中的 /gpio-keys 处于禁用状态")
+        devices = []
+        for device in PLATFORM_DEVICES.iterdir():
+            node = device / "of_node"
+            if node.is_symlink() and node.resolve() == expected:
+                devices.append(device)
+        if len(devices) != 1:
+            raise RuntimeError(f"设备树 /gpio-keys 对应的平台设备数量为 {len(devices)}，需要核对当前启动配置")
+        self.gpio_device = devices[0]
+        if not (GPIO_DRIVER / "bind").is_file() or not (GPIO_DRIVER / "unbind").is_file():
+            raise RuntimeError(f"找到 {self.gpio_device.name}，但系统未注册可重绑的 gpio-keys 驱动")
+        self.original_gpio_bound = self.gpio_bound()
+        state = "已绑定" if self.original_gpio_bound else "未绑定"
+        print(f"按键设备 {self.gpio_device.name}，原始驱动状态：{state}", flush=True)
 
     def gpio_bound(self):
-        driver = GPIO_DEVICE / "driver"
-        return driver.is_symlink() and driver.resolve() == GPIO_DRIVER
+        if self.gpio_device is None or not self.gpio_device.is_dir():
+            raise RuntimeError("gpio-keys 平台设备已消失")
+        driver = self.gpio_device / "driver"
+        if not driver.is_symlink():
+            return False
+        actual = driver.resolve()
+        if actual != GPIO_DRIVER.resolve():
+            raise RuntimeError(f"按键设备当前由 {actual.name} 驱动管理")
+        return True
 
     def set_gpio_bound(self, wanted):
         if self.gpio_bound() == wanted:
             return
         binding = GPIO_DRIVER / ("bind" if wanted else "unbind")
-        binding.write_text(GPIO_DEVICE.name)
+        try:
+            binding.write_text(self.gpio_device.name)
+        except OSError as error:
+            raise RuntimeError(f"{binding.name} {self.gpio_device.name} 失败：{error.strerror}") from error
         if self.gpio_bound() != wanted:
             raise RuntimeError("gpio-keys 的绑定状态与请求不一致")
 
@@ -63,8 +94,6 @@ class Trial:
             maximum = int.from_bytes((rail / "regulator-max-microvolt").read_bytes(), "big")
             if (rail / "regulator-name").read_bytes().rstrip(b"\0") != name.encode() or not minimum <= target <= maximum:
                 raise RuntimeError(f"板上供电轨 {node} 的名称或约束与候选不一致")
-        if not self.gpio_bound():
-            raise RuntimeError("gpio-keys 未按原驱动绑定")
         for name in (*MODULES, *OLD_MODULES):
             if (Path("/sys/module") / name).exists():
                 raise RuntimeError(f"请先卸载已有键盘候选模块：{name}")
@@ -77,9 +106,12 @@ class Trial:
             magic = subprocess.check_output(["modinfo", "-F", "vermagic", str(module)], text=True).split()
             if not magic or magic[0] != platform.release():
                 raise RuntimeError(f"{name} 的内核版本与当前系统不一致")
+        self.find_gpio_keys(tree)
         return dts
 
     def start(self, dts):
+        if self.original_gpio_bound is None or self.gpio_bound() != self.original_gpio_bound:
+            raise RuntimeError("gpio-keys 的绑定状态在开始前发生变化，请重试")
         blob = self.build_firmware(dts)
         FIRMWARE.parent.mkdir(parents=True, exist_ok=True)
         with FIRMWARE.open("xb") as output:
@@ -130,7 +162,7 @@ class Trial:
         finally:
             try:
                 if self.touched_keys:
-                    self.set_gpio_bound(True)
+                    self.set_gpio_bound(self.original_gpio_bound)
             finally:
                 if self.created_firmware:
                     FIRMWARE.unlink()
@@ -179,9 +211,9 @@ def main():
             seen = trial.observe(args.seconds)
         finally:
             trial.stop()
-            if make_dts(TREE) != dts or not trial.gpio_bound():
+            if make_dts(TREE) != dts or trial.gpio_bound() != trial.original_gpio_bound:
                 raise RuntimeError("清理后尚未确认原设备树和 gpio-keys 已恢复，请重启。")
-            print("临时模块已卸载，原 gpio-keys 驱动已恢复。", flush=True)
+            print("临时模块已卸载，gpio-keys 已恢复测试前的绑定状态。", flush=True)
         missing = EXPECTED_INPUTS - seen
         if missing:
             raise RuntimeError("本次未识别到 " + "、".join(sorted(missing)) + "。请保留这次日志。")

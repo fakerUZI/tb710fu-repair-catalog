@@ -435,7 +435,7 @@
       "attachments": [
         {
           "path": "contributions/pogo-keyboard-trial/attachments/README.md",
-          "sha256": "840d9a9e7c88ad6a3907c0e7c8b4deef428cefc7f97bb56a72ca9e66a82ff762"
+          "sha256": "3d66a4c4c6d493c8a1b62877da711417717693a2234bb2264cc680f0e68f53cc"
         },
         {
           "path": "contributions/pogo-keyboard-trial/attachments/build_overlay.py",
@@ -459,7 +459,7 @@
         },
         {
           "path": "contributions/pogo-keyboard-trial/attachments/pogo_trial.py",
-          "sha256": "0a9238bfd5ca75a62b36d152f858128db03c5ee6b592e04938020ff582b6c4c1"
+          "sha256": "95fc48c9ee05f6f199099152cbce6669683b929032df7e7615d7d618352ba67c"
         }
       ]
     }
