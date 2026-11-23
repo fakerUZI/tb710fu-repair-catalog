@@ -419,6 +419,49 @@
           "sha256": "948be023eacf7ac48cc39020951cc604a0c6e7167afacd3c7fa56774be9536a8"
         }
       ]
+    },
+    {
+      "id": "pogo-keyboard-trial",
+      "title": "磁吸键盘实机测试（60 秒）",
+      "device": "TB710FU",
+      "status": "hardware-test",
+      "description": "手动测试联想原装三触点磁吸键盘。适用于 7.2.6-tb710fu-20261118 内核。临时加载重编译的键盘和设备树模块，使用系统已有供电驱动，观察键盘与触控板枚举。60 秒后自动清理。请记录实际按键、触控板和拔插结果。",
+      "risk": "本条目待带键盘实测，从列表单独运行。开始前请保存工作。会短暂重绑音量键和合盖检测。系统若卡住可重启，测试模块没有开机服务。",
+      "script": {
+        "path": "contributions/pogo-keyboard-trial/script.sh",
+        "sha256": "20733c0a6446469286e5f5a870fe54a4918d7643baee5bbf291377a9dccf2e8d",
+        "requires_admin": true
+      },
+      "attachments": [
+        {
+          "path": "contributions/pogo-keyboard-trial/attachments/README.md",
+          "sha256": "840d9a9e7c88ad6a3907c0e7c8b4deef428cefc7f97bb56a72ca9e66a82ff762"
+        },
+        {
+          "path": "contributions/pogo-keyboard-trial/attachments/build_overlay.py",
+          "sha256": "2cc629013f31bdf25084b595b381ddee7fd6590607e6c083b956a1b0c628d2e2"
+        },
+        {
+          "path": "contributions/pogo-keyboard-trial/attachments/driver/lenovo_keyboard.ko",
+          "sha256": "35a7c9587587a4d38e021b7636e102c23cee24272d13f3356e9833c921accf3d"
+        },
+        {
+          "path": "contributions/pogo-keyboard-trial/attachments/driver/tb_pogo_overlay.ko",
+          "sha256": "9c467893c45dc69374022961a089ecd2479fb4486f18f732edc5120dc763d828"
+        },
+        {
+          "path": "contributions/pogo-keyboard-trial/attachments/pogo-keyboard.dtbo",
+          "sha256": "1456ecdc7101d4b22dbd88e29f08b66709ba4b6c42cefc443b95647043e5aa75"
+        },
+        {
+          "path": "contributions/pogo-keyboard-trial/attachments/pogo-keyboard.dts",
+          "sha256": "e83c623a38b8fdc0024c399c54a42e8f6539c3b7d351048a53445383e05375b2"
+        },
+        {
+          "path": "contributions/pogo-keyboard-trial/attachments/pogo_trial.py",
+          "sha256": "0a9238bfd5ca75a62b36d152f858128db03c5ee6b592e04938020ff582b6c4c1"
+        }
+      ]
     }
   ]
 }
