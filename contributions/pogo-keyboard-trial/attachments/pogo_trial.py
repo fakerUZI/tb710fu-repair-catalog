@@ -27,6 +27,7 @@ INPUTS = Path("/sys/class/input")
 FIRMWARE = Path("/usr/lib/firmware/tb710fu/pogo-keyboard.dtbo")
 PMIC = TREE / "soc@0/rsc@17a00000/regulators-0"
 MODULES = ("tb_pogo_overlay", "lenovo_keyboard")
+PREPARED_SOURCES = ("pogo-keyboard.dts", "pogo-uart-only.dts")
 OLD_MODULES = ("uartov", "rpmhmain", "voltset")
 EXPECTED_INPUTS = {
     "Lenovo Keyboard Pack For Yoga Tab Keyboard",
@@ -60,6 +61,21 @@ def report_module_failure(module, started):
     logs = kernel_logs(started, MODULE_LOG_PATTERN, 20)
     print(f"{module} 加载失败，相关内核日志", flush=True)
     print(logs or "本次加载没有读到匹配的内核日志。", flush=True)
+
+
+def check_supplies(pmic):
+    if (pmic / "qcom,pmic-id").read_bytes() != b"b\0":
+        raise RuntimeError("找不到已核对的 PM8550B 供电配置")
+    for node, name, requested_min, requested_max in (
+        ("ldo1", "vreg_l1b_1p8", 1800000, 1800000),
+        ("ldo8", "vreg_l8b_1p8", 3296000, 3300000),
+    ):
+        rail = pmic / node
+        minimum = int.from_bytes((rail / "regulator-min-microvolt").read_bytes(), "big")
+        maximum = int.from_bytes((rail / "regulator-max-microvolt").read_bytes(), "big")
+        if (rail / "regulator-name").read_bytes().rstrip(b"\0") != name.encode() or max(
+                minimum, requested_min) > min(maximum, requested_max):
+            raise RuntimeError(f"板上供电轨 {node} 的名称或约束与候选不一致")
 
 
 class Trial:
@@ -137,18 +153,9 @@ class Trial:
                 print(f"内核暂缓探测的设备：{line.strip()}", flush=True)
 
     def check(self, tree):
-        dts = make_dts(tree)
-        if (PMIC / "qcom,pmic-id").read_bytes() != b"b\0":
-            raise RuntimeError("找不到已核对的 PM8550B 供电配置")
-        for node, name, target in (
-            ("ldo1", "vreg_l1b_1p8", 1800000),
-            ("ldo8", "vreg_l8b_1p8", 3300000),
-        ):
-            rail = PMIC / node
-            minimum = int.from_bytes((rail / "regulator-min-microvolt").read_bytes(), "big")
-            maximum = int.from_bytes((rail / "regulator-max-microvolt").read_bytes(), "big")
-            if (rail / "regulator-name").read_bytes().rstrip(b"\0") != name.encode() or not minimum <= target <= maximum:
-                raise RuntimeError(f"板上供电轨 {node} 的名称或约束与候选不一致")
+        self.find_gpio_keys(tree)
+        dts = make_dts(tree, move_hall=self.original_gpio_bound)
+        check_supplies(PMIC)
         for name in (*MODULES, *OLD_MODULES):
             if (Path("/sys/module") / name).exists():
                 raise RuntimeError(f"请先卸载已有键盘候选模块：{name}")
@@ -161,7 +168,6 @@ class Trial:
             magic = subprocess.check_output(["modinfo", "-F", "vermagic", str(module)], text=True).split()
             if not magic or magic[0] != platform.release():
                 raise RuntimeError(f"{name} 的内核版本与当前系统不一致")
-        self.find_gpio_keys(tree)
         return dts
 
     def start(self, dts):
@@ -180,7 +186,7 @@ class Trial:
         if self.original_gpio_bound:
             self.set_gpio_bound(True)
         else:
-            print("gpio-keys 原先未绑定，跳过主动绑定，继续测试磁吸键盘。", flush=True)
+            print("gpio-keys 原先未绑定，本次设备树仅启用 UART。", flush=True)
         started = time.time()
         self.load(MODULES[1])
         deadline = time.monotonic() + 12
@@ -193,10 +199,11 @@ class Trial:
 
     @staticmethod
     def prepared_dtb(dts):
-        prepared = ROOT / "pogo-keyboard.dts"
-        binary = prepared.with_suffix(".dtbo")
-        if prepared.is_file() and binary.is_file() and prepared.read_text() == dts:
-            return binary
+        for name in PREPARED_SOURCES:
+            prepared = ROOT / name
+            binary = prepared.with_suffix(".dtbo")
+            if prepared.is_file() and binary.is_file() and prepared.read_text() == dts:
+                return binary
         return None
 
     def build_firmware(self, dts):
@@ -307,7 +314,7 @@ def main():
                 hotkeys = kernel_logs(started, "Pogo hotkey ", 40)
                 if hotkeys:
                     print(f"Pogo 功能键记录\n{hotkeys}", flush=True)
-            if make_dts(TREE) != dts or trial.gpio_bound() != trial.original_gpio_bound:
+            if make_dts(TREE, move_hall=trial.original_gpio_bound) != dts or trial.gpio_bound() != trial.original_gpio_bound:
                 raise RuntimeError("清理后尚未确认原设备树和 gpio-keys 已恢复，请重启。")
             print("临时模块已卸载，gpio-keys 已恢复测试前的绑定状态。", flush=True)
         missing = EXPECTED_INPUTS - seen

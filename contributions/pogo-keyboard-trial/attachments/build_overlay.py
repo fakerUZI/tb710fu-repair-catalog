@@ -31,7 +31,7 @@ def render(cells_):
     return " ".join(f"0x{value:x}" for value in cells_)
 
 
-def make_dts(tree):
+def make_dts(tree, *, move_hall=True):
     if "lenovo,tb710fu" not in strings(tree / "compatible"):
         raise ValueError("需要 TB710FU 的设备树")
     if (tree / UART).exists():
@@ -50,7 +50,24 @@ def make_dts(tree):
     gpio, = cells(tree / PINS / "phandle")
     if cells(tree / "gpio-keys/event-hall-sensor/gpios") != [gpio, 81, 1]:
         raise ValueError("找不到待迁移的 GPIO81 合盖配置")
-    old_pins = cells(tree / "gpio-keys/pinctrl-0")
+    hall_pins = ""
+    hall_keys = ""
+    if move_hall:
+        old_pins = cells(tree / "gpio-keys/pinctrl-0")
+        hall_pins = '''    pogo_hall_default: pogo-hall-default-state {
+        pins = "gpio66", "gpio81";
+        function = "gpio";
+        bias-pull-up;
+    };
+'''
+        hall_keys = f'''
+&{{/gpio-keys}} {{
+    pinctrl-0 = <{render(old_pins)}>, <&pogo_hall_default>;
+    event-hall-sensor {{
+        gpios = <0x{gpio:x} 66 1>;
+    }};
+}};
+'''
     properties = "\n".join(f"            {name} = <{render(value)}>;" for name, value in resources.items())
     return f'''/dts-v1/;
 /plugin/;
@@ -67,12 +84,7 @@ def make_dts(tree):
             bias-disable;
         }};
     }};
-    pogo_hall_default: pogo-hall-default-state {{
-        pins = "gpio66", "gpio81";
-        function = "gpio";
-        bias-pull-up;
-    }};
-}};
+{hall_pins}}};
 
 &{{/{GENI}}} {{
     serial@{ENGINE} {{
@@ -85,14 +97,7 @@ def make_dts(tree):
         status = "okay";
     }};
 }};
-
-&{{/gpio-keys}} {{
-    pinctrl-0 = <{render(old_pins)}>, <&pogo_hall_default>;
-    event-hall-sensor {{
-        gpios = <0x{gpio:x} 66 1>;
-    }};
-}};
-'''
+{hall_keys}'''
 
 
 def compile_dtbo(dts, output):
@@ -107,9 +112,10 @@ def compile_dtbo(dts, output):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--tree", type=Path, default=Path("/sys/firmware/devicetree/base"))
+    parser.add_argument("--uart-only", action="store_true")
     parser.add_argument("out", type=Path)
     args = parser.parse_args()
-    compile_dtbo(make_dts(args.tree), args.out)
+    compile_dtbo(make_dts(args.tree, move_hall=not args.uart_only), args.out)
 
 
 if __name__ == "__main__":

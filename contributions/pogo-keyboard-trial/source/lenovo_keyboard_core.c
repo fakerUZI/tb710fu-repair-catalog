@@ -1319,36 +1319,81 @@ resched:
 				   &lenovo_kb_lcd_poll_work, msecs_to_jiffies(200));
 }
 
-static void lenovo_kb_disable_supply(void *data)
-{
-	struct regulator *rail = data;
+struct lenovo_kb_supply {
+	struct device *dev;
+	struct regulator *rail;
+	const char *name;
+	int previous_uv;
+	bool enabled;
+};
 
-	regulator_disable(rail);
+static void lenovo_kb_restore_supply(void *data)
+{
+	struct lenovo_kb_supply *supply = data;
+	int ret;
+
+	if (supply->enabled) {
+		ret = regulator_disable(supply->rail);
+		if (ret) {
+			dev_warn(supply->dev, "Pogo supply %s disable failed: %d\n",
+				 supply->name, ret);
+			return;
+		}
+	}
+	if (regulator_get_voltage(supply->rail) != supply->previous_uv) {
+		ret = regulator_set_voltage(supply->rail, supply->previous_uv,
+					    supply->previous_uv);
+		if (ret)
+			dev_warn(supply->dev, "Pogo supply %s restore to %d uV failed: %d\n",
+				 supply->name, supply->previous_uv, ret);
+	}
 }
 
 /*
  * Stock TB710FU routes vdd_1p8 to PM8550B LDO1 and vdd_3p3 to LDO8.
- * Resolve the existing mainline RPMh regulators by their board names.
- * The regulator core checks the shared voltage constraints and owns the vote.
+ * LDO8's 8 mV selector steps put 3296 mV immediately below the 3300 mV cap.
  */
-static int lenovo_kb_enable_supply(struct device *dev, const char *name, int uv)
+static int lenovo_kb_enable_supply(struct device *dev, const char *name,
+				   int min_uv, int max_uv)
 {
-	struct regulator *rail;
-	int ret;
+	struct lenovo_kb_supply *supply;
+	int ret, selected_uv;
 
-	rail = devm_regulator_get_optional(dev, name);
-	if (IS_ERR(rail))
-		return dev_err_probe(dev, PTR_ERR(rail), "Pogo supply %s unavailable\n", name);
+	supply = devm_kzalloc(dev, sizeof(*supply), GFP_KERNEL);
+	if (!supply)
+		return -ENOMEM;
+	supply->dev = dev;
+	supply->name = name;
+	supply->rail = devm_regulator_get_optional(dev, name);
+	if (IS_ERR(supply->rail))
+		return dev_err_probe(dev, PTR_ERR(supply->rail), "Pogo supply %s unavailable\n", name);
 
-	ret = regulator_set_voltage(rail, uv, uv);
+	supply->previous_uv = regulator_get_voltage(supply->rail);
+	if (supply->previous_uv <= 0)
+		return dev_err_probe(dev, supply->previous_uv ?: -EINVAL,
+				     "Pogo supply %s initial voltage unavailable\n", name);
+	ret = regulator_set_voltage(supply->rail, min_uv, max_uv);
 	if (ret)
-		return dev_err_probe(dev, ret, "Pogo supply %s voltage vote failed\n", name);
+		return dev_err_probe(dev, ret, "Pogo supply %s voltage vote %d-%d uV failed\n",
+				     name, min_uv, max_uv);
 
-	ret = regulator_enable(rail);
+	ret = devm_add_action_or_reset(dev, lenovo_kb_restore_supply, supply);
+	if (ret)
+		return ret;
+
+	selected_uv = regulator_get_voltage(supply->rail);
+	if (selected_uv < min_uv || selected_uv > max_uv)
+		return dev_err_probe(dev, selected_uv < 0 ? selected_uv : -EINVAL,
+				     "Pogo supply %s selected %d uV outside %d-%d uV\n",
+				     name, selected_uv, min_uv, max_uv);
+
+	ret = regulator_enable(supply->rail);
 	if (ret)
 		return dev_err_probe(dev, ret, "Pogo supply %s enable failed\n", name);
 
-	return devm_add_action_or_reset(dev, lenovo_kb_disable_supply, rail);
+	supply->enabled = true;
+	dev_info(dev, "Pogo supply %s enabled at %d uV\n", name, selected_uv);
+	return 0;
 }
 
 static int lenovo_kb_probe(struct platform_device  *device)
@@ -1359,10 +1404,10 @@ static int lenovo_kb_probe(struct platform_device  *device)
 	kb_stopping = false;
 	kb_info("start\n");
 
-	ret = lenovo_kb_enable_supply(dev, "vreg_l1b_1p8", 1800000);
+	ret = lenovo_kb_enable_supply(dev, "vreg_l1b_1p8", 1800000, 1800000);
 	if (ret)
 		return ret;
-	ret = lenovo_kb_enable_supply(dev, "vreg_l8b_1p8", 3300000);
+	ret = lenovo_kb_enable_supply(dev, "vreg_l8b_1p8", 3296000, 3300000);
 	if (ret)
 		return ret;
 

@@ -191,6 +191,16 @@ class OverlayTests(unittest.TestCase):
     def test_bundled_firmware_works_without_a_base_symbol_table(self):
         self.assert_symbol_free_overlay((ATTACHMENTS / "pogo-keyboard.dtbo").read_bytes())
 
+    def test_uart_only_firmware_does_not_modify_gpio_keys(self):
+        source = (ATTACHMENTS / "pogo-uart-only.dts").read_text()
+        binary = pogo.Trial.prepared_dtb(source)
+        self.assertEqual(binary, ATTACHMENTS / "pogo-uart-only.dtbo")
+        blob = binary.read_bytes()
+        self.assert_symbol_free_overlay(blob)
+        self.assertNotIn(b"/gpio-keys\0", blob)
+        self.assertNotIn(b"pogo-hall-default-state\0", blob)
+        self.assertIn(b"serial@a9c000\0", blob)
+
     @unittest.skipUnless(shutil.which("dtc"), "device-tree-compiler is required")
     def test_runtime_compilation_keeps_only_local_fixups(self):
         dts = (ATTACHMENTS / "pogo-keyboard.dts").read_text()
@@ -215,6 +225,22 @@ class OverlayTests(unittest.TestCase):
         self.assertIn("@1234", journal_args)
         self.assertIn("OF: (overlay|resolver)", journal_args[journal_args.index("--grep") + 1])
         self.assertIn(diagnostic, output.getvalue())
+
+
+class PowerSupplyTests(unittest.TestCase):
+    def test_accepts_discrete_3v3_selector_and_rejects_1v8_only_rail(self):
+        pmic = Path(self.enterContext(TemporaryDirectory()))
+        (pmic / "qcom,pmic-id").write_bytes(b"b\0")
+        for node, name, maximum in (("ldo1", "vreg_l1b_1p8", 1800000), ("ldo8", "vreg_l8b_1p8", 3296000)):
+            rail = pmic / node
+            rail.mkdir()
+            (rail / "regulator-name").write_bytes(name.encode() + b"\0")
+            (rail / "regulator-min-microvolt").write_bytes((1800000).to_bytes(4, "big"))
+            (rail / "regulator-max-microvolt").write_bytes(maximum.to_bytes(4, "big"))
+        pogo.check_supplies(pmic)
+        (pmic / "ldo8/regulator-max-microvolt").write_bytes((1800000).to_bytes(4, "big"))
+        with self.assertRaisesRegex(RuntimeError, "ldo8"):
+            pogo.check_supplies(pmic)
 
 
 class GnomeShortcutTests(unittest.TestCase):

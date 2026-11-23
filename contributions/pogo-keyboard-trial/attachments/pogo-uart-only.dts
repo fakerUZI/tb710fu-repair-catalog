@@ -1,0 +1,32 @@
+/dts-v1/;
+/plugin/;
+
+&{/soc@0/pinctrl@f100000} {
+    pogo_uart_default: pogo-uart-default-state {
+        mux {
+            pins = "gpio62", "gpio63";
+            function = "qup1_se7";
+        };
+        config {
+            pins = "gpio62", "gpio63";
+            drive-strength = <2>;
+            bias-disable;
+        };
+    };
+};
+
+&{/soc@0/geniqup@ac0000} {
+    serial@a9c000 {
+        compatible = "qcom,geni-uart";
+            reg = <0x0 0xa9c000 0x0 0x4000>;
+            interrupts = <0x0 0x243 0x4 0x0>;
+            clocks = <0x4d 0x6f>;
+            interconnects = <0x4e 0x1 0x7 0x4e 0x4 0x7 0x7 0x3 0x3 0x4f 0x1e 0x3 0x7b 0x1 0x7 0x8 0x1 0x7>;
+            power-domains = <0x4b 0x0>;
+        clock-names = "se";
+        interconnect-names = "qup-core", "qup-config", "qup-memory";
+        pinctrl-names = "default";
+        pinctrl-0 = <&pogo_uart_default>;
+        status = "okay";
+    };
+};
