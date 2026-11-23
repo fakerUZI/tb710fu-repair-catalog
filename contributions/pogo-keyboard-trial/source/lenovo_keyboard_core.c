@@ -1066,7 +1066,7 @@ static irqreturn_t lenovo_kb_plug_irq_handler(int irq, void *data)
 }
 
 
-/* GPIO81 is claimed by this driver after gpio-keys is rebound to GPIO66. */
+/* GPIO81 detects the keyboard independently of the gpio-keys lid switch. */
 static void lenovo_kb_plug_poll(struct work_struct *w)
 {
 	struct lenovo_keyboard_data *core =
@@ -1484,7 +1484,7 @@ static struct gpiod_lookup_table lenovo_kb_gpio_table = {
 	.table = {
 		GPIO_LOOKUP("f100000.pinctrl", 62, "uart-tx", GPIO_ACTIVE_HIGH),
 		GPIO_LOOKUP("f100000.pinctrl", 63, "uart-rx", GPIO_ACTIVE_HIGH),
-		GPIO_LOOKUP("f100000.pinctrl", 81, "plug", GPIO_ACTIVE_HIGH),
+		GPIO_LOOKUP("f100000.pinctrl", 81, "plug", GPIO_ACTIVE_HIGH | GPIO_PULL_UP),
 		GPIO_LOOKUP("f100000.pinctrl", 137, "uart-wake", GPIO_ACTIVE_HIGH),
 		GPIO_LOOKUP("f100000.pinctrl", 100, "tx-en", GPIO_ACTIVE_HIGH),
 		{ },

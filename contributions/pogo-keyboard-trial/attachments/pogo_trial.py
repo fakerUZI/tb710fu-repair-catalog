@@ -2,6 +2,7 @@
 """Supervised TB710FU trial with restoration of the original key binding."""
 
 import argparse
+import errno
 import fcntl
 import os
 from pathlib import Path
@@ -36,6 +37,8 @@ MODULE_LOG_PATTERN = (
     r"|[Uu]nknown symbol|version magic|disagrees about version"
     r"|module verification|[Ii]nvalid module format"
 )
+PROBE_LOG_PATTERN = MODULE_LOG_PATTERN + r"|gpio-keys|a9c000|Pogo supply|\[lenovo_KB-err\]"
+DEFERRED_DEVICES = Path("/sys/kernel/debug/devices_deferred")
 
 
 def kernel_logs(started, pattern, limit):
@@ -80,9 +83,9 @@ class Trial:
         if len(devices) != 1:
             raise RuntimeError(f"设备树 /gpio-keys 对应的平台设备数量为 {len(devices)}，需要核对当前启动配置")
         self.gpio_device = devices[0]
-        if not (GPIO_DRIVER / "bind").is_file() or not (GPIO_DRIVER / "unbind").is_file():
-            raise RuntimeError(f"找到 {self.gpio_device.name}，但系统未注册可重绑的 gpio-keys 驱动")
         self.original_gpio_bound = self.gpio_bound()
+        if self.original_gpio_bound and not all((GPIO_DRIVER / name).is_file() for name in ("bind", "unbind")):
+            raise RuntimeError(f"找到 {self.gpio_device.name}，但当前 gpio-keys 驱动不支持重绑")
         state = "已绑定" if self.original_gpio_bound else "未绑定"
         print(f"按键设备 {self.gpio_device.name}，原始驱动状态：{state}", flush=True)
 
@@ -98,15 +101,40 @@ class Trial:
         return True
 
     def set_gpio_bound(self, wanted):
-        if self.gpio_bound() == wanted:
-            return
         binding = GPIO_DRIVER / ("bind" if wanted else "unbind")
-        try:
-            binding.write_text(self.gpio_device.name)
-        except OSError as error:
-            raise RuntimeError(f"{binding.name} {self.gpio_device.name} 失败：{error.strerror}") from error
-        if self.gpio_bound() != wanted:
+        started = time.time()
+        for attempt in range(4):
+            if self.gpio_bound() == wanted:
+                return
+            try:
+                binding.write_text(self.gpio_device.name)
+            except OSError as error:
+                if wanted and error.errno == errno.EAGAIN and attempt < 3:
+                    time.sleep(0.25)
+                    continue
+                if self.gpio_bound() == wanted:
+                    return
+                self.report_probe_failure(started)
+                reason = "内核暂缓探测（EAGAIN）" if error.errno == errno.EAGAIN else error.strerror
+                raise RuntimeError(f"{binding.name} {self.gpio_device.name} 失败：{reason}") from error
+            if self.gpio_bound() == wanted:
+                return
+            self.report_probe_failure(started)
             raise RuntimeError("gpio-keys 的绑定状态与请求不一致")
+
+    def report_probe_failure(self, started):
+        logs = kernel_logs(started, PROBE_LOG_PATTERN, 20)
+        if logs:
+            print(f"本次硬件探测日志\n{logs}", flush=True)
+        names = (self.gpio_device.name, "a9c000", "lenovo,lenovo_keyboard")
+        try:
+            deferred = DEFERRED_DEVICES.read_text().splitlines()
+        except OSError:
+            return
+        for line in deferred:
+            fields = line.split(maxsplit=1)
+            if fields and any(name in fields[0] for name in names):
+                print(f"内核暂缓探测的设备：{line.strip()}", flush=True)
 
     def check(self, tree):
         dts = make_dts(tree)
@@ -145,15 +173,22 @@ class Trial:
             self.created_firmware = True
             output.write(blob)
         self.touched_keys = True
-        self.set_gpio_bound(False)
+        if self.original_gpio_bound:
+            self.set_gpio_bound(False)
         self.load(MODULES[0])
-        self.set_gpio_bound(True)
+        print("磁吸键盘设备树覆盖已加载。", flush=True)
+        if self.original_gpio_bound:
+            self.set_gpio_bound(True)
+        else:
+            print("gpio-keys 原先未绑定，跳过主动绑定，继续测试磁吸键盘。", flush=True)
+        started = time.time()
         self.load(MODULES[1])
         deadline = time.monotonic() + 12
         while time.monotonic() < deadline:
             if KEYBOARD_READY.is_file() and KEYBOARD_READY.read_text().strip() == "1":
                 return
             time.sleep(0.2)
+        self.report_probe_failure(started)
         raise RuntimeError("键盘驱动未确认串口唤醒完成")
 
     @staticmethod

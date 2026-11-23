@@ -425,8 +425,8 @@
       "title": "磁吸键盘实机测试（60 秒）",
       "device": "TB710FU",
       "status": "hardware-test",
-      "description": "键帽优先测试版。适用于 7.2.6-tb710fu-20261118 内核和联想原装三触点磁吸键盘。顶排默认执行设备功能，支持 GNOME 全屏和左侧平铺，输出功能键码。请单独运行，测试 60 秒后自动清理。",
-      "risk": "本条目待带键盘实测，从列表单独运行。开始前请保存工作。会短暂重绑音量键和合盖检测。系统若卡住可重启，测试模块没有开机服务。",
+      "description": "键帽优先测试版。适用于 7.2.6-tb710fu-20261118 内核和联想原装三触点磁吸键盘。适配系统按键驱动未绑定的情况，保留 GNOME 全屏、左侧平铺和功能键日志。请单独运行，测试 60 秒后自动清理。",
+      "risk": "本条目待带键盘实测，从列表单独运行。开始前请保存工作。原先已绑定时会短暂重绑音量键和合盖检测。系统若卡住可重启，测试模块没有开机服务。",
       "script": {
         "path": "contributions/pogo-keyboard-trial/script.sh",
         "sha256": "0a5565a61c5e8db02c2c584ca51bdcf6589703eee4fad3a8e423267e96592952",
@@ -435,7 +435,7 @@
       "attachments": [
         {
           "path": "contributions/pogo-keyboard-trial/attachments/README.md",
-          "sha256": "bc38515a7c755618fe7e3cf9c720ef545cf7728c5403f786ab9653abbb0d05a3"
+          "sha256": "eec0f38e27723bc08b9fd2241af271ff5bae48964e0d5b89991f247ace06c219"
         },
         {
           "path": "contributions/pogo-keyboard-trial/attachments/build_overlay.py",
@@ -443,7 +443,7 @@
         },
         {
           "path": "contributions/pogo-keyboard-trial/attachments/driver/lenovo_keyboard.ko",
-          "sha256": "9efbe5fdd330c6342d4f2145bdfb20656360cba3783cbca2ff2a0e632521d3c7"
+          "sha256": "dd1867bf177f108589b347007d324eb19b3f1afbd8d1f7281bac9cde184dc447"
         },
         {
           "path": "contributions/pogo-keyboard-trial/attachments/driver/tb_pogo_overlay.ko",
@@ -463,7 +463,7 @@
         },
         {
           "path": "contributions/pogo-keyboard-trial/attachments/pogo_trial.py",
-          "sha256": "3edd1c90107ff16ac174c03d9ecad0efd763e68b3bb52e1b4cc8748de2aa2e92"
+          "sha256": "2049c138eb39095f2c73cba48d741f13ee91caee7c13024ca5999c0be48ef714"
         }
       ]
     }
