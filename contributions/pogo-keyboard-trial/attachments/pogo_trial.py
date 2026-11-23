@@ -79,7 +79,9 @@ def check_supplies(pmic):
 
 
 class Trial:
-    def __init__(self):
+    def __init__(self, firmware=None, diagnostics=False):
+        self.firmware = FIRMWARE if firmware is None else firmware
+        self.diagnostics = diagnostics
         self.loaded = []
         self.created_firmware = False
         self.touched_keys = False
@@ -159,7 +161,7 @@ class Trial:
         for name in (*MODULES, *OLD_MODULES):
             if (Path("/sys/module") / name).exists():
                 raise RuntimeError(f"请先卸载已有键盘候选模块：{name}")
-        if FIRMWARE.exists() or FIRMWARE.is_symlink():
+        if self.firmware.exists() or self.firmware.is_symlink():
             raise RuntimeError("已有同名 DTBO")
         if self.prepared_dtb(dts) is None and not shutil.which("dtc"):
             raise RuntimeError("当前设备树需要现场生成 DTBO，请先安装 Ubuntu 的 device-tree-compiler。")
@@ -174,8 +176,8 @@ class Trial:
         if self.original_gpio_bound is None or self.gpio_bound() != self.original_gpio_bound:
             raise RuntimeError("gpio-keys 的绑定状态在开始前发生变化，请重试")
         blob = self.build_firmware(dts)
-        FIRMWARE.parent.mkdir(parents=True, exist_ok=True)
-        with FIRMWARE.open("xb") as output:
+        self.firmware.parent.mkdir(parents=True, exist_ok=True)
+        with self.firmware.open("xb") as output:
             self.created_firmware = True
             output.write(blob)
         self.touched_keys = True
@@ -217,8 +219,11 @@ class Trial:
 
     def load(self, module):
         started = time.time()
+        command = ["insmod", ROOT / "driver" / f"{module}.ko"]
+        if self.diagnostics and module == MODULES[1]:
+            command.append("log_hotkeys=1")
         try:
-            subprocess.run(["insmod", ROOT / "driver" / f"{module}.ko"], check=True)
+            subprocess.run(command, check=True)
         except subprocess.CalledProcessError:
             report_module_failure(module, started)
             raise
@@ -237,7 +242,7 @@ class Trial:
                     self.set_gpio_bound(self.original_gpio_bound)
             finally:
                 if self.created_firmware:
-                    FIRMWARE.unlink()
+                    self.firmware.unlink()
 
     def observe(self, seconds):
         deadline = time.monotonic() + seconds
@@ -267,7 +272,7 @@ def main():
     action.add_argument("--rollback", action="store_true")
     parser.add_argument("--seconds", type=int, default=60)
     args = parser.parse_args()
-    trial = Trial()
+    trial = Trial(diagnostics=args.start)
     if not (args.start or args.rollback):
         trial.check(TREE)
         print("设备树、当前内核、模块和 gpio-keys 基线检查通过。")

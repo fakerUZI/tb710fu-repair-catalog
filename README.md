@@ -70,4 +70,4 @@ Ubuntu 电源菜单缺少「挂起」时，可更新仓库并运行[恢复系统
 
 切换或连接新 Wi-Fi 时密码提示未打开，或右上角 Wi-Fi 密码框触屏键盘无法输入时，可更新仓库并运行[修复 Wi-Fi 密码提示和触屏输入](contributions/wifi-password-input/attachments/README.md)。
 
-原装三触点键盘用户可在修复助手单独运行[磁吸键盘实机测试（60 秒）](contributions/pogo-keyboard-trial/attachments/README.md)，按提示记录实测结果。
+原装三触点键盘用户可在修复助手单独安装[磁吸键盘与触控板（正式版）](contributions/pogo-keyboard-trial/attachments/README.md)。安装立即生效，后续开机自动加载。

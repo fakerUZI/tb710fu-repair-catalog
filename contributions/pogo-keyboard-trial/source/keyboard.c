@@ -50,6 +50,9 @@ static const unsigned int custom_key_map[KEYBOARD_CUSTOM_KEYS_NUM][2] = {
 static bool fn_mode;
 module_param(fn_mode, bool, 0444);
 MODULE_PARM_DESC(fn_mode, "top row reports F1-F9 instead of media functions");
+static bool log_hotkeys;
+module_param(log_hotkeys, bool, 0444);
+MODULE_PARM_DESC(log_hotkeys, "report function key diagnostics during a hardware trial");
 
 static unsigned int fn_row_key(unsigned int cuskey)
 {
@@ -156,7 +159,7 @@ int lenovo_kb_keyboard_report(char *buf){
 	for (i = 0; i < 8; i++)
 		input_report_key(input_dev, hid_to_sc[i + 224],
 				(kbd->new[1] >> i) & 1);
-	if ((kbd->new[1] & BIT(3)) && !(kbd->old[1] & BIT(3)))
+	if (log_hotkeys && (kbd->new[1] & BIT(3)) && !(kbd->old[1] & BIT(3)))
 		kb_info("Pogo hotkey keyboard=0xe3 linux=%u\n", KEY_LEFTMETA);
 
 	for (i = 2; i < 8; i++) {
@@ -180,7 +183,7 @@ int lenovo_kb_keyboard_report(char *buf){
 				sc = KEY_F7;
 			if (sc){
 				input_report_key(input_dev, sc, 1);
-				if (kbd->new[i] == 0x46 || kbd->new[i] == 0x4c)
+				if (log_hotkeys && (kbd->new[i] == 0x46 || kbd->new[i] == 0x4c))
 					kb_info("Pogo hotkey keyboard=%#x linux=%u\n",
 						kbd->new[i], sc);
 				kb_debug("key:%d down\n", sc);
@@ -265,8 +268,9 @@ int lenovo_kb_cuskey_report(char *buf){
 			if (cuskey == 0x398) {
 				if (!fn_row_busy(kbd))
 					fn_mode = !fn_mode;
-				kb_info("Pogo hotkey consumer=%#x fn_mode=%d\n",
-					cuskey, fn_mode);
+				if (log_hotkeys)
+					kb_info("Pogo hotkey consumer=%#x fn_mode=%d\n",
+						cuskey, fn_mode);
 			} else if (cuskey){
 				for(j = 0; j < KEYBOARD_CUSTOM_KEYS_NUM; j++){
 					if(cuskey == custom_key_map[j][0])
@@ -277,8 +281,9 @@ int lenovo_kb_cuskey_report(char *buf){
 					if (fn_mode && fn_row_key(cuskey))
 						kc = fn_row_key(cuskey);
 					input_report_key(input_dev, kc, 1);
-					kb_info("Pogo hotkey consumer=%#x linux=%u\n", cuskey, kc);
-				}else
+					if (log_hotkeys)
+						kb_info("Pogo hotkey consumer=%#x linux=%u\n", cuskey, kc);
+				} else if (log_hotkeys)
 					kb_info("Pogo hotkey consumer=%#x unassigned\n", cuskey);
 
 			}

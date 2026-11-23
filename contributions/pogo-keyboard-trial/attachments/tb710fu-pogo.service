@@ -1,0 +1,16 @@
+[Unit]
+Description=TB710FU magnetic keyboard and touchpad
+After=systemd-modules-load.service systemd-udev-trigger.service
+ConditionKernelVersion=7.2.6-tb710fu-20261118
+
+[Service]
+Type=notify
+NotifyAccess=main
+ExecStart=/usr/bin/python3 -EsBu /usr/local/lib/tb710fu-pogo/pogo_install.py serve
+RuntimeDirectory=tb710fu-pogo
+RuntimeDirectoryMode=0700
+TimeoutStartSec=35
+TimeoutStopSec=35
+
+[Install]
+WantedBy=multi-user.target
