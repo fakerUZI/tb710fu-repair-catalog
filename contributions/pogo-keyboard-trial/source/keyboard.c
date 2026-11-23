@@ -40,15 +40,15 @@ static const unsigned int custom_key_map[KEYBOARD_CUSTOM_KEYS_NUM][2] = {
         {0x392,  KEY_TOUCHPAD_TOGGLE},
         {0x393,  KEY_SEARCH},
         {0x394,  KEY_FULL_SCREEN},
-        {0x395,  KEY_TOUCHPAD_TOGGLE},
+        {0x395,  KEY_ASPECT_RATIO}, /* Split-screen shortcut bound by the GNOME trial. */
         {0x397,  KEY_PROG1},
         {0x398,  KEY_PROG3},
         {0x399,  KEY_PROG4},
 };
 
 /* star key (0x398) toggles the top row between media functions and F1-F9 */
-static bool fn_mode = true;
-module_param(fn_mode, bool, 0644);
+static bool fn_mode;
+module_param(fn_mode, bool, 0444);
 MODULE_PARM_DESC(fn_mode, "top row reports F1-F9 instead of media functions");
 
 static unsigned int fn_row_key(unsigned int cuskey)
@@ -156,6 +156,8 @@ int lenovo_kb_keyboard_report(char *buf){
 	for (i = 0; i < 8; i++)
 		input_report_key(input_dev, hid_to_sc[i + 224],
 				(kbd->new[1] >> i) & 1);
+	if ((kbd->new[1] & BIT(3)) && !(kbd->old[1] & BIT(3)))
+		kb_info("Pogo hotkey keyboard=0xe3 linux=%u\n", KEY_LEFTMETA);
 
 	for (i = 2; i < 8; i++) {
 		if (kbd->old[i] > 3 && memscan(kbd->new + 2, kbd->old[i], 6) ==
@@ -178,6 +180,9 @@ int lenovo_kb_keyboard_report(char *buf){
 				sc = KEY_F7;
 			if (sc){
 				input_report_key(input_dev, sc, 1);
+				if (kbd->new[i] == 0x46 || kbd->new[i] == 0x4c)
+					kb_info("Pogo hotkey keyboard=%#x linux=%u\n",
+						kbd->new[i], sc);
 				kb_debug("key:%d down\n", sc);
 			}else
 				kb_debug("Unknown key (scancode %#x) pressed.\n",
@@ -202,6 +207,23 @@ static void *memscan_ex(void *addr, int c, size_t size)
 		size = size - 2;
 	}
 	return (void *)p;
+}
+
+static bool fn_row_busy(struct lenovo_keyboard_data *kbd)
+{
+	int i;
+
+	if (memchr(kbd->old + 2, 0x46, 6))
+		return true;
+
+	for (i = 0; i < 4; i += 2) {
+		unsigned int old = kbd->mm_old[i] | kbd->mm_old[i + 1] << 8;
+		unsigned int new = kbd->mm_new[i] | kbd->mm_new[i + 1] << 8;
+
+		if (fn_row_key(old) || fn_row_key(new))
+			return true;
+	}
+	return false;
 }
 
 int lenovo_kb_cuskey_report(char *buf){
@@ -241,8 +263,10 @@ int lenovo_kb_cuskey_report(char *buf){
 		cuskey = kbd->mm_new[2*i] | kbd->mm_new[2*i+1] << 8;
 		if (memscan_ex(kbd->mm_old, cuskey, 4) == kbd->mm_old + 4) {
 			if (cuskey == 0x398) {
-				fn_mode = !fn_mode;
-				kb_info("fn mode:%d\n", fn_mode);
+				if (!fn_row_busy(kbd))
+					fn_mode = !fn_mode;
+				kb_info("Pogo hotkey consumer=%#x fn_mode=%d\n",
+					cuskey, fn_mode);
 			} else if (cuskey){
 				for(j = 0; j < KEYBOARD_CUSTOM_KEYS_NUM; j++){
 					if(cuskey == custom_key_map[j][0])
@@ -253,9 +277,9 @@ int lenovo_kb_cuskey_report(char *buf){
 					if (fn_mode && fn_row_key(cuskey))
 						kc = fn_row_key(cuskey);
 					input_report_key(input_dev, kc, 1);
-					kb_debug("key:%x down\n", cuskey);
+					kb_info("Pogo hotkey consumer=%#x linux=%u\n", cuskey, kc);
 				}else
-					kb_debug("Unknown key %#x  pressed.\n", cuskey);
+					kb_info("Pogo hotkey consumer=%#x unassigned\n", cuskey);
 
 			}
 			else

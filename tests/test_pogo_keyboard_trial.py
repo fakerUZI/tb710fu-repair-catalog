@@ -13,6 +13,7 @@ ATTACHMENTS = Path(__file__).resolve().parents[1] / "contributions/pogo-keyboard
 sys.path.insert(0, str(ATTACHMENTS))
 try:
     import pogo_trial as pogo
+    from gnome_shortcuts import GnomeShortcuts
 finally:
     sys.path.pop(0)
 
@@ -152,6 +153,59 @@ class OverlayTests(unittest.TestCase):
         self.assertIn("@1234", journal_args)
         self.assertIn("OF: (overlay|resolver)", journal_args[journal_args.index("--grep") + 1])
         self.assertIn(diagnostic, output.getvalue())
+
+
+class GnomeShortcutTests(unittest.TestCase):
+    fullscreen = "/org/gnome/desktop/wm/keybindings/toggle-fullscreen"
+    tiled = "/org/gnome/mutter/keybindings/toggle-tiled-left"
+
+    def setUp(self):
+        run = Path(self.enterContext(TemporaryDirectory()))
+        self.shortcuts = GnomeShortcuts.__new__(GnomeShortcuts)
+        self.shortcuts.state = run / "state" / "shortcuts.json"
+        self.defaults = {self.fullscreen: "@as []", self.tiled: "['<Super>Left']"}
+        self.values = {self.fullscreen: "['<Alt>F12']"}
+        self.enterContext(patch.object(self.shortcuts, "run", side_effect=self.command))
+
+    def command(self, command, action, key, *args):
+        if command == "gsettings":
+            path = "/" + key.replace(".", "/") + "/" + args[0]
+            return "true" if action == "writable" else self.values.get(path, self.defaults[path])
+        if action == "read":
+            return self.values.get(key, "")
+        if action == "write":
+            self.values[key] = args[0]
+        else:
+            self.values.pop(key, None)
+
+    def test_preserves_existing_bindings_and_restores_unset_defaults(self):
+        self.shortcuts.apply()
+        self.assertEqual(self.values[self.fullscreen], "['<Alt>F12', 'XF86FullScreen']")
+        self.assertEqual(self.values[self.tiled], "['<Super>Left', 'XF86AspectRatio']")
+        self.assertTrue(self.shortcuts.state.is_file())
+        self.shortcuts.restore()
+        self.assertEqual(self.values, {self.fullscreen: "['<Alt>F12']"})
+        self.assertFalse(self.shortcuts.state.exists())
+
+    def test_recovery_keeps_unrelated_edits_and_original_shortcut(self):
+        self.values[self.tiled] = "['XF86AspectRatio']"
+        self.shortcuts.apply()
+        self.values[self.fullscreen] = "['XF86FullScreen', '<Alt>F11']"
+        self.shortcuts.restore()
+        self.assertEqual(self.values, {self.fullscreen: "['<Alt>F11']", self.tiled: "['XF86AspectRatio']"})
+
+    def test_interrupted_apply_can_be_recovered(self):
+        def interrupted(command, action, key, *args):
+            if command == "dconf" and action == "write" and key == self.tiled:
+                raise subprocess.CalledProcessError(1, ["dconf"])
+            return self.command(command, action, key, *args)
+
+        with patch.object(self.shortcuts, "run", side_effect=interrupted):
+            with self.assertRaises(subprocess.CalledProcessError):
+                self.shortcuts.apply()
+        self.assertEqual(self.values[self.fullscreen], "['<Alt>F12', 'XF86FullScreen']")
+        self.shortcuts.restore()
+        self.assertEqual(self.values, {self.fullscreen: "['<Alt>F12']"})
 
 
 if __name__ == "__main__":

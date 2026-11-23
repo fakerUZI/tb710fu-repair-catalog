@@ -425,17 +425,17 @@
       "title": "磁吸键盘实机测试（60 秒）",
       "device": "TB710FU",
       "status": "hardware-test",
-      "description": "手动测试联想原装三触点磁吸键盘。适用于 7.2.6-tb710fu-20261118 内核。临时加载重编译的键盘和设备树模块，使用系统已有供电驱动，观察键盘与触控板枚举。60 秒后自动清理。请记录实际按键、触控板和拔插结果。",
+      "description": "键帽优先测试版。适用于 7.2.6-tb710fu-20261118 内核和联想原装三触点磁吸键盘。顶排默认执行设备功能，支持 GNOME 全屏和左侧平铺，输出功能键码。请单独运行，测试 60 秒后自动清理。",
       "risk": "本条目待带键盘实测，从列表单独运行。开始前请保存工作。会短暂重绑音量键和合盖检测。系统若卡住可重启，测试模块没有开机服务。",
       "script": {
         "path": "contributions/pogo-keyboard-trial/script.sh",
-        "sha256": "20733c0a6446469286e5f5a870fe54a4918d7643baee5bbf291377a9dccf2e8d",
+        "sha256": "0a5565a61c5e8db02c2c584ca51bdcf6589703eee4fad3a8e423267e96592952",
         "requires_admin": true
       },
       "attachments": [
         {
           "path": "contributions/pogo-keyboard-trial/attachments/README.md",
-          "sha256": "5f07ea12e42a4e3924210e1702320f432d461a663620e63c3d708461e281da91"
+          "sha256": "bc38515a7c755618fe7e3cf9c720ef545cf7728c5403f786ab9653abbb0d05a3"
         },
         {
           "path": "contributions/pogo-keyboard-trial/attachments/build_overlay.py",
@@ -443,11 +443,15 @@
         },
         {
           "path": "contributions/pogo-keyboard-trial/attachments/driver/lenovo_keyboard.ko",
-          "sha256": "35a7c9587587a4d38e021b7636e102c23cee24272d13f3356e9833c921accf3d"
+          "sha256": "9efbe5fdd330c6342d4f2145bdfb20656360cba3783cbca2ff2a0e632521d3c7"
         },
         {
           "path": "contributions/pogo-keyboard-trial/attachments/driver/tb_pogo_overlay.ko",
           "sha256": "9c467893c45dc69374022961a089ecd2479fb4486f18f732edc5120dc763d828"
+        },
+        {
+          "path": "contributions/pogo-keyboard-trial/attachments/gnome_shortcuts.py",
+          "sha256": "66ce7239611318f0d2ee1245602bf1618304cb885856070aadf20307b0977d90"
         },
         {
           "path": "contributions/pogo-keyboard-trial/attachments/pogo-keyboard.dtbo",
@@ -459,7 +463,7 @@
         },
         {
           "path": "contributions/pogo-keyboard-trial/attachments/pogo_trial.py",
-          "sha256": "89d32bdd8f0e507624031aa0216c2bc0c08d6454de3b9febf2be4f4a714528dd"
+          "sha256": "3edd1c90107ff16ac174c03d9ecad0efd763e68b3bb52e1b4cc8748de2aa2e92"
         }
       ]
     }

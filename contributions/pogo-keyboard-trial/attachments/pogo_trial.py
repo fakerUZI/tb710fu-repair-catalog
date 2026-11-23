@@ -14,6 +14,7 @@ import tempfile
 import time
 
 from build_overlay import compile_dtbo, make_dts
+from gnome_shortcuts import GnomeShortcuts
 
 
 ROOT = Path(__file__).resolve().parent
@@ -37,19 +38,23 @@ MODULE_LOG_PATTERN = (
 )
 
 
-def report_module_failure(module, started):
+def kernel_logs(started, pattern, limit):
     try:
         result = subprocess.run(
             [
                 "journalctl", "-k", "-b", "--since", f"@{int(started)}",
-                "--grep", MODULE_LOG_PATTERN, "--lines", "20",
+                "--grep", pattern, "--lines", str(limit),
                 "--no-pager", "--quiet", "--output", "cat",
             ],
             capture_output=True, encoding="utf-8", errors="replace", timeout=4,
         )
-        logs = result.stdout.strip()
+        return result.stdout.strip()
     except (OSError, subprocess.TimeoutExpired):
-        logs = ""
+        return ""
+
+
+def report_module_failure(module, started):
+    logs = kernel_logs(started, MODULE_LOG_PATTERN, 20)
     print(f"{module} 加载失败，相关内核日志", flush=True)
     print(logs or "本次加载没有读到匹配的内核日志。", flush=True)
 
@@ -215,11 +220,13 @@ class Trial:
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--start", action="store_true")
+    action = parser.add_mutually_exclusive_group()
+    action.add_argument("--start", action="store_true")
+    action.add_argument("--rollback", action="store_true")
     parser.add_argument("--seconds", type=int, default=60)
     args = parser.parse_args()
     trial = Trial()
-    if not args.start:
+    if not (args.start or args.rollback):
         trial.check(TREE)
         print("设备树、当前内核、模块和 gpio-keys 基线检查通过。")
         return
@@ -229,13 +236,42 @@ def main():
     lock = os.open("/run/lock/tb710fu-pogo-trial.lock", os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
     with os.fdopen(lock, "r+") as held:
         fcntl.flock(held, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        dts = trial.check(TREE)
+        shortcuts = None
         try:
+            shortcuts = GnomeShortcuts.active()
+        except (OSError, ValueError, subprocess.SubprocessError) as error:
+            print(f"无法访问 GNOME 会话：{error}", flush=True)
+        if shortcuts is not None:
+            shortcuts.restore()
+        if args.rollback:
+            if shortcuts is None:
+                raise RuntimeError("请在原测试账号的 GNOME Wayland 桌面登录后恢复快捷键。")
+            print("已清理此账号的临时 GNOME 快捷键。", flush=True)
+            return
+        dts = trial.check(TREE)
+        started = time.time()
+        try:
+            if shortcuts is not None:
+                try:
+                    shortcuts.apply()
+                    print("已配置本次测试的 GNOME 全屏和左侧平铺快捷键。", flush=True)
+                except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:
+                    shortcuts.restore()
+                    print(f"无法配置桌面快捷键，本次仍可测试键码：{error}", flush=True)
+            else:
+                print("当前无可用的 GNOME Wayland 会话。本次仍可测试键码。", flush=True)
             trial.start(dts)
-            print(f"UART 唤醒已发出。请在 {args.seconds} 秒内测试按键、触控板和拔插。", flush=True)
+            print(f"UART 唤醒已发出。请在 {args.seconds} 秒内测试顶排、四格键、Delete、触控板和拔插。", flush=True)
             seen = trial.observe(args.seconds)
         finally:
-            trial.stop()
+            try:
+                trial.stop()
+            finally:
+                if shortcuts is not None:
+                    shortcuts.restore()
+                hotkeys = kernel_logs(started, "Pogo hotkey ", 40)
+                if hotkeys:
+                    print(f"Pogo 功能键记录\n{hotkeys}", flush=True)
             if make_dts(TREE) != dts or trial.gpio_bound() != trial.original_gpio_bound:
                 raise RuntimeError("清理后尚未确认原设备树和 gpio-keys 已恢复，请重启。")
             print("临时模块已卸载，gpio-keys 已恢复测试前的绑定状态。", flush=True)
