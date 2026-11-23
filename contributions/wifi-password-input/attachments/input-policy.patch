@@ -1,0 +1,69 @@
+--- extension.js
++++ extension.js
+@@ -1,5 +1,6 @@
+ import Clutter from 'gi://Clutter';
+ import Shell from 'gi://Shell';
++import St from 'gi://St';
+ import GLib from 'gi://GLib';
+ import Gio from 'gi://Gio';
+ import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
+@@ -40,6 +41,7 @@
+         this._manual = false;
+         this._hadInputFocus = false;
+         this._lastNativeFocus = null;
++        this._lastWifiPasswordFocus = null;
+         this._touchGeneration = 0;
+         this._handledTouchGeneration = 0;
+         this._lastAppTouch = 0;
+@@ -60,6 +62,12 @@
+             if (event.type() !== Clutter.EventType.TOUCH_END)
+                 return Clutter.EVENT_PROPAGATE;
+             const source = global.stage.get_event_actor(event);
++            const password = this.getWifiPasswordFocus();
++            if (password && source && password.get_parent().contains(source)) {
++                this._mode = 'touch';
++                this._openForTouch();
++                return Clutter.EVENT_PROPAGATE;
++            }
+             if (!source || !global.window_group.contains(source))
+                 return Clutter.EVENT_PROPAGATE;
+             this._mode = 'touch';
+@@ -115,6 +123,12 @@
+             if (GLib.get_monotonic_time() / 1000 - this._lastDeviceCheck > 1000)
+                 this._refreshPhysicalKeyboards();
+             const focus = Main.inputMethod?.currentFocus;
++            const password = this.getWifiPasswordFocus();
++            if (password && password !== this._lastWifiPasswordFocus) {
++                this._manager.resetSuggestions();
++                this._openForTouch();
++            }
++            this._lastWifiPasswordFocus = password;
+             let focused = false;
+             try { focused = !!focus?.is_focused(); } catch (_e) {}
+             const recentlyTouched = this._touchGeneration !== this._handledTouchGeneration;
+@@ -226,8 +240,24 @@
+     }
+     _isSensitiveInput() {
+         return Main.sessionMode?.isLocked ||
+-            Main.actionMode === Shell.ActionMode.LOCK_SCREEN || hasSensitiveNativeFocus();
++            Main.actionMode === Shell.ActionMode.LOCK_SCREEN ||
++            Boolean(this.getWifiPasswordFocus()) || hasSensitiveNativeFocus();
+     }
++    getWifiPasswordFocus() {
++        if (Main.actionMode !== Shell.ActionMode.SYSTEM_MODAL)
++            return null;
++        const focus = global.stage.key_focus;
++        if (!(focus?.get_parent() instanceof St.PasswordEntry) ||
++            !focus.get_editable())
++            return null;
++        const agent = Main.componentManager?._allComponents?.networkAgent;
++        for (const dialog of Object.values(agent?._dialogs ?? {})) {
++            if (dialog.contains(focus) &&
++                dialog._connection?.get_setting_connection()?.get_connection_type() === '802-11-wireless')
++                return focus;
++        }
++        return null;
++    }
+     _wrapKeyboard() {
+         const keyboard = this._manager.keyboardActor;
+         if (!keyboard || keyboard === this._keyboard)

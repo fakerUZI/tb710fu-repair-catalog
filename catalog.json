@@ -67,6 +67,37 @@
       ]
     },
     {
+      "id": "wifi-password-input",
+      "title": "修复 Wi-Fi 密码提示和触屏输入",
+      "device": "TB710FU",
+      "status": "community-review",
+      "description": "修复使用中切换或连接新 Wi-Fi 时出现的 no-secrets，以及 GNOME 右上角 Wi-Fi 密码框的触屏键盘输入。补齐 Ubuntu GNOME 密钥环依赖，并针对现有 TB710FU 屏幕键盘更新密码框焦点、输入和退格。",
+      "risk": "需要管理员授权及 Ubuntu 软件源连接。更新后请保存工作并注销重登。支持检查和键盘补丁回退。",
+      "script": {
+        "path": "contributions/wifi-password-input/script.sh",
+        "sha256": "6737c634082eefa6cbab1740da438274fa3c81257d50cf49447251799ca53ec1",
+        "requires_admin": true
+      },
+      "attachments": [
+        {
+          "path": "contributions/wifi-password-input/attachments/install.py",
+          "sha256": "0a6dc95bb46b690729da251b0d25f0a5ee6922c56e8622a93824ecaf3a5ff2cd"
+        },
+        {
+          "path": "contributions/wifi-password-input/attachments/input-policy.patch",
+          "sha256": "b9283c77afdccc920563b31ba9bcc22bd1503eeb99c75c327ff1d0f75df07e49"
+        },
+        {
+          "path": "contributions/wifi-password-input/attachments/wowtype.patch",
+          "sha256": "0ca373ac085dbde80bbd6d927b701ac989ade241f51194ecff10eb222a4e6a87"
+        },
+        {
+          "path": "contributions/wifi-password-input/attachments/README.md",
+          "sha256": "c5524c2552676e10f63eacdee0d4f14f6a32502689ee48061ddede15e5f40c76"
+        }
+      ]
+    },
+    {
       "id": "touch-window-grip",
       "title": "手指拖动 / 缩放宽边框为无边框的 X11 窗口（Electron 等）",
       "description": "问题：平板上无法用一根手指拖动画布/窗口，也无法从边角缩放。WorkBuddy、微信这类 Electron / 无边框应用尤其明显。\n\n原因：无边框窗口的拖动靠 -webkit-app-region: drag，缩放靠 Chromium 的 resize 热区，二者都只识别鼠标事件；触摸会被当成普通点击交给页面。平板上没有物理鼠标，于是这条路径整体失效。\n\n做法：touch-window-grip 用 XInput2 被动触摸抓取（XIGrabTouchBegin），在触摸按下那一刻先做一次分流，再决定是否接管：\n  1) 距角落 54px 内 → 双轴缩放\n  2) 距边缘 18px 内 → 单轴缩放\n  3) 顶部 80px 条 → 移动窗口\n  4) 其余 → 立即 XIRejectTouch，原样交还给应用，保证点击、长按、滚动不被抢\n\n窗口尺寸受 WM_NORMAL_HINTS 的 min/max 夹取；每次按下都重新读取窗口几何，避免窗口被别的途径移动后错位。配置在 ~/.config/touch-window-grip/targets.json，按 WM_CLASS / 标题关键字匹配要接管的应用，可用 --add / --remove / --list 管理。自带 --selftest，会验证分类、移动、右/下/右下角缩放并复原。\n\n只对 XWayland / X11 窗口有效；原生 Wayland 客户端抓不到。\n\n用法：TB710FU_FIX_ACTION=check 只检查不改动，默认 apply 安装，rollback 停用服务并移除本包文件（你的 targets.json 会保留为 .bak 目录）。",
