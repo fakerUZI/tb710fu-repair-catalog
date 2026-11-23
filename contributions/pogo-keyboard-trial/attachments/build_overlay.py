@@ -95,16 +95,21 @@ def make_dts(tree):
 '''
 
 
+def compile_dtbo(dts, output):
+    # The kernel rejects overlay symbols when the live tree has no symbol table.
+    # Path targets need no exported symbols. /plugin/ emits the local fixups.
+    with tempfile.TemporaryDirectory() as workspace:
+        source = Path(workspace) / "pogo.dts"
+        source.write_text(dts)
+        subprocess.run(["dtc", "-I", "dts", "-O", "dtb", "-o", output, source], check=True)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--tree", type=Path, default=Path("/sys/firmware/devicetree/base"))
     parser.add_argument("out", type=Path)
     args = parser.parse_args()
-    text = make_dts(args.tree)
-    with tempfile.TemporaryDirectory() as workspace:
-        source = Path(workspace) / "pogo.dts"
-        source.write_text(text)
-        subprocess.run(["dtc", "-@", "-I", "dts", "-O", "dtb", "-o", str(args.out), str(source)], check=True)
+    compile_dtbo(make_dts(args.tree), args.out)
 
 
 if __name__ == "__main__":

@@ -435,11 +435,11 @@
       "attachments": [
         {
           "path": "contributions/pogo-keyboard-trial/attachments/README.md",
-          "sha256": "3d66a4c4c6d493c8a1b62877da711417717693a2234bb2264cc680f0e68f53cc"
+          "sha256": "5f07ea12e42a4e3924210e1702320f432d461a663620e63c3d708461e281da91"
         },
         {
           "path": "contributions/pogo-keyboard-trial/attachments/build_overlay.py",
-          "sha256": "2cc629013f31bdf25084b595b381ddee7fd6590607e6c083b956a1b0c628d2e2"
+          "sha256": "747af77cde3e8fa311f1559aa33918f63f0de7a43976b1f01bb9a9f2ca853a65"
         },
         {
           "path": "contributions/pogo-keyboard-trial/attachments/driver/lenovo_keyboard.ko",
@@ -451,7 +451,7 @@
         },
         {
           "path": "contributions/pogo-keyboard-trial/attachments/pogo-keyboard.dtbo",
-          "sha256": "1456ecdc7101d4b22dbd88e29f08b66709ba4b6c42cefc443b95647043e5aa75"
+          "sha256": "e5dcf5ce3ce8637fca12da324e31026c953eba2e40de21a8768876675e4e28e6"
         },
         {
           "path": "contributions/pogo-keyboard-trial/attachments/pogo-keyboard.dts",
@@ -459,7 +459,7 @@
         },
         {
           "path": "contributions/pogo-keyboard-trial/attachments/pogo_trial.py",
-          "sha256": "95fc48c9ee05f6f199099152cbce6669683b929032df7e7615d7d618352ba67c"
+          "sha256": "89d32bdd8f0e507624031aa0216c2bc0c08d6454de3b9febf2be4f4a714528dd"
         }
       ]
     }

@@ -1,4 +1,7 @@
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 from tempfile import TemporaryDirectory
@@ -102,6 +105,7 @@ class BindingTests(unittest.TestCase):
                     patch.object(started, "set_gpio_bound", side_effect=set_bound),
                     patch.object(started, "build_firmware", return_value=b"fixture"),
                     patch.object(pogo, "FIRMWARE", firmware),
+                    patch.object(pogo, "report_module_failure"),
                     patch.object(pogo.subprocess, "run", side_effect=command),
                 ):
                     with self.assertRaises(subprocess.CalledProcessError):
@@ -113,6 +117,41 @@ class BindingTests(unittest.TestCase):
                 self.assertFalse(firmware.exists())
                 self.assertIn(("rmmod", "tb_pogo_overlay"), actions)
                 self.assertNotIn(("rmmod", "lenovo_keyboard"), actions)
+
+
+class OverlayTests(unittest.TestCase):
+    def assert_symbol_free_overlay(self, blob):
+        self.assertNotIn(b"__symbols__\0", blob)
+        self.assertNotIn(b"__fixups__\0", blob)
+        self.assertIn(b"__local_fixups__\0", blob)
+
+    def test_bundled_firmware_works_without_a_base_symbol_table(self):
+        self.assert_symbol_free_overlay((ATTACHMENTS / "pogo-keyboard.dtbo").read_bytes())
+
+    @unittest.skipUnless(shutil.which("dtc"), "device-tree-compiler is required")
+    def test_runtime_compilation_keeps_only_local_fixups(self):
+        dts = (ATTACHMENTS / "pogo-keyboard.dts").read_text()
+        with patch.object(pogo.Trial, "prepared_dtb", return_value=None):
+            self.assert_symbol_free_overlay(pogo.Trial().build_firmware(dts))
+
+    def test_load_failure_reports_kernel_reason_and_propagates_error(self):
+        diagnostic = "OF: overlay: symbols in overlay, but not in live tree"
+        journal = subprocess.CompletedProcess(["journalctl"], 0, stdout=diagnostic)
+        failed = subprocess.CalledProcessError(1, ["insmod"])
+        trial = pogo.Trial()
+        output = StringIO()
+        with (
+            patch.object(pogo.time, "time", return_value=1234.5),
+            patch.object(pogo.subprocess, "run", side_effect=[failed, journal]) as run,
+            redirect_stdout(output),
+            self.assertRaises(subprocess.CalledProcessError),
+        ):
+            trial.load("tb_pogo_overlay")
+        self.assertEqual(trial.loaded, [])
+        journal_args = run.call_args.args[0]
+        self.assertIn("@1234", journal_args)
+        self.assertIn("OF: (overlay|resolver)", journal_args[journal_args.index("--grep") + 1])
+        self.assertIn(diagnostic, output.getvalue())
 
 
 if __name__ == "__main__":

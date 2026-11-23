@@ -13,7 +13,7 @@ import sys
 import tempfile
 import time
 
-from build_overlay import make_dts
+from build_overlay import compile_dtbo, make_dts
 
 
 ROOT = Path(__file__).resolve().parent
@@ -30,6 +30,28 @@ EXPECTED_INPUTS = {
     "Lenovo Keyboard Pack For Yoga Tab Keyboard",
     "Lenovo Keyboard Pack For Yoga Tab Touchpad",
 }
+MODULE_LOG_PATTERN = (
+    r"OF: (overlay|resolver)|tb_pogo_overlay|lenovo_keyboard|pogo-keyboard\.dtbo"
+    r"|[Uu]nknown symbol|version magic|disagrees about version"
+    r"|module verification|[Ii]nvalid module format"
+)
+
+
+def report_module_failure(module, started):
+    try:
+        result = subprocess.run(
+            [
+                "journalctl", "-k", "-b", "--since", f"@{int(started)}",
+                "--grep", MODULE_LOG_PATTERN, "--lines", "20",
+                "--no-pager", "--quiet", "--output", "cat",
+            ],
+            capture_output=True, encoding="utf-8", errors="replace", timeout=4,
+        )
+        logs = result.stdout.strip()
+    except (OSError, subprocess.TimeoutExpired):
+        logs = ""
+    print(f"{module} 加载失败，相关内核日志", flush=True)
+    print(logs or "本次加载没有读到匹配的内核日志。", flush=True)
 
 
 class Trial:
@@ -142,14 +164,17 @@ class Trial:
         if prepared is not None:
             return prepared.read_bytes()
         with tempfile.TemporaryDirectory() as work:
-            source = Path(work) / "pogo.dts"
-            blob = source.with_suffix(".dtbo")
-            source.write_text(dts)
-            subprocess.run(["dtc", "-@", "-I", "dts", "-O", "dtb", "-o", blob, source], check=True)
+            blob = Path(work) / "pogo-keyboard.dtbo"
+            compile_dtbo(dts, blob)
             return blob.read_bytes()
 
     def load(self, module):
-        subprocess.run(["insmod", ROOT / "driver" / f"{module}.ko"], check=True)
+        started = time.time()
+        try:
+            subprocess.run(["insmod", ROOT / "driver" / f"{module}.ko"], check=True)
+        except subprocess.CalledProcessError:
+            report_module_failure(module, started)
+            raise
         self.loaded.append(module)
 
     def stop(self):
