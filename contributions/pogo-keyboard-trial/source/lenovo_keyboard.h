@@ -118,7 +118,10 @@ struct lenovo_keyboard_data{
 	int tx_en_gpio;
 
 	int plug_gpio;
-	int plug_irq;
+	struct input_handler hall_handler;
+	struct input_handle hall_handle;
+	bool hall_input_connected;
+	bool hall_near;
 	struct delayed_work plug_poll_work;
 	bool ready;
 	int last_plug_level;

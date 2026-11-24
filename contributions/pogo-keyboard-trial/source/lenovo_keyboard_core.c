@@ -737,11 +737,20 @@ static void lenovo_kb_power_enable(int value){
 	kb_info("enable:%d\n", value);
 }
 
+static int lenovo_kb_plug_level(struct lenovo_keyboard_data *core)
+{
+	if (gpio_is_valid(core->plug_gpio))
+		return gpio_get_value(core->plug_gpio);
+
+	/* gpio-keys reports the active-low GPIO81 as an asserted switch. */
+	return !READ_ONCE(core->hall_near);
+}
+
 static void lenovo_kb_check_keyboard(void)
 {
         int value = 0;
 
-        value = gpio_get_value(lenovo_kb_core->plug_gpio);
+        value = lenovo_kb_plug_level(lenovo_kb_core);
         if(value == 0 && (get_kb_status(KB_CONNECT_STATUS) == UNCONNECTED)) {
                 if (gpio_is_valid(lenovo_kb_core->power_en_gpio) && gpio_get_value(lenovo_kb_core->power_en_gpio) == 1) {
                         lenovo_kb_power_enable(0);
@@ -775,7 +784,7 @@ static ssize_t kb_hall_status_show(struct device *dev,
 					char *buf)
 {
 	int value = 0;
-	value = gpio_get_value(lenovo_kb_core->plug_gpio);
+	value = lenovo_kb_plug_level(lenovo_kb_core);
 
 	return sprintf(buf, "%d\n", value);
 }
@@ -984,9 +993,101 @@ static struct attribute_group lenovo_kb_attribute_group = {
 	.attrs = lenovo_kb_attributes
 };
 
+static void lenovo_kb_hall_event(struct input_handle *handle, unsigned int type,
+				unsigned int code, int value)
+{
+	struct lenovo_keyboard_data *core = handle->private;
+
+	if (type == EV_SW && code == SW_LID)
+		WRITE_ONCE(core->hall_near, value);
+}
+
+static int lenovo_kb_hall_connect(struct input_handler *handler,
+				 struct input_dev *input,
+				 const struct input_device_id *id)
+{
+	struct lenovo_keyboard_data *core = handler->private;
+	struct input_handle *handle = &core->hall_handle;
+	struct device *parent = input->dev.parent;
+	unsigned long flags;
+	int ret;
+
+	if (!parent || !of_node_name_eq(parent->of_node, "gpio-keys") ||
+	    READ_ONCE(core->hall_input_connected))
+		return -ENODEV;
+
+	handle->dev = input;
+	handle->handler = handler;
+	handle->name = handler->name;
+	handle->private = core;
+	ret = input_register_handle(handle);
+	if (ret)
+		return ret;
+	ret = input_open_device(handle);
+	if (ret) {
+		input_unregister_handle(handle);
+		return ret;
+	}
+
+	spin_lock_irqsave(&input->event_lock, flags);
+	WRITE_ONCE(core->hall_near, test_bit(SW_LID, input->sw));
+	spin_unlock_irqrestore(&input->event_lock, flags);
+	WRITE_ONCE(core->hall_input_connected, true);
+	return 0;
+}
+
+static void lenovo_kb_hall_disconnect(struct input_handle *handle)
+{
+	struct lenovo_keyboard_data *core = handle->private;
+
+	input_close_device(handle);
+	input_unregister_handle(handle);
+	WRITE_ONCE(core->hall_near, false);
+	WRITE_ONCE(core->hall_input_connected, false);
+}
+
+static const struct input_device_id lenovo_kb_hall_ids[] = {
+	{
+		.flags = INPUT_DEVICE_ID_MATCH_EVBIT | INPUT_DEVICE_ID_MATCH_SWBIT,
+		.evbit = { BIT_MASK(EV_SW) },
+		.swbit = { BIT_MASK(SW_LID) },
+	},
+	{ }
+};
+
+static void lenovo_kb_hall_unregister(void *data)
+{
+	input_unregister_handler(data);
+}
+
+static int lenovo_kb_use_hall_input(struct lenovo_keyboard_data *core)
+{
+	struct input_handler *handler = &core->hall_handler;
+	struct device *dev = &core->plat_dev->dev;
+	int ret;
+
+	handler->name = "tb710fu-pogo-hall";
+	handler->event = lenovo_kb_hall_event;
+	handler->connect = lenovo_kb_hall_connect;
+	handler->disconnect = lenovo_kb_hall_disconnect;
+	handler->id_table = lenovo_kb_hall_ids;
+	handler->private = core;
+	ret = input_register_handler(handler);
+	if (ret)
+		return ret;
+	if (!READ_ONCE(core->hall_input_connected)) {
+		input_unregister_handler(handler);
+		return dev_err_probe(dev, -EPROBE_DEFER,
+				     "GPIO81 is busy and its gpio-keys switch is unavailable\n");
+	}
+	dev_info(dev, "Pogo detection uses the existing gpio-keys Hall input\n");
+	return devm_add_action_or_reset(dev, lenovo_kb_hall_unregister, handler);
+}
+
 static int lenovo_kb_get_dts_info(struct lenovo_keyboard_data *core)
 {
         struct device_node *node = NULL;
+	int ret;
 
         kb_info("start\n");
         node = of_find_compatible_node(NULL, NULL, KEYBOARD_CORE_NAME);
@@ -995,9 +1096,13 @@ static int lenovo_kb_get_dts_info(struct lenovo_keyboard_data *core)
         /* no DT node is fine: gpios come from the machine lookup table */
 
         core->plug_gpio = kb_gpio(&core->plat_dev->dev, "plug", GPIOD_IN);
-        if (!gpio_is_valid(core->plug_gpio)) {
+	if (core->plug_gpio == -EBUSY) {
+		ret = lenovo_kb_use_hall_input(core);
+		if (ret)
+			return ret;
+	} else if (!gpio_is_valid(core->plug_gpio)) {
                 kb_err("plug_gpio is not valid %d\n", core->plug_gpio);
-                return -EINVAL;
+		return core->plug_gpio;
         }
 
         core->power_en_gpio = kb_gpio(&core->plat_dev->dev, "power-en", GPIOD_OUT_LOW);
@@ -1040,7 +1145,7 @@ static int lenovo_kb_gpio_setup(struct lenovo_keyboard_data *core)
 
 static void lenovo_kb_hall_work(struct work_struct *work)
 {
-	int plug_status = gpio_get_value(lenovo_kb_core->plug_gpio);
+	int plug_status = lenovo_kb_plug_level(lenovo_kb_core);
 	if (plug_status == 0) {
 		lenovo_kb_power_enable(1);
 	} else {
@@ -1058,7 +1163,7 @@ static irqreturn_t lenovo_kb_plug_irq_handler(int irq, void *data)
 		(struct lenovo_keyboard_data *)data;
         int value = 0;
 
-        value = gpio_get_value(core->plug_gpio);
+        value = lenovo_kb_plug_level(core);
 
         kb_info("plug irq gpio = %d\n", value);
 	pm_wakeup_dev_event(&core->plat_dev->dev, 2000, true);
@@ -1068,7 +1173,7 @@ static irqreturn_t lenovo_kb_plug_irq_handler(int irq, void *data)
 }
 
 
-/* GPIO81 detects the keyboard independently of the gpio-keys lid switch. */
+/* GPIO81 is read through gpio-keys when it already owns the Hall line. */
 static void lenovo_kb_plug_poll(struct work_struct *w)
 {
 	struct lenovo_keyboard_data *core =
@@ -1076,7 +1181,7 @@ static void lenovo_kb_plug_poll(struct work_struct *w)
 	if (kb_stopping)
 		return;
 	if (core->ready) {
-		int level = gpio_get_value(core->plug_gpio);
+		int level = lenovo_kb_plug_level(core);
 		/* polled plug line: act only on a real edge, not every 100ms */
 		if (level != core->last_plug_level) {
 			core->last_plug_level = level;
@@ -1087,17 +1192,10 @@ static void lenovo_kb_plug_poll(struct work_struct *w)
 			   msecs_to_jiffies(100));
 }
 
-static int lenovo_kb_plug_irq_config(struct lenovo_keyboard_data *core)
+static void lenovo_kb_plug_poll_init(struct lenovo_keyboard_data *core)
 {
-	core->plug_irq = gpio_to_irq(core->plug_gpio);
-	if (core->plug_irq < 0) {
-		kb_err("failed get plug irq num %d", core->plug_irq);
-		return -EINVAL;
-	}
-
 	core->last_plug_level = -1; /* force first poll to establish initial state */
 	INIT_DELAYED_WORK(&core->plug_poll_work, lenovo_kb_plug_poll);
-	return 0;
 }
 
 static irqreturn_t lenovo_kb_wake_irq_handler(int irq, void *data)
@@ -1500,9 +1598,7 @@ static int lenovo_kb_probe(struct platform_device  *device)
 	if(ret != 0)
 		goto exit_out;
 
-	ret = lenovo_kb_plug_irq_config(lenovo_kb_core);
-	if(ret != 0)
-		goto exit_out;
+	lenovo_kb_plug_poll_init(lenovo_kb_core);
 
 	ret = lenovo_kb_wake_irq_config(lenovo_kb_core);
 	if(ret != 0)

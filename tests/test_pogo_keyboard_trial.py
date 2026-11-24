@@ -1,5 +1,4 @@
 from contextlib import nullcontext, redirect_stdout
-import errno
 from io import StringIO
 from pathlib import Path
 import shutil
@@ -74,82 +73,20 @@ class BindingTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "数量为 2"):
             self.trial.find_gpio_keys(self.tree)
 
-    def test_reports_disabled_node_and_absent_driver(self):
-        status = self.node / "status"
-        status.write_bytes(b"disabled\0")
+    def test_reports_disabled_node(self):
+        (self.node / "status").write_bytes(b"disabled\0")
+        self.platform_device("gpio-keys", self.node, self.driver)
         with self.assertRaisesRegex(RuntimeError, "禁用状态"):
             self.trial.find_gpio_keys(self.tree)
-        status.unlink()
-        self.platform_device("gpio-keys", self.node, self.driver)
-        (self.driver / "bind").unlink()
-        with self.assertRaisesRegex(RuntimeError, "不支持重绑"):
-            self.trial.find_gpio_keys(self.tree)
 
-    def test_binding_retries_deferred_probe_without_hiding_permanent_error(self):
-        device = self.platform_device("gpio-keys", self.node)
-        self.trial.find_gpio_keys(self.tree)
-        driver_link = device / "driver"
-        attempts = []
-
-        def bind(path, name):
-            self.assertEqual(path, self.driver / "bind")
-            self.assertEqual(name, device.name)
-            attempts.append(name)
-            if len(attempts) == 1:
-                raise BlockingIOError(errno.EAGAIN, "deferred probe")
-            driver_link.symlink_to(self.driver)
-
-        with (
-            patch.object(Path, "write_text", autospec=True, side_effect=bind),
-            patch.object(pogo.time, "sleep") as delay,
-        ):
-            self.trial.set_gpio_bound(True)
-        self.assertTrue(self.trial.gpio_bound())
-        self.assertEqual(len(attempts), 2)
-        delay.assert_called_once()
-        driver_link.unlink()
-        with (
-            patch.object(Path, "write_text", side_effect=OSError(errno.EBUSY, "busy")) as write,
-            patch.object(self.trial, "report_probe_failure") as report,
-            self.assertRaisesRegex(RuntimeError, "busy"),
-        ):
-            self.trial.set_gpio_bound(True)
-        write.assert_called_once()
-        report.assert_called_once()
-
-    def test_deferred_probe_timeout_reports_only_relevant_devices(self):
-        self.platform_device("gpio-keys.0", self.node)
-        self.trial.find_gpio_keys(self.tree)
-        deferred = self.tree / "deferred"
-        deferred.write_text("gpio-keys.0\tGPIO supplier not ready\n6800000.remoteproc\tunrelated\n")
-        output = StringIO()
-        error = BlockingIOError(errno.EAGAIN, "deferred probe")
-        with (
-            patch.object(pogo, "DEFERRED_DEVICES", deferred),
-            patch.object(pogo, "kernel_logs", return_value="gpio-keys.0: probe deferred"),
-            patch.object(Path, "write_text", side_effect=error) as write,
-            patch.object(pogo.time, "sleep"),
-            redirect_stdout(output),
-            self.assertRaisesRegex(RuntimeError, "内核暂缓探测"),
-        ):
-            self.trial.set_gpio_bound(True)
-        self.assertEqual(write.call_count, 4)
-        self.assertIn("GPIO supplier not ready", output.getvalue())
-        self.assertNotIn("6800000.remoteproc", output.getvalue())
-
-    def test_partial_load_restores_either_original_binding_state(self):
-        for original in (False, True):
-            with self.subTest(initially_bound=original):
-                started = pogo.Trial()
-                started.original_gpio_bound = original
-                state = original
+    def test_partial_load_cleans_up_without_rebinding_gpio_keys(self):
+        for initially_bound in (False, True):
+            with self.subTest(initially_bound=initially_bound):
+                driver = self.driver if initially_bound else None
+                device = self.platform_device(f"keys-{initially_bound}", self.node, driver)
+                self.trial.gpio_device = device
+                self.trial.original_gpio_bound = initially_bound
                 actions = []
-
-                def set_bound(wanted):
-                    nonlocal state
-                    if state != wanted:
-                        actions.append(("bind" if wanted else "unbind",))
-                        state = wanted
 
                 def command(argv, *, check):
                     actions.append((argv[0], Path(argv[1]).stem))
@@ -158,29 +95,23 @@ class BindingTests(unittest.TestCase):
 
                 firmware = self.platform / "firmware"
                 with (
-                    patch.object(started, "gpio_bound", side_effect=lambda: state),
-                    patch.object(started, "set_gpio_bound", side_effect=set_bound),
-                    patch.object(started, "build_firmware", return_value=b"fixture"),
-                    patch.object(started, "firmware", firmware),
+                    patch.object(self.trial, "build_firmware", return_value=b"fixture"),
+                    patch.object(self.trial, "firmware", firmware),
                     patch.object(pogo, "report_module_failure"),
                     patch.object(pogo.subprocess, "run", side_effect=command),
+                    patch.object(Path, "write_text", side_effect=AssertionError("unexpected sysfs write")),
                 ):
                     with self.assertRaises(subprocess.CalledProcessError):
                         try:
-                            started.start("fixture")
+                            self.trial.start("fixture")
                         finally:
-                            started.stop()
-                self.assertIs(state, original)
+                            self.trial.stop()
+                self.assertIs(self.trial.gpio_bound(), initially_bound)
                 self.assertFalse(firmware.exists())
-                self.assertIn(("rmmod", "tb_pogo_overlay"), actions)
-                self.assertNotIn(("rmmod", "lenovo_keyboard"), actions)
-                if original:
-                    self.assertEqual([action for action in actions if len(action) == 1],
-                                     [("unbind",), ("bind",), ("unbind",), ("bind",)])
-                else:
-                    self.assertEqual(actions, [("insmod", "tb_pogo_overlay"),
-                                               ("insmod", "lenovo_keyboard"),
-                                               ("rmmod", "tb_pogo_overlay")])
+                self.assertEqual(actions, [("insmod", "tb_pogo_overlay"),
+                                           ("insmod", "lenovo_keyboard"),
+                                           ("rmmod", "tb_pogo_overlay")])
+                self.trial = pogo.Trial()
 
 
 class OverlayTests(unittest.TestCase):
@@ -204,7 +135,7 @@ class OverlayTests(unittest.TestCase):
 
     @unittest.skipUnless(shutil.which("dtc"), "device-tree-compiler is required")
     def test_runtime_compilation_keeps_only_local_fixups(self):
-        dts = (ATTACHMENTS / "pogo-keyboard.dts").read_text()
+        dts = (ATTACHMENTS / "pogo-uart-only.dts").read_text()
         with patch.object(pogo.Trial, "prepared_dtb", return_value=None):
             self.assert_symbol_free_overlay(pogo.Trial().build_firmware(dts))
 

@@ -422,11 +422,11 @@
     },
     {
       "id": "pogo-keyboard-trial",
-      "title": "磁吸键盘与触控板（正式版）",
+      "title": "磁吸键盘与触控板（测试版）",
       "device": "TB710FU",
-      "status": "stable",
-      "description": "适用于小新 Pad Pro GT（TB710FU）原装三触点磁吸键盘和 7.2.6-tb710fu-20261118 内核。支持键盘、触控板、功能键和 GNOME 窗口快捷键。单独运行安装，立即生效，无需重启，后续开机自动加载。",
-      "risk": "需要管理员权限。仅在匹配内核加载。服务启动和停止时，原先已绑定的机器会短暂重绑音量键和合盖检测。",
+      "status": "manual-install",
+      "description": "适用于小新 Pad Pro GT（TB710FU）原装三触点磁吸键盘和 7.2.6-tb710fu-20261118 内核。单独安装后服务立即启动，后续开机自动加载。已实测安装、串口启动和机身按键驱动绑定，打字、触控板和拔插待原装键盘复测。",
+      "risk": "需要管理员权限，仅在匹配内核加载。启动和停止服务时保留机身按键驱动绑定。旧版安装失败后如果音量＋失效，请先重启平板，再运行测试版。",
       "script": {
         "path": "contributions/pogo-keyboard-trial/script.sh",
         "sha256": "2a885be823a4d4a38f1bc91d0da6bf19b9caa4903b1491ed0a9eec40c8776722",
@@ -435,7 +435,7 @@
       "attachments": [
         {
           "path": "contributions/pogo-keyboard-trial/attachments/README.md",
-          "sha256": "027a40c6c68a1cbad7a813c6d3dafdbe1c355efe65644a70fad4ac75af0ba11a"
+          "sha256": "c90e09f78e6910ec6f56aefb8d3541f9f387c6fe4d68d60742a61138f79d180a"
         },
         {
           "path": "contributions/pogo-keyboard-trial/attachments/build_overlay.py",
@@ -443,23 +443,15 @@
         },
         {
           "path": "contributions/pogo-keyboard-trial/attachments/driver/lenovo_keyboard.ko",
-          "sha256": "e780bf3ccf7de29778ab121d2ff0ca84b6fb2e9a4e728fbc70c3b6067ace9e58"
+          "sha256": "50988a811e7c994b64ff87e8dad7a3eab6c1715576d95e784543c69aded6e123"
         },
         {
           "path": "contributions/pogo-keyboard-trial/attachments/driver/tb_pogo_overlay.ko",
-          "sha256": "9c467893c45dc69374022961a089ecd2479fb4486f18f732edc5120dc763d828"
+          "sha256": "77e4f9920d786c9370bef2552d71557b35b8fa9a3cb408d6d1771ff97c5337cf"
         },
         {
           "path": "contributions/pogo-keyboard-trial/attachments/gnome_shortcuts.py",
           "sha256": "6e43871ef2ba655643cb6cfe8418957c1843b1bd9e5bf63587aa2dc32b5fa90c"
-        },
-        {
-          "path": "contributions/pogo-keyboard-trial/attachments/pogo-keyboard.dtbo",
-          "sha256": "e5dcf5ce3ce8637fca12da324e31026c953eba2e40de21a8768876675e4e28e6"
-        },
-        {
-          "path": "contributions/pogo-keyboard-trial/attachments/pogo-keyboard.dts",
-          "sha256": "e83c623a38b8fdc0024c399c54a42e8f6539c3b7d351048a53445383e05375b2"
         },
         {
           "path": "contributions/pogo-keyboard-trial/attachments/pogo-uart-only.dtbo",
@@ -471,11 +463,11 @@
         },
         {
           "path": "contributions/pogo-keyboard-trial/attachments/pogo_install.py",
-          "sha256": "ae20ecd1919b59d68e891829e5934f64a6229b20c72b30691d43905bb812ab80"
+          "sha256": "09445d12c2f28ea4e8c7aff2cac699dbebc6a35e7f6ba6866712ad8f218ee3eb"
         },
         {
           "path": "contributions/pogo-keyboard-trial/attachments/pogo_trial.py",
-          "sha256": "deb0bf0c770bb8828900f803338306b714f5e2de5233f413130e4a4e2069bd27"
+          "sha256": "928c68af858136dce528354ec15092ba3ddeec135227cfdfca6fc39d4e584123"
         },
         {
           "path": "contributions/pogo-keyboard-trial/attachments/tb710fu-pogo.service",

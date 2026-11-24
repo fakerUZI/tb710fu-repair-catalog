@@ -128,7 +128,7 @@ def serve():
                 signal.pause()
         finally:
             trial.stop()
-            print("磁吸键盘服务已释放模块并恢复 gpio-keys。", flush=True)
+            print("磁吸键盘服务已卸载模块。", flush=True)
 
 
 def setup_shortcuts():
