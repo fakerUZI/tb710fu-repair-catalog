@@ -557,7 +557,7 @@
       "title": "BOOTFIX 时钟同步修复（单独安装）",
       "description": "适用于 TB710FU 的原版 BOOTFIX Ubuntu 26.04 ARM64。修复系统只使用单个 HTTP 时间源、长时间未同步或 tb-timesync 服务反复失败的问题。切换到 Ubuntu systemd-timesyncd，提供多个 NTP 缺省地址。随包提供与原版 systemd 共享库匹配的离线 Ubuntu 依赖；其他版本从本机软件源安装匹配版本。支持检查、应用和回退。",
       "device": "TB710FU",
-      "status": "community-review",
+      "status": "manual-install",
       "risk": "需要管理员权限，校时可能调整系统时钟。首次网络同步需允许 UDP 123。已运行其他时间服务的系统保留原配置。回退恢复原先校时服务的启用和运行状态；已下载的软件包由 APT 管理。",
       "script": {
         "path": "contributions/bootfix-clock-sync/script.sh",

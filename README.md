@@ -68,6 +68,8 @@ Ubuntu 安装包 [下载 0.10.17（.deb）](packages/repair-assistant/tb710fu-re
 
 原版 BOOTFIX 能进入 Ubuntu，但 A 槽未标记启动成功时，更新仓库并单独运行[BOOTFIX A 槽启动确认](contributions/bootfix-slot-success/attachments/README.md)。
 
+原版 BOOTFIX 时钟长期未同步或旧校时服务反复报错时，可单独运行[BOOTFIX 时钟同步修复](contributions/bootfix-clock-sync/attachments/README.md)。原包内置的修复助手 0.10.11 可通过「应用更新」下载安装包。
+
 Ubuntu 电源菜单缺少「挂起」时，可更新仓库并运行[恢复系统挂起（s2idle）](contributions/suspend-restore/attachments/README.md)。
 
 切换或连接新 Wi-Fi 时密码提示未打开，或右上角 Wi-Fi 密码框触屏键盘无法输入时，可更新仓库并运行[修复 Wi-Fi 密码提示和触屏输入](contributions/wifi-password-input/attachments/README.md)。
