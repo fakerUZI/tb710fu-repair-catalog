@@ -592,25 +592,84 @@
       "title": "Droidloom 手写笔触控兼容（测试版）",
       "device": "TB710FU",
       "status": "manual-install",
-      "description": "适用于原生笔已正常的 TB710FU Ubuntu GNOME Wayland 和 Droidloom 0.1.0 release 49 ARM64。把落笔、移动、抬笔和压感转成安卓触控事件。笔记软件如有「允许手指书写」选项，请开启。",
+      "description": "适用于原生笔已正常的 TB710FU Ubuntu GNOME Wayland 和 Droidloom 0.1.0 release 42–49 ARM64。按本机安卓输入 ABI 选择窗口程序，把落笔、移动、抬笔和压感转成安卓触控事件。笔记软件如有「允许手指书写」选项，请开启。",
       "risk": "单独安装，无需管理员权限。仅为当前账号添加 Droidloom 启动覆盖。保存安卓应用工作后重启 Droidloom 生效。安卓识别为手指触点，仅手写笔模式暂不适用。支持 TB710FU_FIX_ACTION=check 和 rollback。",
       "script": {
         "path": "contributions/droidloom-pen-compat/script.sh",
-        "sha256": "1e4a88ca7dd780320ba1e19b62e3a0126b719bcebc522d20e86c18fe50094e4e",
+        "sha256": "300ef702df3e626327324e5439e6f52ee96f7ce4c5c3cc4bb29d52e3cb6325cd",
         "requires_admin": false
       },
       "attachments": [
         {
           "path": "contributions/droidloom-pen-compat/attachments/README.md",
-          "sha256": "e5d0f89aa33245fd020d1e8b3734ec255519dd08d8e6986b41f558a4f56591bf"
+          "sha256": "bd9ffb916b9bdc30b9a3e3953f4cd716e0727da5135127ded44450554fb2710f"
         },
         {
-          "path": "contributions/droidloom-pen-compat/attachments/droidloom-wayland",
-          "sha256": "8202e635e20a72eee63402ca6b7c66729e5fb0033d97413fee8cf7a97816c994"
+          "path": "contributions/droidloom-pen-compat/attachments/droidloom-wayland.gz.001",
+          "sha256": "c260ac99ed6bbb92620b189a1f7bb829d6f6ee82e63ffca6796c9f501f9f9168"
+        },
+        {
+          "path": "contributions/droidloom-pen-compat/attachments/droidloom-wayland.gz.002",
+          "sha256": "11d87d66b67c0735b90ea3acd035c8b379d0865626af4adf907f00ea97ba6cd0"
+        },
+        {
+          "path": "contributions/droidloom-pen-compat/attachments/droidloom-wayland.gz.003",
+          "sha256": "3972dcf7051f16a1994d7b592e3de46dab3b386ca9fadefcc30005ca5acb5bd0"
+        },
+        {
+          "path": "contributions/droidloom-pen-compat/attachments/droidloom-wayland.gz.004",
+          "sha256": "31879d376527b1c0a2f383b64d2d0a6f85ca688ae56863135ba47d59c3708487"
+        },
+        {
+          "path": "contributions/droidloom-pen-compat/attachments/droidloom-wayland.gz.005",
+          "sha256": "a96ca3616ff83627faec325ea7eb9a4896cff0172a2a198ae555de42dcc91824"
+        },
+        {
+          "path": "contributions/droidloom-pen-compat/attachments/droidloom-wayland-r42.gz.001",
+          "sha256": "f4bf7804bf67c87e72be9908e0dee78c20061ade36cbb7340ba8312d03f01a78"
+        },
+        {
+          "path": "contributions/droidloom-pen-compat/attachments/droidloom-wayland-r42.gz.002",
+          "sha256": "142dca35635de87ffd96cff6171875f1a26f301ac597c8baf371b082e764f5cf"
+        },
+        {
+          "path": "contributions/droidloom-pen-compat/attachments/droidloom-wayland-r42.gz.003",
+          "sha256": "b2d5a466e6afee52162063e360d7961a0eb1bcc0f2fad3f8285022dc060a6939"
+        },
+        {
+          "path": "contributions/droidloom-pen-compat/attachments/droidloom-wayland-r42.gz.004",
+          "sha256": "0ba17acc1ffd933c8f53bedd8135ab82443acd6e88c27a17ed881a7cc064ff7a"
+        },
+        {
+          "path": "contributions/droidloom-pen-compat/attachments/droidloom-wayland-r42.gz.005",
+          "sha256": "fce24392b53470f5571f47f4d181ab0ee5cea35d89034f59bdd7946c1d66e83c"
         },
         {
           "path": "contributions/droidloom-pen-compat/attachments/pen-compat.py",
-          "sha256": "d5c30ccdcaf38eaba1641a8ad5036777f5aa1ae5fdde2c6fdec51a83c689d566"
+          "sha256": "fccefb9410d83f25dadc7e582b22bdabc8b766fcc6b17d59b91e8be74d88550c"
+        }
+      ]
+    },
+    {
+      "id": "droidloom-upgrade-r49",
+      "title": "Droidloom 升级到 release 49（测试版）",
+      "device": "TB710FU",
+      "status": "manual-install",
+      "description": "把 TB710FU Ubuntu 26.04 ARM64 上已配置的 Droidloom release 42–48 升级到 release 49。BOOTFIX 已内置 49，运行时直接提示已是目标版本。可先以 check 查看。",
+      "risk": "单独安装，需要管理员权限。先保存安卓窗口工作并预留 10 GiB。安装使用官方软件包，保留现有 Android 数据目录，提供软件和主机配置回退。Google 应用扩展需单独核对。",
+      "script": {
+        "path": "contributions/droidloom-upgrade-r49/script.sh",
+        "sha256": "5ca803f1c1e4afca777df7187dafc014f5c1b6417913f166970f4c8d59d85e5a",
+        "requires_admin": true
+      },
+      "attachments": [
+        {
+          "path": "contributions/droidloom-upgrade-r49/attachments/README.md",
+          "sha256": "5ed3b8496686affb5ab0adedc8a02b1315842870eb1e2ced417f2b14d82847e5"
+        },
+        {
+          "path": "contributions/droidloom-upgrade-r49/attachments/upgrade.py",
+          "sha256": "34c39b600fde75571a4e1f874d3c2981209e579d6f1fff5c7f760db390f87780"
         }
       ]
     }

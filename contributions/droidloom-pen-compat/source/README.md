@@ -1,4 +1,4 @@
-# Droidloom 49 对应源码
+# Droidloom 手写笔测试版对应源码
 
 测试程序来自 [Droidloom 0.1.0 release 49](https://github.com/denialwm/droidloom/tree/572e1c51c5caf75183efe25ad811f98c1268bf56)，应用同目录的 `droidloom-49-pen-compat.patch`。沿用上游 GPL-3.0-or-later 许可，许可及版权声明随附。
 
@@ -12,3 +12,12 @@ strip target/release/droidloom-wayland
 ```
 
 补丁在窗口侧接收 Wayland tablet-v2，并以一个独立于鼠标与手指触点的标识写入现有 Droidloom 触控协议。该构建沿用 Droidloom 49 的 Android 输入 ABI 8，可与系统原版安卓镜像配合使用。
+
+release 43–48 也使用输入 ABI 8。窗口协议会与旧版 Android Composer 协商双方支持的功能。
+
+release 42 的输入 ABI 为 7。请从上游 release 42 提交 `df72bc9` 构建该版本，在上述同样的 ARM64 环境和工具链下，先应用共用的手写笔协议处理及 release 42 的窗口端接入补丁，再运行相同的测试和构建命令。
+
+```sh
+git apply --include='*/stylus.rs' /path/to/droidloom-49-pen-compat.patch
+git apply /path/to/droidloom-42-presenter.patch
+```
