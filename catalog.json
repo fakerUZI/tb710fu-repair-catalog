@@ -534,7 +534,7 @@
       "title": "BOOTFIX A 槽启动确认（单独安装）",
       "description": "适用于已从 2026-11-22 BOOTFIX A 槽进入 Ubuntu 的 TB710FU。原安装器在首次系统启动后缺少启动确认，导致后续重启可能耗尽试启动次数。更新仓库后单独运行，先做只读检查；确认适用后写入 A 槽启动成功位。实际根分区、原版 boot_a 及主备 GPT 需通过校验。保留重试计数、其他槽位和分区内容。",
       "device": "TB710FU",
-      "status": "community-review",
+      "status": "manual-install",
       "risk": "需要管理员权限，涉及主备 GPT 启动属性。仅当成功位尚未设置且设备、引导与 GPT 全部通过校验时写入。操作期间保持供电。原 GPT 备份保存在本机 /var/lib/tb710fu-boot-slot/boot-gpt.before.bin，供离线恢复。支持只读检查和应用。若已停在 Fastboot，应先按随附说明恢复 A 槽启动。",
       "script": {
         "path": "contributions/bootfix-slot-success/script.sh",
