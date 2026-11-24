@@ -1,0 +1,417 @@
+diff --git a/graphics/droidloom-wayland/src/main.rs b/graphics/droidloom-wayland/src/main.rs
+index c1dc7b2..324af23 100644
+--- a/graphics/droidloom-wayland/src/main.rs
++++ b/graphics/droidloom-wayland/src/main.rs
+@@ -19,6 +19,7 @@ mod presentation_audit;
+ mod readiness;
+ mod resize;
+ mod scroll;
++mod stylus;
+ mod text_input;
+ mod titles;
+
+@@ -410,6 +411,7 @@ struct App {
+     focused: Option<TaskObjectId>,
+     pointer_contact: Option<Contact>,
+     touch_contacts: BTreeMap<i32, Contact>,
++    stylus: stylus::Stylus,
+     // Touch and mouse share Android's injected pointer device; keys are separate.
+     motion_times: input_time::Stream,
+     key_times: input_time::Stream,
+@@ -2051,11 +2053,11 @@ impl App {
+             self.remove_task(object);
+         }
+         self.focused = None;
+-        self.pointer_contact = None;
+-        self.touch_contacts.clear();
++        self.clear_contacts();
+     }
+
+     fn clear_contacts(&mut self) {
++        self.stylus.active = None;
+         clear_contact_state(
+             &mut self.pointer_contact,
+             &mut self.touch_contacts,
+@@ -2086,6 +2088,11 @@ impl App {
+                     .touch_contacts
+                     .values()
+                     .any(|contact| contact.object == object)
++                && !self
++                    .stylus
++                    .active
++                    .as_ref()
++                    .is_some_and(|(_, contact)| contact.object == object)
+                 && !self.clipboard_inputs.iter().any(|(owner, event, _)| {
+                     *owner == object && matches!(event, InputEvent::Touch { .. })
+                 })
+@@ -2112,6 +2119,7 @@ impl App {
+         } else if self.endpoint.is_some() {
+             let mut contacts: Vec<_> = self.touch_contacts.values().copied().collect();
+             contacts.extend(self.pointer_contact);
++            contacts.extend(self.stylus.active.as_ref().map(|(_, contact)| *contact));
+             // Legacy policy groups by task. Every route needs retirement.
+             contacts.sort_by_key(|contact| contact.object);
+             contacts.dedup_by_key(|contact| contact.object);
+@@ -2947,7 +2955,9 @@ impl SeatHandler for App {
+         &mut self.seat_state
+     }
+
+-    fn new_seat(&mut self, _conn: &Connection, _qh: &QueueHandle<Self>, _seat: wl_seat::WlSeat) {}
++    fn new_seat(&mut self, _conn: &Connection, qh: &QueueHandle<Self>, seat: wl_seat::WlSeat) {
++        self.stylus.add_seat(seat, qh);
++    }
+
+     fn new_capability(
+         &mut self,
+@@ -3047,6 +3057,9 @@ impl SeatHandler for App {
+     }
+
+     fn remove_seat(&mut self, conn: &Connection, qh: &QueueHandle<Self>, seat: wl_seat::WlSeat) {
++        if self.stylus.remove_seat(&seat) && self.stylus.active.is_some() {
++            self.retire_contacts(None);
++        }
+         for capability in [Capability::Keyboard, Capability::Pointer, Capability::Touch] {
+             self.remove_capability(conn, qh, seat.clone(), capability);
+         }
+@@ -3635,6 +3648,7 @@ fn run() -> Result<(), PresenterError> {
+         focused: None,
+         pointer_contact: None,
+         touch_contacts: BTreeMap::new(),
++        stylus: stylus::Stylus::new(globals.bind(&qh, 1..=1, ()).ok()),
+         motion_times: input_time::Stream::default(),
+         key_times: input_time::Stream::default(),
+         input_timestamps: input_time::Timestamps::new(globals.bind(&qh, 1..=1, ()).ok()),
+@@ -3644,6 +3658,9 @@ fn run() -> Result<(), PresenterError> {
+         socket_path,
+         fatal: None,
+     };
++    for seat in app.seat_state.seats() {
++        app.stylus.add_seat(seat, &qh);
++    }
+     app.text_input.bind_panel_feedback(&globals, &qh);
+     app.dmabuf_state.get_default_feedback(&qh)?;
+     while app.feedback.is_none() || app.host_canvas_size().is_none() {
+diff --git a/graphics/droidloom-wayland/src/stylus.rs b/graphics/droidloom-wayland/src/stylus.rs
+new file mode 100644
+index 0000000..f269bfd
+--- /dev/null
++++ b/graphics/droidloom-wayland/src/stylus.rs
+@@ -0,0 +1,318 @@
++//! Forward tablet tip events through the pressure-capable Android touch ABI.
++
++use std::sync::Mutex;
++
++use wayland_client::backend::ObjectId;
++use wayland_client::protocol::{wl_seat::WlSeat, wl_surface::WlSurface};
++use wayland_client::{Connection, Dispatch, Proxy, QueueHandle, WEnum};
++use wayland_protocols::wp::tablet::zv2::client::{
++    zwp_tablet_manager_v2::ZwpTabletManagerV2,
++    zwp_tablet_pad_v2::{self, ZwpTabletPadV2},
++    zwp_tablet_seat_v2::{self, ZwpTabletSeatV2},
++    zwp_tablet_tool_v2::{self, ZwpTabletToolV2},
++    zwp_tablet_v2::{self, ZwpTabletV2},
++};
++
++use crate::{App, Contact, InputEvent, TouchAction, monotonic_timestamp_nanos};
++
++// wl_touch uses nonnegative i32 identifiers. The mouse uses u32::MAX.
++const PEN_CONTACT_ID: u32 = u32::MAX - 1;
++
++pub(super) struct Stylus {
++    manager: Option<ZwpTabletManagerV2>,
++    seats: Vec<(WlSeat, ZwpTabletSeatV2)>,
++    pub(super) active: Option<(ObjectId, Contact)>,
++}
++
++impl Stylus {
++    pub(super) fn new(manager: Option<ZwpTabletManagerV2>) -> Self {
++        Self {
++            manager,
++            seats: Vec::new(),
++            active: None,
++        }
++    }
++
++    pub(super) fn add_seat(&mut self, seat: WlSeat, qh: &QueueHandle<App>) {
++        if let Some(manager) = &self.manager
++            && !self.seats.iter().any(|(bound, _)| *bound == seat)
++        {
++            let tablet_seat = manager.get_tablet_seat(&seat, qh, ());
++            self.seats.push((seat, tablet_seat));
++        }
++    }
++
++    pub(super) fn remove_seat(&mut self, seat: &WlSeat) -> bool {
++        let Some(index) = self.seats.iter().position(|(bound, _)| bound == seat) else {
++            return false;
++        };
++        self.seats.swap_remove(index).1.destroy();
++        true
++    }
++}
++
++#[derive(Default)]
++struct Tool {
++    pen: bool,
++    surface: Option<WlSurface>,
++    position: Option<(f64, f64)>,
++    pressure: Option<u16>,
++    down: Option<u32>,
++    up: bool,
++    left: bool,
++    changed: bool,
++}
++
++impl Tool {
++    fn contact_event(contact: Contact, action: TouchAction, pressure: Option<u16>) -> InputEvent {
++        let (x_fixed, y_fixed) = contact.position_fixed;
++        InputEvent::Touch {
++            action,
++            pointer_id: contact.pointer_id,
++            x_fixed,
++            y_fixed,
++            pressure: match action {
++                TouchAction::Down | TouchAction::Motion => pressure.unwrap_or(u16::MAX),
++                TouchAction::Up | TouchAction::Cancel => 0,
++            },
++        }
++    }
++
++    fn frame(&mut self, app: &mut App, tool: ObjectId, time: u32) {
++        let down = self.down.take();
++        let up = std::mem::take(&mut self.up);
++        let left = std::mem::take(&mut self.left);
++        let changed = std::mem::take(&mut self.changed);
++        if !self.pen {
++            return;
++        }
++        if let Some(serial) = down
++            && app.stylus.active.is_none()
++            && let Some(object) = self
++                .surface
++                .as_ref()
++                .and_then(|surface| app.task_for_surface(surface))
++            && let Some(position) = self.position
++        {
++            let contact = Contact {
++                object,
++                pointer_id: PEN_CONTACT_ID,
++                position_fixed: app.fixed_position(object, position),
++            };
++            app.clipboard.serial(serial);
++            app.text_input.note_touch();
++            if self.send(app, contact, TouchAction::Down, time) {
++                app.stylus.active = Some((tool.clone(), contact));
++            }
++        }
++        if let Some((owner, mut contact)) = app.stylus.active.as_ref().cloned()
++            && owner == tool
++        {
++            if let Some(position) = self.position {
++                contact.position_fixed = app.fixed_position(contact.object, position);
++            }
++            if up {
++                self.send(app, contact, TouchAction::Up, time);
++                app.stylus.active = None;
++            } else if left {
++                app.retire_contacts(Some(contact.object));
++            } else if changed
++                && down.is_none()
++                && self.send(app, contact, TouchAction::Motion, time)
++            {
++                app.stylus.active = Some((owner, contact));
++            }
++        }
++        if left {
++            self.surface = None;
++            self.position = None;
++            self.pressure = None;
++        }
++    }
++
++    fn send(&self, app: &mut App, contact: Contact, action: TouchAction, time: u32) -> bool {
++        let result = monotonic_timestamp_nanos()
++            .map(|now| app.motion_times.event(time, None, now))
++            .and_then(|timestamp| {
++                app.send_input(
++                    contact.object,
++                    Self::contact_event(contact, action, self.pressure),
++                    timestamp,
++                )
++            });
++        match result {
++            Ok(sent) => sent,
++            Err(error) => {
++                app.fail(&error);
++                false
++            }
++        }
++    }
++}
++
++impl Dispatch<ZwpTabletSeatV2, ()> for App {
++    fn event(
++        _: &mut Self,
++        _: &ZwpTabletSeatV2,
++        _: zwp_tablet_seat_v2::Event,
++        _: &(),
++        _: &Connection,
++        _: &QueueHandle<Self>,
++    ) {
++    }
++
++    wayland_client::event_created_child!(App, ZwpTabletSeatV2, [
++        zwp_tablet_seat_v2::EVT_TABLET_ADDED_OPCODE => (ZwpTabletV2, ()),
++        zwp_tablet_seat_v2::EVT_TOOL_ADDED_OPCODE => (ZwpTabletToolV2, Mutex::new(Tool::default())),
++        zwp_tablet_seat_v2::EVT_PAD_ADDED_OPCODE => (ZwpTabletPadV2, ())
++    ]);
++}
++
++impl Dispatch<ZwpTabletToolV2, Mutex<Tool>> for App {
++    fn event(
++        app: &mut Self,
++        proxy: &ZwpTabletToolV2,
++        event: zwp_tablet_tool_v2::Event,
++        state: &Mutex<Tool>,
++        _: &Connection,
++        _: &QueueHandle<Self>,
++    ) {
++        use zwp_tablet_tool_v2::{Event, Type};
++        let mut tool = state.lock().expect("tablet tool state");
++        match event {
++            Event::Type { tool_type } => {
++                tool.pen = matches!(
++                    tool_type,
++                    WEnum::Value(
++                        Type::Pen | Type::Eraser | Type::Brush | Type::Pencil | Type::Airbrush
++                    )
++                );
++            }
++            Event::ProximityIn { surface, .. } => {
++                tool.surface = Some(surface);
++                tool.position = None;
++                tool.pressure = None;
++            }
++            Event::ProximityOut => tool.left = true,
++            Event::Down { serial } => tool.down = Some(serial),
++            Event::Up => tool.up = true,
++            Event::Motion { x, y } => {
++                tool.position = Some((x, y));
++                tool.changed = true;
++            }
++            Event::Pressure { pressure } => {
++                tool.pressure = Some(u16::try_from(pressure).unwrap_or(u16::MAX));
++                tool.changed = true;
++            }
++            Event::Frame { time } => tool.frame(app, proxy.id(), time),
++            Event::Removed => {
++                if let Some((_, contact)) = app
++                    .stylus
++                    .active
++                    .as_ref()
++                    .filter(|(owner, _)| *owner == proxy.id())
++                {
++                    app.retire_contacts(Some(contact.object));
++                }
++                proxy.destroy();
++            }
++            _ => {}
++        }
++    }
++}
++
++impl Dispatch<ZwpTabletV2, ()> for App {
++    fn event(
++        _: &mut Self,
++        tablet: &ZwpTabletV2,
++        event: zwp_tablet_v2::Event,
++        _: &(),
++        _: &Connection,
++        _: &QueueHandle<Self>,
++    ) {
++        if matches!(event, zwp_tablet_v2::Event::Removed) {
++            tablet.destroy();
++        }
++    }
++}
++
++// Pads are separate from the tip. Their child objects still need Wayland
++// dispatch when a compositor advertises a graphics tablet with pad controls.
++mod pad {
++    use super::*;
++    use wayland_protocols::wp::tablet::zv2::client::{
++        zwp_tablet_pad_group_v2::{self, ZwpTabletPadGroupV2},
++        zwp_tablet_pad_ring_v2::ZwpTabletPadRingV2,
++        zwp_tablet_pad_strip_v2::ZwpTabletPadStripV2,
++    };
++
++    impl Dispatch<ZwpTabletPadV2, ()> for App {
++        fn event(
++            _: &mut Self,
++            pad: &ZwpTabletPadV2,
++            event: zwp_tablet_pad_v2::Event,
++            _: &(),
++            _: &Connection,
++            _: &QueueHandle<Self>,
++        ) {
++            if matches!(event, zwp_tablet_pad_v2::Event::Removed) {
++                pad.destroy();
++            }
++        }
++        wayland_client::event_created_child!(App, ZwpTabletPadV2, [
++            zwp_tablet_pad_v2::EVT_GROUP_OPCODE => (ZwpTabletPadGroupV2, ())
++        ]);
++    }
++
++    impl Dispatch<ZwpTabletPadGroupV2, ()> for App {
++        fn event(
++            _: &mut Self,
++            _: &ZwpTabletPadGroupV2,
++            _: zwp_tablet_pad_group_v2::Event,
++            _: &(),
++            _: &Connection,
++            _: &QueueHandle<Self>,
++        ) {
++        }
++        wayland_client::event_created_child!(App, ZwpTabletPadGroupV2, [
++            zwp_tablet_pad_group_v2::EVT_RING_OPCODE => (ZwpTabletPadRingV2, ()),
++            zwp_tablet_pad_group_v2::EVT_STRIP_OPCODE => (ZwpTabletPadStripV2, ())
++        ]);
++    }
++
++    wayland_client::delegate_noop!(App: ignore ZwpTabletPadRingV2);
++    wayland_client::delegate_noop!(App: ignore ZwpTabletPadStripV2);
++}
++
++wayland_client::delegate_noop!(App: ignore ZwpTabletManagerV2);
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    #[test]
++    fn tip_contact_keeps_coordinates_and_pressure() {
++        let contact = Contact {
++            object: crate::TaskObjectId(42),
++            pointer_id: PEN_CONTACT_ID,
++            position_fixed: (7 << 16, 13 << 16),
++        };
++        for (action, expected_pressure) in [
++            (TouchAction::Down, 1024),
++            (TouchAction::Motion, 1024),
++            (TouchAction::Up, 0),
++            (TouchAction::Cancel, 0),
++        ] {
++            assert_eq!(
++                Tool::contact_event(contact, action, Some(1024)),
++                InputEvent::Touch {
++                    action,
++                    pointer_id: PEN_CONTACT_ID,
++                    x_fixed: 7 << 16,
++                    y_fixed: 13 << 16,
++                    pressure: expected_pressure,
++                }
++            );
++        }
++    }
++}
