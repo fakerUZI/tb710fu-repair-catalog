@@ -586,6 +586,33 @@
           "sha256": "7191f7cde87d64bb708dee5c9e08fa02af00b034c5dbd17146215fe216ae74c6"
         }
       ]
+    },
+    {
+      "id": "droidloom-pen-compat",
+      "title": "Droidloom 手写笔触控兼容（测试版）",
+      "device": "TB710FU",
+      "status": "manual-install",
+      "description": "适用于原生笔已正常的 TB710FU Ubuntu GNOME Wayland 和 Droidloom 0.1.0 release 49 ARM64。把落笔、移动、抬笔和压感转成安卓触控事件。笔记软件如有「允许手指书写」选项，请开启。",
+      "risk": "单独安装，无需管理员权限。仅为当前账号添加 Droidloom 启动覆盖。保存安卓应用工作后重启 Droidloom 生效。安卓识别为手指触点，仅手写笔模式暂不适用。支持 TB710FU_FIX_ACTION=check 和 rollback。",
+      "script": {
+        "path": "contributions/droidloom-pen-compat/script.sh",
+        "sha256": "1e4a88ca7dd780320ba1e19b62e3a0126b719bcebc522d20e86c18fe50094e4e",
+        "requires_admin": false
+      },
+      "attachments": [
+        {
+          "path": "contributions/droidloom-pen-compat/attachments/README.md",
+          "sha256": "e5d0f89aa33245fd020d1e8b3734ec255519dd08d8e6986b41f558a4f56591bf"
+        },
+        {
+          "path": "contributions/droidloom-pen-compat/attachments/droidloom-wayland",
+          "sha256": "8202e635e20a72eee63402ca6b7c66729e5fb0033d97413fee8cf7a97816c994"
+        },
+        {
+          "path": "contributions/droidloom-pen-compat/attachments/pen-compat.py",
+          "sha256": "d5c30ccdcaf38eaba1641a8ad5036777f5aa1ae5fdde2c6fdec51a83c689d566"
+        }
+      ]
     }
   ]
 }
