@@ -2,7 +2,13 @@
 
 适用于已经从 **2026-11-22 BOOTFIX** 的 A 槽进入 Ubuntu 的 TB710FU。原安装器会给 A 槽设置试启动次数，但恢复的系统缺少成功确认步骤。次数耗尽后，平板可能回到 bootloader Fastboot。
 
-在修复助手更新仓库后，打开「BOOTFIX A 槽启动确认（单独安装）」。先运行只读检查，只有显示 `successful=no` 且 `unbootable=no` 时才应用。应用结束后再检查，预期显示 `successful=yes`，`retry` 数字保持原值。已经成功的槽位无需再应用。
+如需先检查，退出已打开的修复助手，在平板终端运行：
+
+```sh
+TB710FU_FIX_ACTION=check tb710fu-repair-assistant
+```
+
+在这个窗口更新仓库，选择「BOOTFIX A 槽启动确认（单独安装）」，下载后点击「运行脚本」。如果显示 `successful=no` 且 `unbootable=no`，关闭只读窗口，从桌面正常打开修复助手，再运行同一条目来应用。应用结束后再次用只读模式检查，预期显示 `successful=yes`，`retry` 数字保持原值。已经成功的槽位无需再应用。
 
 申请管理员权限后，脚本查验机型、当前 A 槽、可写的 ext4 根分区、主备 GPT 和原版 BOOTFIX 启动镜像。应用只写入 A 槽启动成功位和对应的 GPT 校验值。写入前将 GPT 备份留在本机 `/var/lib/tb710fu-boot-slot/boot-gpt.before.bin`，供离线恢复。修复助手不会自动回退这个启动成功位。
 
