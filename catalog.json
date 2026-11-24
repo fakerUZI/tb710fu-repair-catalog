@@ -422,20 +422,20 @@
     },
     {
       "id": "pogo-keyboard-trial",
-      "title": "磁吸键盘与触控板（测试版）",
+      "title": "手写笔、磁吸键盘与触控板（联合测试版）",
       "device": "TB710FU",
       "status": "manual-install",
-      "description": "适用于小新 Pad Pro GT（TB710FU）原装三触点磁吸键盘和 7.2.6-tb710fu-20261118 内核。单独安装后服务立即启动，后续开机自动加载。已实测安装、串口启动和机身按键驱动绑定，打字、触控板和拔插待原装键盘复测。",
-      "risk": "需要管理员权限，仅在匹配内核加载。启动和停止服务时保留机身按键驱动绑定。旧版安装失败后如果音量＋失效，请先重启平板，再运行测试版。",
+      "description": "适用小新 Pad Pro GT（TB710FU）的 7.2.6-tb710fu-20261118 内核。安装后键盘服务立即启动，手写笔模块在重启后生效。适配公开的 20261118 原版触控模块及双击唤醒修复版。 已在 20261118 的双击唤醒配置上实测联合安装、重启、笔扫描和键盘串口。",
+      "risk": "需要管理员权限，单独安装。脚本备份并替换匹配的触控模块，不刷写启动分区。修复后仍需使用原装笔和磁吸键盘测试书写、压感、触控板和拔插。",
       "script": {
         "path": "contributions/pogo-keyboard-trial/script.sh",
-        "sha256": "2a885be823a4d4a38f1bc91d0da6bf19b9caa4903b1491ed0a9eec40c8776722",
+        "sha256": "5791dd134ac7a2a6fd761d9dd6031f660876b4c52756b60e3b1e8a43a5171fe9",
         "requires_admin": true
       },
       "attachments": [
         {
           "path": "contributions/pogo-keyboard-trial/attachments/README.md",
-          "sha256": "c90e09f78e6910ec6f56aefb8d3541f9f387c6fe4d68d60742a61138f79d180a"
+          "sha256": "aa7ee2f95f341e74d661045603d64d56a22ba3b298efdc8958cda730d842360b"
         },
         {
           "path": "contributions/pogo-keyboard-trial/attachments/build_overlay.py",
@@ -472,6 +472,22 @@
         {
           "path": "contributions/pogo-keyboard-trial/attachments/tb710fu-pogo.service",
           "sha256": "5611eea7dcf033464b57839e4cc723b5af31fb8d074805765c88e2eb88a1c3dd"
+        },
+        {
+          "path": "contributions/pogo-keyboard-trial/attachments/pogo_pen_install.py",
+          "sha256": "efe5c6cd2b65d239c82177f69b143a123eda1b478231036c05d803001d1f492b"
+        },
+        {
+          "path": "contributions/pogo-keyboard-trial/attachments/pen_install.py",
+          "sha256": "06316f1f1704787f6c87dd0af6f6f6900c42b7b17e6ffc5b60f117d1f710725a"
+        },
+        {
+          "path": "contributions/pogo-keyboard-trial/attachments/driver/pen/stock/nvt_36xxx.ko",
+          "sha256": "bf7824f5e0f0af26817bee28ce6dc2d42e220ce97649353bd340571238399922"
+        },
+        {
+          "path": "contributions/pogo-keyboard-trial/attachments/driver/pen/gestures/nvt_36xxx.ko",
+          "sha256": "c45e19140babff4460833e5b77dc638914558b2c5c7db038154652f5495af34e"
         }
       ]
     },
