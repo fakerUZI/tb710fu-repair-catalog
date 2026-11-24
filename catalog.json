@@ -511,7 +511,7 @@
       "title": "恢复当前 Wi-Fi 的高速协商（单独安装）",
       "description": "适用于 TB710FU Ubuntu 26.04 上已识别版本的 Wi-Fi 兼容服务。路由器支持 Wi-Fi 6、平板却退回 Wi-Fi 4／40 MHz 时，先连接目标网络，再单独运行此修复并重新连接 Wi-Fi。只为当前网络解除兼容限速。Ubuntu 26.04.1 与 20261118 内核的实机安装和回退验证通过。",
       "device": "TB710FU",
-      "status": "community-review",
+      "status": "manual-install",
       "risk": "需要管理员授权。请单独安装。兼容服务原用于缓解高速关联问题，应用后请观察重连；若关联失败或出现不稳定，在平板本地回退并重新连接。支持只读 check 和 rollback。",
       "script": {
         "path": "contributions/wifi-link-speed/script.sh",
