@@ -51,7 +51,8 @@ def modinfo(field, module):
 
 
 def depmod():
-    subprocess.run(["/usr/sbin/depmod", "-a", KERNEL], check=True, timeout=60)
+    # Module indexes must stay readable when an elevated caller uses umask 077.
+    subprocess.run(["/usr/sbin/depmod", "-a", KERNEL], check=True, timeout=60, umask=0o022)
 
 
 def selected_module():

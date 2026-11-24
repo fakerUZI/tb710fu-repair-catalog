@@ -128,5 +128,13 @@ class CombinedRepairTests(unittest.TestCase):
         self.depmod.assert_not_called()
 
 
+class ModuleIndexTests(unittest.TestCase):
+    def test_depmod_keeps_indexes_readable_for_regular_users(self):
+        with patch.object(pen.subprocess, "run") as run:
+            pen.depmod()
+        run.assert_called_once_with(["/usr/sbin/depmod", "-a", pen.KERNEL],
+                                    check=True, timeout=60, umask=0o022)
+
+
 if __name__ == "__main__":
     unittest.main()
