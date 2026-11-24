@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-"""Supervised TB710FU trial with restoration of the original key binding."""
+"""Supervised TB710FU Pogo trial that leaves the built-in keys bound."""
 
 import argparse
-import errno
 import fcntl
 import os
 from pathlib import Path
@@ -27,7 +26,7 @@ INPUTS = Path("/sys/class/input")
 FIRMWARE = Path("/usr/lib/firmware/tb710fu/pogo-keyboard.dtbo")
 PMIC = TREE / "soc@0/rsc@17a00000/regulators-0"
 MODULES = ("tb_pogo_overlay", "lenovo_keyboard")
-PREPARED_SOURCES = ("pogo-keyboard.dts", "pogo-uart-only.dts")
+PREPARED_SOURCES = ("pogo-uart-only.dts",)
 OLD_MODULES = ("uartov", "rpmhmain", "voltset")
 EXPECTED_INPUTS = {
     "Lenovo Keyboard Pack For Yoga Tab Keyboard",
@@ -84,7 +83,6 @@ class Trial:
         self.diagnostics = diagnostics
         self.loaded = []
         self.created_firmware = False
-        self.touched_keys = False
         self.gpio_device = None
         self.original_gpio_bound = None
 
@@ -102,8 +100,6 @@ class Trial:
             raise RuntimeError(f"设备树 /gpio-keys 对应的平台设备数量为 {len(devices)}，需要核对当前启动配置")
         self.gpio_device = devices[0]
         self.original_gpio_bound = self.gpio_bound()
-        if self.original_gpio_bound and not all((GPIO_DRIVER / name).is_file() for name in ("bind", "unbind")):
-            raise RuntimeError(f"找到 {self.gpio_device.name}，但当前 gpio-keys 驱动不支持重绑")
         state = "已绑定" if self.original_gpio_bound else "未绑定"
         print(f"按键设备 {self.gpio_device.name}，原始驱动状态：{state}", flush=True)
 
@@ -117,28 +113,6 @@ class Trial:
         if actual != GPIO_DRIVER.resolve():
             raise RuntimeError(f"按键设备当前由 {actual.name} 驱动管理")
         return True
-
-    def set_gpio_bound(self, wanted):
-        binding = GPIO_DRIVER / ("bind" if wanted else "unbind")
-        started = time.time()
-        for attempt in range(4):
-            if self.gpio_bound() == wanted:
-                return
-            try:
-                binding.write_text(self.gpio_device.name)
-            except OSError as error:
-                if wanted and error.errno == errno.EAGAIN and attempt < 3:
-                    time.sleep(0.25)
-                    continue
-                if self.gpio_bound() == wanted:
-                    return
-                self.report_probe_failure(started)
-                reason = "内核暂缓探测（EAGAIN）" if error.errno == errno.EAGAIN else error.strerror
-                raise RuntimeError(f"{binding.name} {self.gpio_device.name} 失败：{reason}") from error
-            if self.gpio_bound() == wanted:
-                return
-            self.report_probe_failure(started)
-            raise RuntimeError("gpio-keys 的绑定状态与请求不一致")
 
     def report_probe_failure(self, started):
         logs = kernel_logs(started, PROBE_LOG_PATTERN, 20)
@@ -156,7 +130,7 @@ class Trial:
 
     def check(self, tree):
         self.find_gpio_keys(tree)
-        dts = make_dts(tree, move_hall=self.original_gpio_bound)
+        dts = make_dts(tree, move_hall=False)
         check_supplies(PMIC)
         for name in (*MODULES, *OLD_MODULES):
             if (Path("/sys/module") / name).exists():
@@ -180,15 +154,8 @@ class Trial:
         with self.firmware.open("xb") as output:
             self.created_firmware = True
             output.write(blob)
-        self.touched_keys = True
-        if self.original_gpio_bound:
-            self.set_gpio_bound(False)
         self.load(MODULES[0])
-        print("磁吸键盘设备树覆盖已加载。", flush=True)
-        if self.original_gpio_bound:
-            self.set_gpio_bound(True)
-        else:
-            print("gpio-keys 原先未绑定，本次设备树仅启用 UART。", flush=True)
+        print("磁吸键盘 UART 设备树覆盖已加载。", flush=True)
         started = time.time()
         self.load(MODULES[1])
         deadline = time.monotonic() + 12
@@ -234,15 +201,10 @@ class Trial:
             if MODULES[1] in self.loaded:
                 subprocess.run(["rmmod", MODULES[1]], check=True)
             if MODULES[0] in self.loaded:
-                self.set_gpio_bound(False)
                 subprocess.run(["rmmod", MODULES[0]], check=True)
         finally:
-            try:
-                if self.touched_keys:
-                    self.set_gpio_bound(self.original_gpio_bound)
-            finally:
-                if self.created_firmware:
-                    self.firmware.unlink()
+            if self.created_firmware:
+                self.firmware.unlink()
 
     def observe(self, seconds):
         deadline = time.monotonic() + seconds
