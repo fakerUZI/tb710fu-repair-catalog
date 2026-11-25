@@ -13,19 +13,12 @@ import sys
 import tempfile
 import time
 
-RELEASE = 49
+# The assistant stages verified attachments together and runs Python in isolated mode.
+sys.path.append(str(Path(__file__).resolve().parent))
+import droidloom_updates as upstream
+
 UPSTREAM = "https://github.com/denialwm/droidloom/releases/download/packages/"
-PACKAGES = {
-    "droidloom-runtime-0.1.0-49-aarch64.pkg.tar.zst": (
-        11047451, "6e5cf18c7c196f3ffa5a79ca938e0caf8315548610f21bb6db4adae0e35dbc28",
-    ),
-    "droidloom-image-0.1.0-49-aarch64.pkg.tar.zst": (
-        66862311, "8257effad113503ec5d0ed369e0b2d6d61cd976f37f93ce5b9a206f883a96062",
-    ),
-    "droidloom-base-0.1.0-49-aarch64.pkg.tar.zst": (
-        903293629, "40712a6eb1bcc451c8c4bdd2ca5b2951f845d041c4746a4bb2a07b3259b49473",
-    ),
-}
+# Reuse old cached downloads, locks and rollback snapshots across script updates.
 CACHE = Path("/var/cache/tb710fu-droidloom-r49")
 BACKUP = Path("/var/backups/tb710fu-droidloom-r49")
 ROOTS = (Path("/usr/lib/droidloom"), Path("/usr/share/droidloom"))
@@ -61,15 +54,6 @@ def json_file(path):
     if not isinstance(value, dict):
         raise ValueError(f"无效的 JSON 配置 {path}")
     return value
-
-
-def release_at(path):
-    metadata = json_file(path)
-    release = metadata.get("release")
-    if (metadata.get("architecture") != "aarch64" or metadata.get("version") != "0.1.0"
-            or type(release) is not int or not 42 <= release <= RELEASE):
-        raise ValueError("该升级脚本适用于 Droidloom 0.1.0 release 42–49 ARM64。")
-    return release
 
 
 def host_check():
@@ -110,7 +94,7 @@ def checked_storage(uid):
     if spec.get("host_uid") != uid:
         raise ValueError("现有 Droidloom 配置属于其他桌面账号。")
     if spec.get("gapps_dir") or present(ROOTS[0] / "gapps"):
-        raise ValueError("检测到 Google 应用扩展，需要先核对与 release 49 匹配的扩展。")
+        raise ValueError("检测到 Google 应用扩展，需要先核对与目标版本匹配的扩展。")
     storage = Path(spec["data_dir"])
     if not storage.is_absolute() or not storage.resolve().is_relative_to("/var/lib/droidloom"):
         raise ValueError("现有 Android 数据目录需要人工核对。")
@@ -152,11 +136,11 @@ def download(name, size, expected):
     return target
 
 
-def stage_packages(stage):
-    for name, (size, expected) in PACKAGES.items():
+def stage_packages(stage, target, packages):
+    for name, size, expected in packages:
         archive = download(name, size, expected)
-        run("tar", "--use-compress-program=zstd", "--no-same-owner", "-xf", archive, "-C", stage, "usr")
-    if release_at(stage / VERSION.relative_to("/")) != RELEASE:
+        run("tar", "--use-compress-program=zstd", "--no-same-owner", "-xf", archive, "-C", stage)
+    if upstream.installed_version(stage / VERSION.relative_to("/")) != target:
         raise ValueError("暂存的 Droidloom 发行版与预期不符。")
     images = stage / "usr/lib/droidloom/images/images"
     for name in ("system.img", "system_ext.img", "product.img", "vendor.raw.img"):
@@ -165,6 +149,25 @@ def stage_packages(stage):
     paths = list(ROOTS)
     for pattern in PACKAGE_PATHS:
         paths.extend(Path("/") / file.relative_to(stage) for file in sorted(stage.glob(pattern)))
+    required = (CTL, HELPER, Path("/usr/bin/droidloom-wayland"),
+                Path("/usr/lib/systemd/user/droidloom.service"), Path("/usr/lib/systemd/system/droidloomd.service"))
+    for path in required:
+        if not (stage / path.relative_to("/")).is_file():
+            raise ValueError(f"新版软件包布局已变化，缺少 {path}")
+    # Only the known host locations are copied. Arch hook files are replaced by
+    # the explicit stop / after-install steps on Ubuntu.
+    managed = {stage / path.relative_to("/") for path in paths}
+    hooks = stage / "usr/share/libalpm/hooks"
+    metadata = {stage / name for name in (".MTREE", ".BUILDINFO", ".PKGINFO")}
+    pending = list(stage.iterdir())
+    while pending:
+        entry = pending.pop()
+        if entry in managed or entry in metadata or (entry.parent == hooks and entry.match("*.hook")):
+            continue
+        if entry.is_dir() and not entry.is_symlink():
+            pending.extend(entry.iterdir())
+        else:
+            raise ValueError(f"新版软件包包含未适配的文件 {entry.relative_to(stage)}")
     for path in [item for item in paths if item.parent == CTL.parent] + [HELPER]:
         result = run("ldd", stage / path.relative_to("/"), capture=True, check=False)
         if result.returncode or "not found" in result.stdout:
@@ -184,8 +187,8 @@ def remove(path):
         path.unlink(missing_ok=True)
 
 
-def snapshot(paths, uid, release, running):
-    state = {"uid": uid, "release": release, "running": running, "paths": [str(p) for p in paths]}
+def snapshot(paths, uid, release, running, target):
+    state = {"uid": uid, "release": release, "running": running, "target": target, "paths": [str(p) for p in paths]}
     with tempfile.TemporaryDirectory(prefix=".droidloom-r49-", dir=BACKUP.parent) as pending:
         staged = Path(pending) / "snapshot"
         staged.mkdir(mode=0o700)
@@ -193,7 +196,16 @@ def snapshot(paths, uid, release, running):
             if present(path):
                 copy(path, staged / "files" / path.relative_to("/"))
         (staged / "state.json").write_text(json.dumps(state))
-        staged.rename(BACKUP)
+        previous = None
+        if present(BACKUP):
+            previous = BACKUP.with_name(f"{BACKUP.name}-{time.time_ns()}")
+            BACKUP.rename(previous)
+        try:
+            staged.rename(BACKUP)
+        except OSError:
+            if previous is not None:
+                previous.rename(BACKUP)
+            raise
     return state
 
 
@@ -222,14 +234,20 @@ def restore(user, state):
     (BACKUP / "state.json").rename(BACKUP / "restored.json")
 
 
-def apply(uid, user, release):
-    if present(BACKUP):
-        if (BACKUP.is_symlink() or BACKUP.stat().st_uid != 0
-                or (BACKUP / "state.json").exists()
-                or not (BACKUP / "restored.json").is_file()
-                or json_file(BACKUP / "restored.json").get("uid") != uid):
-            raise ValueError(f"已有升级或回退快照，请先核对 {BACKUP}")
-        BACKUP.rename(BACKUP.with_name(f"{BACKUP.name}-restored-{time.time_ns()}"))
+def previous_snapshot(uid):
+    if not present(BACKUP):
+        return
+    if BACKUP.is_symlink() or BACKUP.stat().st_uid != 0:
+        raise ValueError(f"快照目录权限异常 {BACKUP}")
+    marker = BACKUP / "restored.json"
+    if (BACKUP / "completed").is_file():
+        marker = BACKUP / "state.json"
+    if not marker.is_file() or json_file(marker).get("uid") != uid:
+        raise ValueError(f"有未完成的快照或属于其他账号，请检查 {BACKUP}")
+
+
+def apply(uid, user, release, target, packages):
+    previous_snapshot(uid)
     if run("dpkg-query", "-S", CTL, capture=True, check=False).returncode == 0:
         raise ValueError("当前安装由 dpkg 管理，请沿用原软件包渠道。")
     storage = checked_storage(uid)
@@ -244,12 +262,12 @@ def apply(uid, user, release):
         raise ValueError("已有下载缓存的属主或权限异常。")
     with tempfile.TemporaryDirectory(prefix="tb710fu-droidloom-r49-", dir="/var/tmp") as work:
         stage = Path(work)
-        paths = stage_packages(stage)
+        paths = stage_packages(stage, target, packages)
         running = run(*user, "is-active", "--quiet", "droidloom.service", check=False).returncode == 0
         state = None
         try:
             stop(user)
-            state = snapshot([*paths, *CONFIG], uid, release, running)
+            state = snapshot([*paths, *CONFIG], uid, release, running, target)
             for path in paths:
                 remove(path)
                 copy(stage / path.relative_to("/"), path)
@@ -267,7 +285,7 @@ def apply(uid, user, release):
             elif running:
                 run(*user, "start", "droidloom.service", check=False)
             raise
-    print("已升级到 Droidloom release 49。用桌面账号运行 droidloomctl start 启动。")
+    print(f"已升级到 Droidloom {target}。用桌面账号运行 droidloomctl start 启动。")
 
 
 def main():
@@ -276,19 +294,24 @@ def main():
     action = parser.parse_args().action
     host_check()
     if action == "check":
-        print(f"本机 Droidloom release {release_at(VERSION)}，此脚本目标 release {RELEASE}。")
+        current = upstream.installed_version(VERSION)
+        target, _ = upstream.latest()
+        print(f"本机 Droidloom {current}，官方 ARM64 仓库 {target}。")
         return
     if os.geteuid() != 0:
         raise ValueError("升级与回退需要管理员权限。")
     with open("/run/lock/tb710fu-droidloom-r49.lock", "a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         if action == "apply":
-            release = release_at(VERSION)
-            if release == RELEASE:
-                print("本机已是 Droidloom release 49。")
+            if (BACKUP / "state.json").exists() and not (BACKUP / "completed").exists():
+                raise ValueError("上次升级中断，请先使用 rollback 恢复快照。")
+            release = upstream.installed_version(VERSION)
+            target, packages = upstream.latest()
+            if upstream.version_key(release) >= upstream.version_key(target):
+                print(f"无需升级。本机 {release}，官方仓库 {target}。")
                 return
             uid, user = desktop()
-            apply(uid, user, release)
+            apply(uid, user, release, target, packages)
             return
         uid, user = desktop()
         if not (BACKUP / "state.json").is_file():
@@ -296,7 +319,7 @@ def main():
         state = json_file(BACKUP / "state.json")
         if state.get("uid") != uid or BACKUP.is_symlink() or BACKUP.stat().st_uid != 0:
             raise ValueError("不能使用当前快照回退。")
-        if (BACKUP / "completed").exists() and release_at(VERSION) != RELEASE:
+        if (BACKUP / "completed").exists() and upstream.installed_version(VERSION) != state.get("target", "0.1.0-49"):
             raise ValueError("Droidloom 版本已变化，请人工核对后再回退。")
         restore(user, state)
         print("Droidloom 软件和主机配置已回退。")
