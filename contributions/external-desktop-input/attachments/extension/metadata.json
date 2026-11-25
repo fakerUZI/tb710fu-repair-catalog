@@ -1,0 +1,7 @@
+{
+  "uuid": "tb-external-desktop-input@tb710fu",
+  "name": "外接桌面控制",
+  "description": "在平板上用现有屏幕键盘和触控板操作 USB-C 扩展桌面",
+  "shell-version": ["50"],
+  "version": 3
+}
