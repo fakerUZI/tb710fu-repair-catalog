@@ -1,0 +1,75 @@
+--- extension.js
++++ extension.js
+@@ -63,9 +63,4 @@
+         this._disabledPogo = new Set();
+         this._panelKeyboard = null;
+-        this._postureId = global.stage.connect('captured-event', (_stage, event) => {
+-            if (event.type() === Clutter.EventType.KEY_PRESS)
+-                this._pogoKey(event);
+-            return Clutter.EVENT_PROPAGATE;
+-        });
+         this._lastDeviceCheck = 0;
+         this._seat = global.stage.context.get_backend().get_default_seat();
+@@ -194,19 +189,17 @@
+         return this._physicalKeyboardCount > 0;
+     }
+-    _pogoKey(event) {
+-        // Firmware status pulses use these Linux evdev codes on the Lenovo Pogo.
+-        const code = event.get_event_code();
+-        if (code !== 0x28e && code !== 0x28f)
+-            return;
+-        const device = event.get_source_device();
+-        if (!device || !this._physicalTypingDevice(device, true))
+-            return;
+-        if (code === 0x28f)
+-            this._disabledPogo.add(device);
+-        else
+-            this._disabledPogo.delete(device);
+-        this._refreshPhysicalKeyboards();
+-    }
+-    _physicalTypingDevice(device, pogoOnly = false) {
++    _pogoDisabled(device) {
++        try {
++            const node = GLib.path_get_basename(device.get_device_node());
++            const target = GLib.file_read_link(`/sys/class/input/${node}`);
++            const inputId = GLib.path_get_basename(GLib.path_get_dirname(target));
++            const file = Gio.File.new_for_path(`/run/tb710fu-pogo-fold-${node}/state`);
++            const [, bytes] = file.load_contents(null);
++            return new TextDecoder().decode(bytes).trim() === `${inputId} disabled`;
++        } catch {
++            return false;
++        }
++    }
++    _physicalTypingDevice(device) {
+         try {
+             const node = device.get_device_node();
+@@ -220,6 +213,4 @@
+             };
+             const bus = read(`${base}/device/id/bustype`);
+-            if (pogoOnly && Number.parseInt(bus, 16) !== 0x19)
+-                return false;
+             return isExternalTypingKeyboard(bus,
+                 GLib.file_read_link(base), read(`${base}/device/capabilities/key`),
+@@ -232,6 +223,14 @@
+         this._lastDeviceCheck = GLib.get_monotonic_time() / 1000;
+         const oldCount = this._physicalKeyboardCount;
+-        this._physicalKeyboardCount = this._seat.list_devices()
+-            .filter(device => !this._disabledPogo.has(device) && this._physicalTypingDevice(device)).length;
++        this._disabledPogo.clear();
++        this._physicalKeyboardCount = this._seat.list_devices().filter(device => {
++            if (!this._physicalTypingDevice(device))
++                return false;
++            if (this._pogoDisabled(device)) {
++                this._disabledPogo.add(device);
++                return false;
++            }
++            return true;
++        }).length;
+         if (this.hasPhysicalKeyboard()) {
+             const keyboard = this._manager.keyboardActor;
+@@ -366,5 +365,4 @@
+     disable() {
+         this._enabled = false;
+-        global.stage.disconnect(this._postureId);
+         this._panelKeyboard = null;
+         this._diagnostic?.unexport();

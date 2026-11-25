@@ -1,0 +1,1 @@
+ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{phys}=="input/lenovo_kb", ATTRS{id/bustype}=="0019", ATTRS{id/vendor}=="17ef", ATTRS{id/product}=="61ba", TAG+="systemd", ENV{SYSTEMD_WANTS}+="tb710fu-pogo-fold@%k.service"
