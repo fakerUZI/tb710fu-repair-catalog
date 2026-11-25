@@ -902,6 +902,49 @@
           "sha256": "159363617ca69896f83b5dc67125c09799d80fe5b0ab84b7139e9c3ef99730d6"
         }
       ]
+    },
+    {
+      "id": "ubuntu-uboot-uefi",
+      "title": "Ubuntu 启动器切换到 U-Boot（可选）",
+      "device": "TB710FU",
+      "status": "manual-install",
+      "description": "适用于 7.2.6-tb710fu-20261124 内核、A 槽 kShim 和 arch 单系统根分区。复用本机 Ubuntu 内核与设备树，切换为 U-Boot / UEFI 启动。已切换的匹配设备只核对现状。",
+      "risk": "仅可单独安装。需要管理员权限和网络，写入 boot_a，启动中断可能需要电脑恢复。脚本校验固件和 GPT 并保存原镜像，完成后请将备份另存到电脑，再手动重启。支持只读检查及使用本机备份回退。",
+      "script": {
+        "path": "contributions/ubuntu-uboot-uefi/script.sh",
+        "sha256": "28987cb9807f647a62921b8843621fb871b76219c2630bae14ff66cc73da16b4",
+        "requires_admin": true
+      },
+      "attachments": [
+        {
+          "path": "contributions/ubuntu-uboot-uefi/attachments/README.md",
+          "sha256": "dce2f3ff9125547a0a338289b9ff953d7354f8f05220d7b924b897f2475c75f8"
+        },
+        {
+          "path": "contributions/ubuntu-uboot-uefi/attachments/board.dtb.patch",
+          "sha256": "91d29323c1e8d7549b82c0d4653b12bc065c51b16b77d6e4d4029312e9956208"
+        },
+        {
+          "path": "contributions/ubuntu-uboot-uefi/attachments/boot.img.patch",
+          "sha256": "58c11af5239928218a2b911fabd26993bc3e11f91603f7a254b9d5071d1a709a"
+        },
+        {
+          "path": "contributions/ubuntu-uboot-uefi/attachments/loader.conf",
+          "sha256": "ca70d248b8f9b3fdacd2e6143424819d870d00629745b8618f875a92202c1235"
+        },
+        {
+          "path": "contributions/ubuntu-uboot-uefi/attachments/migrate.py",
+          "sha256": "336c3b99f7c4bddf1fa333b89e13ebc5cb9f8968a63c7686a7730042382afd39"
+        },
+        {
+          "path": "contributions/ubuntu-uboot-uefi/attachments/profile.json",
+          "sha256": "755ea3af47e99f3490a9af15d169d3a714d4d569b1cf96c4c10b303723e6040c"
+        },
+        {
+          "path": "contributions/ubuntu-uboot-uefi/attachments/ubuntu.conf",
+          "sha256": "35714a4791e2f1fb1609a790329677d3361f6aa61f0c168a29e50a5525a58f36"
+        }
+      ]
     }
   ]
 }

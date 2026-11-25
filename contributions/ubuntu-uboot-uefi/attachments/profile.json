@@ -1,0 +1,35 @@
+{
+  "reservations": {
+    "kshim-firmware@d4e23000": [
+      0,
+      3571593216,
+      0,
+      3002368
+    ],
+    "kshim-framebuffer@d5100000": [
+      0,
+      3574595584,
+      0,
+      25600000
+    ]
+  },
+  "previous_boot": "3f3694ab3f18e656b1117fdaa399bbdfac855b0dba9941b0d4c420d88525382a",
+  "uboot": "d70027712f411095cc9d3c0a7d54dacac8c4891be93388eb7b40e66648d3e3fe",
+  "firmware": {
+    "abl_a": "6a651633a08d1eef678c24de17ec36e249600589db4f9cf8cf3a770a9e015871",
+    "abl_b": "dcb879bbfde77519b131b87ab5d09c903a0d785cff70127d792244aa88b35ccb",
+    "xbl_a": "ac78eb393c0170d67fd03aeb4b8de68d7e023e65835dd084c16b0842cf033bd1",
+    "xbl_b": "ea23d98ce78048e425235aa3f834257e137a44a9ef52da80104d8600db9bf7d9",
+    "xbl_config_a": "8498b8dc40c0248e9625b86d21c60ed5d78d0c22af9d0ed6071359c7e80fded0",
+    "xbl_config_b": "e763d921fbee00097d0428fa750c427cbe06135cff5cb36413884a7de3c42700",
+    "dtbo_a": "408901bcf1c6862f226f218996cf2c0089e219f6c406d9c857df9482924a7873",
+    "vendor_boot_a": "0a3c13edf9af8c315906b784aead9cd40b8fb35ce4f583df6c64fb50065be34c"
+  },
+  "files": {
+    "EFI/BOOT/BOOTAA64.EFI": "b49d3eb1277aabea11d6ce8cf81ceabd3bfb2360d1fa6d70b2ef007c1b786467",
+    "boot/Image": "43b2de187d0bfa97fd74ba046764237be95434e9dbffd5b8c7b29faecaa80816",
+    "boot/sm8650-lenovo-tb710fu.dtb": "8b9af1114fe90d177abdf4bae9a57b3061feb8590716f211fd44a043678fc3cb",
+    "loader/entries/ubuntu.conf": "35714a4791e2f1fb1609a790329677d3361f6aa61f0c168a29e50a5525a58f36",
+    "loader/loader.conf": "ca70d248b8f9b3fdacd2e6143424819d870d00629745b8618f875a92202c1235"
+  }
+}
