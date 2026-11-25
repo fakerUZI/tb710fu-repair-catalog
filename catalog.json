@@ -336,6 +336,37 @@
       ]
     },
     {
+      "id": "sudo-face-password",
+      "title": "sudo 与软件安装的人脸验证",
+      "device": "TB710FU",
+      "status": "manual-install",
+      "description": "先安装「TB710FU 锁屏人脸解锁」并录入。单独安装本项后，在「设置 → 隐私与安全 → 锁屏 → 人脸解锁」选择仅解锁后、仅开机或始终。本机 sudo 和图形软件安装等系统授权可使用前摄，识别时显示提示，失败可输入密码。",
+      "risk": "需要管理员权限及 ARM64 GNOME 设置 50.3-0ubuntu0.2。安装系统 PAM 模块与授权服务，首次安装默认关闭。普通 RGB 前摄没有专门的活体检测。支持只读检查及回退。",
+      "script": {
+        "path": "contributions/sudo-face-password/script.sh",
+        "sha256": "ba0aef4c5d7f815f4086054c37c7d6958b54123dc1e3eec31b1ec59726e5a109",
+        "requires_admin": true
+      },
+      "attachments": [
+        {
+          "path": "contributions/sudo-face-password/attachments/README.md",
+          "sha256": "7c514e7080a6697573b7d6a879284f6ed0838304306660bd3fb169faddb72f89"
+        },
+        {
+          "path": "contributions/sudo-face-password/attachments/install.py",
+          "sha256": "71ba3f349cc086969b8b7d1a4a1c30543458d52dcd1936a63eeef1282045a888"
+        },
+        {
+          "path": "contributions/sudo-face-password/attachments/settings-user.py",
+          "sha256": "5f83581f8895c91b6bb80d6954897716997fbe0aa28a0c419b83af7640a280b8"
+        },
+        {
+          "path": "contributions/sudo-face-password/attachments/tb710fu-face-password_1.0.2_arm64.deb",
+          "sha256": "4133a63ac34d02fec34efe557d410f4b46bef099a6b8caf5813f427e7a76e7fc"
+        }
+      ]
+    },
+    {
       "id": "dp-refresh-profiles",
       "title": "DP 外接屏刷新率自动切换",
       "description": "适用 TB710FU、Ubuntu 26.04、GNOME Wayland、7.2.6-tb710fu-20261118。内屏 144Hz 接 DP 外屏时可能黑屏或灰屏。此条目保存 GNOME 的配对配置，接上同一台 DP 显示器时内屏切到 120Hz，外屏保持当前分辨率并选约 60Hz；拔掉时恢复原来保存的单屏刷新率。请先保存单屏设置，登录后接上一台 DP 外屏，使用“加入显示”。以普通用户运行，并在 GNOME 弹窗点“保留更改”。需要系统 Python 3 和 PyGObject。已实测同一台 2560×1440 显示器的原生配置和拔插切换；投稿脚本在平板上通过只读检查，写入和回退流程使用隔离测试验证。详见附件。",

@@ -1,0 +1,121 @@
+--- a/panels/privacy/screen/cc-screen-page.c
++++ b/panels/privacy/screen/cc-screen-page.c
+@@ -26,6 +26,7 @@
+ #include "panels/display/cc-display-config-manager.h"
+
+ #include <gio/gdesktopappinfo.h>
++#include <unistd.h>
+
+ struct _CcScreenPage
+ {
+@@ -48,6 +49,8 @@
+   AdwSwitchRow        *desktop_click_to_lock_row;
+   AdwPreferencesGroup *face_unlock_group;
+   AdwButtonRow        *face_toggle_row;
++  AdwComboRow         *face_password_row;
++  gulong               face_password_changed;
+   GDBusProxy          *usb_proxy;
+   AdwSwitchRow        *automatic_screen_lock_row;
+   AdwSwitchRow        *lock_on_suspend_row;
+@@ -68,6 +71,31 @@
+   return g_str_has_prefix (g_get_language_names ()[0], "zh") ? chinese : english;
+ }
+
++#define FACE_PASSWORD_ADMIN "/usr/local/lib/tb710fu-face-unlock/configure"
++static const char *const password_modes[] = { "off", "unlock", "boot", "always", NULL };
++
++static void
++refresh_password_mode (CcScreenPage *self)
++{
++  g_autofree char *path = g_strdup_printf ("/var/lib/tb710fu-face-password/%u", (guint) getuid ());
++  g_autofree char *contents = NULL;
++  guint selected = 0;
++
++  if (!self->face_password_row)
++    return;
++
++  if (g_file_get_contents (path, &contents, NULL, NULL))
++    {
++      g_strdelimit (contents, "\n", '\0');
++      for (guint i = 1; password_modes[i]; i++)
++        if (g_str_equal (contents, password_modes[i]))
++          selected = i;
++    }
++  g_signal_handler_block (self->face_password_row, self->face_password_changed);
++  adw_combo_row_set_selected (self->face_password_row, selected);
++  g_signal_handler_unblock (self->face_password_row, self->face_password_changed);
++}
++
+ static gboolean
+ face_unlock_enabled (void)
+ {
+@@ -85,6 +113,8 @@
+ refresh_face_settings (CcScreenPage *self)
+ {
+   gboolean enabled = face_unlock_enabled ();
++
++  refresh_password_mode (self);
+
+   adw_preferences_row_set_title (ADW_PREFERENCES_ROW (self->face_toggle_row),
+                                  enabled ? face_text ("Turn Off Face Unlock", "关闭人脸解锁")
+@@ -335,10 +365,12 @@
+   g_autoptr (GSubprocess) process = NULL;
+   g_autoptr (GError) error = NULL;
+
+-  process = g_subprocess_new (G_SUBPROCESS_FLAGS_STDOUT_PIPE | G_SUBPROCESS_FLAGS_STDERR_SILENCE,
+-                              &error, "/usr/bin/pkexec", FACE_SETTINGS_ADMIN, action, NULL);
++  const char *helper = g_strv_contains (password_modes, action) ? FACE_PASSWORD_ADMIN : FACE_SETTINGS_ADMIN;
++  process = g_subprocess_new (G_SUBPROCESS_FLAGS_STDOUT_PIPE | G_SUBPROCESS_FLAGS_STDERR_MERGE,
++                              &error, "/usr/bin/pkexec", helper, action, NULL);
+   if (!process)
+     {
++      refresh_password_mode (self);
+       show_face_result (self, FALSE, error->message);
+       return;
+     }
+@@ -472,6 +504,37 @@
+ }
+
+ static void
++on_password_mode_changed (AdwComboRow *row, GParamSpec *pspec, CcScreenPage *self)
++{
++  guint index = adw_combo_row_get_selected (row);
++  if (index < G_N_ELEMENTS (password_modes) - 1)
++    run_face_action (self, password_modes[index]);
++}
++
++static void
++add_password_mode (CcScreenPage *self)
++{
++  const char *labels[] = {
++    face_text ("Off", "关闭"), face_text ("Until screen lock", "仅解锁后"),
++    face_text ("Until restart", "仅开机"), face_text ("Always", "始终"), NULL
++  };
++  g_autoptr (GtkStringList) model = gtk_string_list_new (labels);
++
++  if (!g_file_test (FACE_PASSWORD_ADMIN, G_FILE_TEST_IS_EXECUTABLE))
++    return;
++  self->face_password_row = ADW_COMBO_ROW (adw_combo_row_new ());
++  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (self->face_password_row),
++                                 face_text ("Face recognition for system passwords", "用人脸识别验证系统密码"));
++  adw_action_row_set_subtitle (ADW_ACTION_ROW (self->face_password_row),
++    face_text ("Choose face recognition at the first prompt. Each following request scans your face again.",
++               "首次授权时选择人脸或密码。选用人脸后，在所选时段内每次授权都会重新识别。"));
++  adw_combo_row_set_model (self->face_password_row, G_LIST_MODEL (model));
++  self->face_password_changed = g_signal_connect (self->face_password_row, "notify::selected",
++                                                  G_CALLBACK (on_password_mode_changed), self);
++  adw_preferences_group_add (self->face_unlock_group, GTK_WIDGET (self->face_password_row));
++}
++
++static void
+ setup_face_settings (CcScreenPage *self)
+ {
+   AdwButtonRow *delete_row;
+@@ -484,6 +547,7 @@
+   self->face_toggle_row = add_face_button (self, "toggle", "");
+   delete_row = add_face_button (self, "forget", face_text ("Delete Face Data…", "删除人脸资料…"));
+   gtk_widget_add_css_class (GTK_WIDGET (delete_row), "destructive-action");
++  add_password_mode (self);
+   add_attention_switch (self);
+   refresh_face_settings (self);
+   gtk_widget_set_visible (GTK_WIDGET (self->face_unlock_group), TRUE);
