@@ -1,0 +1,20 @@
+--- a/graphics/droidloom-wayland/src/main.rs
++++ b/graphics/droidloom-wayland/src/main.rs
+@@ -557,6 +557,17 @@
+                 })
+                 .map(|(object, _)| self.task_refresh_millihz(*object))
+                 .max()
++                .or_else(|| {
++                    // SurfaceFlinger reads the hidden display's first configure before
++                    // a visible task can enter an output. On a single-output tablet
++                    // we already know which physical mode will present the ink.
++                    let mut outputs = self.output_state.outputs();
++                    let output = outputs.next()?;
++                    if outputs.next().is_some() {
++                        return None;
++                    }
++                    self.output_refresh_millihz(&output)
++                })
+                 .unwrap_or(60_000);
+         }
+         select_surface_refresh(

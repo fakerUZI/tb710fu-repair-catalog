@@ -51,6 +51,16 @@ class InstallTests(unittest.TestCase):
         self.assertFalse(pen.ROOT.exists())
         self.desktop.assert_called_with(self.account, "disable")
 
+    def test_upgrade_presenter_only_then_restore_factory(self):
+        self.run_action("apply")
+        (pen.ROOT / pen.HOST).write_bytes(b"previous presenter")
+        with patch.object(pen, "PREVIOUS_PRESENTER_SHA", pen.digest(pen.ROOT / pen.HOST)):
+            self.run_action("apply")
+        self.assertEqual(pen.digest(pen.ROOT / pen.HOST), self.release[pen.HOST]["sha256"])
+        self.assertEqual(pen.digest(self.live), self.release[pen.GUEST]["sha256"])
+        self.run_action("rollback")
+        self.assertEqual(pen.digest(self.live), pen.FACTORY_SHA)
+
     def test_missing_guest_part_leaves_original(self):
         (self.assets / (pen.GUEST + ".gz.002")).unlink()
         with self.assertRaises(ValueError):

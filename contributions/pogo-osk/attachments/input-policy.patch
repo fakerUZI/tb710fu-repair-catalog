@@ -1,0 +1,27 @@
+--- extension.js
++++ extension.js
+@@ -26,6 +26,13 @@
+-function isExternalTypingKeyboard(bus, sysfsTarget, keyBits) {
+-    if (![3, 5].includes(Number.parseInt(bus, 16)) ||
+-        sysfsTarget.includes('/devices/virtual/input/'))
++function isExternalTypingKeyboard(bus, sysfsTarget, keyBits, readIdentity) {
++    const busType = Number.parseInt(bus, 16);
++    if (busType === 0x19) {
++        // The Lenovo driver registers a parentless BUS_HOST input on attach.
++        if (readIdentity('id/vendor') !== '17ef' || readIdentity('id/product') !== '61ba' ||
++            readIdentity('phys') !== 'input/lenovo_kb' ||
++            readIdentity('name') !== 'Lenovo Keyboard Pack For Yoga Tab Keyboard')
++            return false;
++    } else if (![3, 5].includes(busType) || sysfsTarget.includes('/devices/virtual/input/')) {
+         return false;
++    }
+     // These typing keys all belong to the final 64-bit capability word.
+     // Concatenating sysfs words loses zero padding and misclassifies pens.
+@@ -183,5 +190,6 @@
+             };
+             return isExternalTypingKeyboard(read(`${base}/device/id/bustype`),
+-                GLib.file_read_link(base), read(`${base}/device/capabilities/key`));
++                GLib.file_read_link(base), read(`${base}/device/capabilities/key`),
++                field => read(`${base}/device/${field}`).trim());
+         } catch (_error) {
+             return false; // Hot-unplug or a virtual/master device with no node.

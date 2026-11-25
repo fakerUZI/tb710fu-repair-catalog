@@ -18,6 +18,7 @@ SPEC = Path("/etc/droidloom/cell.json")
 META = Path("/usr/share/droidloom/package.json")
 STOCK = Path("/usr/bin/droidloom-wayland")
 FACTORY_SHA = "a61a37dc57fc5ec2bb7b80366452329ae9576426bcd65cec94d576a36dc3cc3d"
+PREVIOUS_PRESENTER_SHA = "fb23637ff0b46169926492d7991bf76ff1e41386cf6bba02b091f3c7db47bd71"
 MARKER = b"DROIDLOOM_STYLUS_WIRE=1;"
 HOST = "droidloom-wayland"
 GUEST = "libinputflinger.so"
@@ -151,8 +152,16 @@ def apply_or_rollback(account, action, release):
         shutil.rmtree(ROOT)
         print("已恢复系统输入库和先前的启动配置，重启安卓容器后生效。")
         return
-    if state["guest"] != release[GUEST]["sha256"] or any(digest(ROOT / n) != release[n]["sha256"] for n in (HOST, GUEST)):
-        raise ValueError("已有修复版本不同，请先回退。")
+    if state["guest"] != release[GUEST]["sha256"] or digest(ROOT / GUEST) != state["guest"]:
+        raise ValueError("已有输入库不同，请先回退。")
+    host_sha = digest(ROOT / HOST)
+    if host_sha != release[HOST]["sha256"]:
+        if host_sha != PREVIOUS_PRESENTER_SHA:
+            raise ValueError("已有窗口程序不同，请先核对。")
+        # The Android receiver and its factory backup are identical across these builds.
+        with tempfile.TemporaryDirectory(dir=ROOT) as folder:
+            unpack(Path(folder), HOST, release[HOST])
+            os.replace(Path(folder) / HOST, ROOT / HOST)
     # If interrupted between the two changes, running apply or rollback resumes.
     if current == FACTORY_SHA:
         swap_receiver(ROOT / GUEST)
