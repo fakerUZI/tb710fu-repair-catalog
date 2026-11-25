@@ -1,0 +1,18 @@
+.tb-external-deck { background-color: #1d2025; color: #e9edf1; padding: 6px 12px 8px; }
+.tb-external-controls { spacing: 10px; padding: 3px 5px 7px; font-size: 15px; font-weight: bold; }
+.tb-external-controls .button, .tb-external-clicks .button { padding: 5px 16px; border-radius: 7px; }
+.tb-desktop-key {
+    margin: 3px; padding: 1px; border-radius: 8px;
+    background-color: #3c4149; border: 1px solid #565d66;
+    color: #f2f4f7; font-size: 22px; font-weight: 600;
+    box-shadow: 0 2px 0 #16181b;
+}
+.tb-key-function, .tb-key-control { background-color: #2d3239; font-size: 16px; }
+.tb-key-enter { background-color: #345b75; border-color: #4d7995; font-size: 18px; }
+.tb-key-symbol { color: #b2bbc7; font-size: 12px; }
+.tb-desktop-key:hover { background-color: #49515c; }
+.tb-desktop-key:active, .tb-desktop-key:latched { background-color: #416d90; border-color: #85b5d6; }
+.tb-external-pad { spacing: 4px; padding: 7px 3px 0; }
+.tb-external-surface { background-color: #282d33; border: 1px solid #4b545f; border-radius: 10px; color: #b5bdc7; }
+.tb-external-clicks { spacing: 5px; }
+.tb-external-entry { padding: 8px 16px; border-radius: 16px; background-color: #303338; color: white; }

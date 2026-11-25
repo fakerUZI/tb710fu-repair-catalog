@@ -390,6 +390,57 @@
       ]
     },
     {
+      "id": "external-desktop-input",
+      "title": "USB-C 外接桌面控制（全屏键盘与触控板）",
+      "device": "TB710FU",
+      "status": "manual-install",
+      "description": "USB-C 接显示器后，用平板全屏键盘和触控板操作自己的外接桌面。进入时自动将外屏切为主屏，应用菜单和候选词在外屏显示。支持常驻指针、双指滚动、桌面数字行和 1–5 选词，拔线或锁屏自动退出。版本 3 已实机验收。",
+      "risk": "可选功能，使用当前用户权限。适用于 Ubuntu / GNOME Shell 50 和可用的 USB-C 扩展显示，中文候选依赖现有 Fcitx5 输入法。初装或更新后需保存工作并重新登录。支持只读检查，回退可停用此扩展。",
+      "script": {
+        "path": "contributions/external-desktop-input/script.sh",
+        "sha256": "8909a65c2c075b4e79ccc5613ea294f9a0b71ea8f3d8c4f72e1122898a31a691",
+        "requires_admin": false
+      },
+      "attachments": [
+        {
+          "path": "contributions/external-desktop-input/attachments/README.md",
+          "sha256": "075f6827c76d6529520d63fa9946cf5e79adbb78b035f8d38d57021d55be667e"
+        },
+        {
+          "path": "contributions/external-desktop-input/attachments/extension/desktop-keys.js",
+          "sha256": "8145592099e84a0e9fea77b4a044561a2151e4193e1278dd8833fb822cae406d"
+        },
+        {
+          "path": "contributions/external-desktop-input/attachments/extension/extension.js",
+          "sha256": "d0d3c365d8e86cbf992a0441cb283d3e646cd1566e98c0da6010bfb6769175c1"
+        },
+        {
+          "path": "contributions/external-desktop-input/attachments/extension/install.sh",
+          "sha256": "18692c2dad5773585e978971c4abda32a00cf9fce1ffc12bf463e502b7016840"
+        },
+        {
+          "path": "contributions/external-desktop-input/attachments/extension/metadata.json",
+          "sha256": "2e2683e58306ac23d20235d78e8c3702fe91161df4df5abb8509f367f2bf53e0"
+        },
+        {
+          "path": "contributions/external-desktop-input/attachments/extension/primary-monitor.js",
+          "sha256": "291a9badda85d66d720511d6a57eaad1e25537d09c01cb01c500a730808949ca"
+        },
+        {
+          "path": "contributions/external-desktop-input/attachments/extension/stylesheet.css",
+          "sha256": "13c93b2b8526eab272801f03846f0dacddb9e2fbeecd95db9d1375a991877dc6"
+        },
+        {
+          "path": "contributions/external-desktop-input/attachments/extension/touchpad.js",
+          "sha256": "49e094a38a9ae842a4377d1501a0fc82294c58f8389acd27c22dbcb784732329"
+        },
+        {
+          "path": "contributions/external-desktop-input/attachments/manage.py",
+          "sha256": "88367c31a336269881b2fbc6e64ce5d9d6d88cf10f17c1a91a91a5a725532515"
+        }
+      ]
+    },
+    {
       "id": "flash-portable-runtime",
       "title": "后摄补光灯与手电筒快捷开关修复",
       "description": "适用于已安装相机和手电筒组件的 TB710FU Ubuntu ARM64（20261117／20261118）。修复不同启动镜像或存储容量造成的补光灯启动失败，并补齐 GNOME 右上角「手电筒」开关。请在平板解锁并登录本机桌面后应用。首次恢复扩展可能需注销并重新登录。",
