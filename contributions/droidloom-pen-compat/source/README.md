@@ -13,18 +13,11 @@ strip target/release/droidloom-wayland
 
 补丁在窗口侧接收 Wayland tablet-v2，并以一个独立于鼠标与手指触点的标识写入现有 Droidloom 触控协议。该构建沿用 Droidloom 49 的 Android 输入 ABI 8，可与系统原版安卓镜像配合使用。
 
-release 43–48 也使用输入 ABI 8。窗口协议会与旧版 Android Composer 协商双方支持的功能。
-
-release 42 的输入 ABI 为 7。请从上游 release 42 提交 `df72bc9` 构建该版本，在上述同样的 ARM64 环境和工具链下，先应用共用的手写笔协议处理及 release 42 的窗口端接入补丁，再运行相同的测试和构建命令。
-
-```sh
-git apply --include='*/stylus.rs' /path/to/droidloom-49-pen-compat.patch
-git apply /path/to/droidloom-42-presenter.patch
-```
+旧测试版的 release 42–48 适用范围、专用补丁和构建步骤见[原始归档](https://github.com/fakerUZI/tb710fu-repair-catalog/tree/913abacc413c12e35c085d3589923a1c0e469369/contributions/droidloom-pen-compat/source)。
 
 ### release 49 安卓原生笔与压感补丁
 
-`droidloom-49-native-stylus.patch` 叠加在上述 release 49 触控兼容补丁上。它需要配套构建 Wayland 窗口程序和 Android 的 `libinputflinger.so`。窗口程序读取系统中接收库的功能标记，匹配后才发送原生笔记录。修复助手的「Droidloom 手写笔触控兼容（测试版）」使用触控通道。「Droidloom 49 安卓原生手写笔与压感」使用本补丁，并安装配套的安卓输入库。
+`droidloom-49-native-stylus.patch` 叠加在上述 release 49 触控兼容补丁上。它需要配套构建 Wayland 窗口程序和 Android 的 `libinputflinger.so`。窗口程序读取系统中接收库的功能标记，匹配后才发送原生笔记录。已归档的触控兼容测试版使用触控通道。「Droidloom 49 安卓原生手写笔与压感」使用本补丁，并安装配套的安卓输入库。
 
 在应用两份补丁的源码根目录可运行 `cargo test --locked -p droidloom-wayland -p droidloom-input-protocol -p droidloom-android-policy`。这些测试覆盖笔、手指共存、轻重压力、取消和拒收恢复。Android 系统库需使用同一 release 的上游 AOSP/Soong 构建流程生成，随后核对安装到容器的库内含 `DROIDLOOM_STYLUS_WIRE=1;`。
 

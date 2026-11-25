@@ -83,3 +83,7 @@ Ubuntu 电源菜单缺少「挂起」时，可更新仓库并运行[恢复系统
 ## 磁吸键盘背折与屏幕键盘
 
 2026 年 11 月 25 日，背折修复已并入正式条目。旧正式版和背折测试版用户可直接从修复助手详情页更新或安装。[实测记录与目录归并](docs/REVIEW-20261125-pogo-osk.md)
+
+## 安卓手写笔测试版归档
+
+Droidloom 49 请在修复助手中单独安装「Droidloom 49 安卓原生手写笔与压感」。旧版将笔尖模拟为手指，已从当前清单下架。仍在使用 42–48 或需要撤销旧测试版的用户，可以从[固定版本的安装脚本与全部附件](https://github.com/fakerUZI/tb710fu-repair-catalog/tree/913abacc413c12e35c085d3589923a1c0e469369/contributions/droidloom-pen-compat)取回旧包。在该条目目录内，以原桌面账号运行 `TB710FU_ATTACHMENTS_DIR="$PWD/attachments" TB710FU_FIX_ACTION=rollback bash script.sh`，保存安卓工作后重启 Droidloom。清理下载缓存不会撤销已安装的修复。

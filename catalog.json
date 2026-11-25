@@ -735,7 +735,7 @@
       "attachments": [
         {
           "path": "contributions/droidloom-native-pen/attachments/README.md",
-          "sha256": "25a749ecfcf031a4ca99136b225c7299925cc705de9b767854f177f3521a0268"
+          "sha256": "2f01f16b05c7a2d27c202419f73957846d72b26717403ee1b290766423045ae3"
         },
         {
           "path": "contributions/droidloom-native-pen/attachments/droidloom-wayland.gz.001",
@@ -792,75 +792,12 @@
       ]
     },
     {
-      "id": "droidloom-pen-compat",
-      "title": "Droidloom 手写笔触控兼容（测试版）",
-      "device": "TB710FU",
-      "status": "manual-install",
-      "description": "适用于原生笔已正常的 TB710FU Ubuntu GNOME Wayland 和 Droidloom 0.1.0 release 42–49 ARM64。按本机安卓输入 ABI 选择窗口程序，把落笔、移动、抬笔和压感转成安卓触控事件。笔记软件如有「允许手指书写」选项，请开启。",
-      "risk": "单独安装，无需管理员权限。仅为当前账号添加 Droidloom 启动覆盖。保存安卓应用工作后重启 Droidloom 生效。安卓识别为手指触点，仅手写笔模式暂不适用。支持 TB710FU_FIX_ACTION=check 和 rollback。",
-      "script": {
-        "path": "contributions/droidloom-pen-compat/script.sh",
-        "sha256": "300ef702df3e626327324e5439e6f52ee96f7ce4c5c3cc4bb29d52e3cb6325cd",
-        "requires_admin": false
-      },
-      "attachments": [
-        {
-          "path": "contributions/droidloom-pen-compat/attachments/README.md",
-          "sha256": "bd9ffb916b9bdc30b9a3e3953f4cd716e0727da5135127ded44450554fb2710f"
-        },
-        {
-          "path": "contributions/droidloom-pen-compat/attachments/droidloom-wayland.gz.001",
-          "sha256": "c260ac99ed6bbb92620b189a1f7bb829d6f6ee82e63ffca6796c9f501f9f9168"
-        },
-        {
-          "path": "contributions/droidloom-pen-compat/attachments/droidloom-wayland.gz.002",
-          "sha256": "11d87d66b67c0735b90ea3acd035c8b379d0865626af4adf907f00ea97ba6cd0"
-        },
-        {
-          "path": "contributions/droidloom-pen-compat/attachments/droidloom-wayland.gz.003",
-          "sha256": "3972dcf7051f16a1994d7b592e3de46dab3b386ca9fadefcc30005ca5acb5bd0"
-        },
-        {
-          "path": "contributions/droidloom-pen-compat/attachments/droidloom-wayland.gz.004",
-          "sha256": "31879d376527b1c0a2f383b64d2d0a6f85ca688ae56863135ba47d59c3708487"
-        },
-        {
-          "path": "contributions/droidloom-pen-compat/attachments/droidloom-wayland.gz.005",
-          "sha256": "a96ca3616ff83627faec325ea7eb9a4896cff0172a2a198ae555de42dcc91824"
-        },
-        {
-          "path": "contributions/droidloom-pen-compat/attachments/droidloom-wayland-r42.gz.001",
-          "sha256": "f4bf7804bf67c87e72be9908e0dee78c20061ade36cbb7340ba8312d03f01a78"
-        },
-        {
-          "path": "contributions/droidloom-pen-compat/attachments/droidloom-wayland-r42.gz.002",
-          "sha256": "142dca35635de87ffd96cff6171875f1a26f301ac597c8baf371b082e764f5cf"
-        },
-        {
-          "path": "contributions/droidloom-pen-compat/attachments/droidloom-wayland-r42.gz.003",
-          "sha256": "b2d5a466e6afee52162063e360d7961a0eb1bcc0f2fad3f8285022dc060a6939"
-        },
-        {
-          "path": "contributions/droidloom-pen-compat/attachments/droidloom-wayland-r42.gz.004",
-          "sha256": "0ba17acc1ffd933c8f53bedd8135ab82443acd6e88c27a17ed881a7cc064ff7a"
-        },
-        {
-          "path": "contributions/droidloom-pen-compat/attachments/droidloom-wayland-r42.gz.005",
-          "sha256": "fce24392b53470f5571f47f4d181ab0ee5cea35d89034f59bdd7946c1d66e83c"
-        },
-        {
-          "path": "contributions/droidloom-pen-compat/attachments/pen-compat.py",
-          "sha256": "fccefb9410d83f25dadc7e582b22bdabc8b766fcc6b17d59b91e8be74d88550c"
-        }
-      ]
-    },
-    {
       "id": "droidloom-upgrade",
       "title": "Droidloom 升级到最新版（测试版）",
       "device": "TB710FU",
       "status": "manual-install",
       "description": "查询官方 ARM64 仓库并升级已配置的 Droidloom，可重复运行。修复助手 0.10.19 起会比较本机和上游版本，有新版时显示在「未安装／可更新」。适用于 TB710FU Ubuntu 26.04，起始版本 0.1.0-42。",
-      "risk": "单独安装，需要管理员权限。请保存安卓窗口工作，预留 10 GiB。支持软件和主机配置回退。已有 Google 应用扩展需另行核对。手写笔触控兼容测试版适配 0.1.0-42 至 0.1.0-49，超出范围时使用系统自带窗口程序。",
+      "risk": "单独安装，需要管理员权限。请保存安卓窗口工作，预留 10 GiB。支持软件和主机配置回退。已有 Google 应用扩展需另行核对。Droidloom 49 可单独安装原生笔正式版。其他版本的笔支持范围见附件。",
       "script": {
         "path": "contributions/droidloom-upgrade/script.sh",
         "sha256": "090d94567e8162ccd2fafadd401988cc66f7ed45992aaf4795d38a701fa3457f",
@@ -869,7 +806,7 @@
       "attachments": [
         {
           "path": "contributions/droidloom-upgrade/attachments/README.md",
-          "sha256": "b2622443766ea17dd5d67e9a1965b0d3d8fbc057529fb740f9f5ad2ebb109e4b"
+          "sha256": "3453d35b0f4dd5647e2c112f7bd3f7d05f51475814ebed53a4b05632edc58bcd"
         },
         {
           "path": "contributions/droidloom-upgrade/attachments/droidloom_updates.py",

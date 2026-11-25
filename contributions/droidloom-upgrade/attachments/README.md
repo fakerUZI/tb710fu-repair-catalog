@@ -8,6 +8,6 @@
 
 设置 `TB710FU_FIX_ACTION=check` 可只读查询，`rollback` 可离线恢复最近一次软件和主机配置快照。沿用原升级条目的快照目录 `/var/backups/tb710fu-droidloom-r49`，多次升级时较早快照带时间戳留存在同一父目录。已启动新版后产生的 Android 数据变更独立于软件快照。
 
-昨天发布的手写笔触控兼容测试版适用于 0.1.0-42 至 0.1.0-49。42 对应输入 ABI 7，43–49 对应 ABI 8，均要求原生输入 ABI 2。超出范围时该测试版启动器回到系统自带的窗口程序。未来上游版本在 TB710FU 上的运行情况仍需按版本实测。
+Droidloom 49 用户可单独安装「Droidloom 49 安卓原生手写笔与压感」。42–48 用户仍可获取[旧版触控兼容包和回退说明](https://github.com/fakerUZI/tb710fu-repair-catalog/tree/913abacc413c12e35c085d3589923a1c0e469369/contributions/droidloom-pen-compat)。后续上游版本的手写笔支持需按版本验证。
 
 [官方 ARM64 索引](https://denialwm.github.io/droidloom/aarch64/droidloom.db.tar.gz) · [官方软件包](https://github.com/denialwm/droidloom/releases/tag/packages)
