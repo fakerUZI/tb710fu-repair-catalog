@@ -928,11 +928,94 @@
       ]
     },
     {
+      "id": "kernel-1118-to-1124",
+      "title": "Ubuntu 内核升级：1118 → 1124（可选）",
+      "device": "TB710FU",
+      "status": "manual-install",
+      "description": "适用于公开 1118 及 BOOTFIX / SLOT-FIX 的 arch 单系统。升级为 7.2.6-tb710fu-20261124，保留 kShim，安装匹配的内核模块和现有相机配套。重启确认后可自行选择 U-Boot。已运行匹配的 1124 时仅检查状态。",
+      "risk": "单独安装，需要管理员权限。会备份并写入 boot_a，保持供电并准备电脑端恢复方式。完成后备份原镜像到电脑并手动重启。支持只读检查和从本机备份回退。",
+      "script": {
+        "path": "contributions/kernel-1118-to-1124/script.sh",
+        "sha256": "ab06a0cd8b1af5a12028d101a955da310eb1683b70d49d98ff767612c39b3990",
+        "requires_admin": true
+      },
+      "attachments": [
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/README.md",
+          "sha256": "b129129ae06b058575f0442a54e3a4a38f10a2bd8e80c08349e0e38ba50e6be6"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/boot.patch",
+          "sha256": "fafc4045ef72b792e08862a28a542bb9123d6d52f2fc3f915f921d800a18de26"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/legacy.patch",
+          "sha256": "c825e600b6c1e9b088c779299c288719126575fd7e8524b48337c3694a9e03b9"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/modules.part1",
+          "sha256": "a64199720d2975a71925341d4ada79a663c403e964538daa7659652bbafb2eb2"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/modules.part2",
+          "sha256": "7c4c569272b782f170e87cc640778c8071154fec32e76da3786f1091a7407401"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/modules.part3",
+          "sha256": "899e412f361e8d0d1fd764e0c4b4536f5b3b4db945d2164fc981d68e45b70bb9"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/profile.json",
+          "sha256": "b9bbbd89a0a613ca1b50d71b67e93c9b0bad3f6c572696397c4dc4340074770b"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/tb-camera-focus-permission.py",
+          "sha256": "6608cb6e87d7111ae0e652d2eb635e42d1f4c98184593ffcc6028a0dcbfc92e2"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/tb-camera-focus.sh",
+          "sha256": "7318179d1c0406f44245d568bb49fa5236830c2ebd54b2a654809e1fc37decee"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/tb-camera-live.sh",
+          "sha256": "88a8cb12df77471f34681005bd5a55c4bdd05184eff824a9ac560774bc6fdd1a"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/tb-flash-hardware.py",
+          "sha256": "3db6de1993be63e7772b4d40c5e7352c06f23d4f28cbd523efee3bde8496b7be"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/tb-front-camera.sh",
+          "sha256": "24f5fedd88ab5e15d25fd5efb51ab565ce56287e9b9c993fc51f6fd3d84b20f3"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/tb-macro-hardware.py",
+          "sha256": "15e3982cfff3f544a4ffc695a2fdceaef4eb0693a12b9a66a4f54561a37bb19b"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/tb710fu-flash-hardware.service",
+          "sha256": "c6609c5a8a0b43c6be327462e8d30bed6b892cce6896c3f29e94ca319f655260"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/tb710fu-macro-camera.service",
+          "sha256": "fcb3eea185be4737a5a171f63aaf4e3481cda82f957261a556dbf33e44573477"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/tb710fu-torch.service",
+          "sha256": "43f0c629f20762cca5872f8905aac00306b0c0711fac97782562329f5000a92a"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/upgrade.py",
+          "sha256": "94b5e9ef0b7809b36285a660bfa95ff472bb8a248c7acdbbbec3b6e4578eae73"
+        }
+      ]
+    },
+    {
       "id": "ubuntu-uboot-uefi",
       "title": "Ubuntu 启动器切换到 U-Boot（可选）",
       "device": "TB710FU",
       "status": "manual-install",
-      "description": "适用于 7.2.6-tb710fu-20261124 内核、A 槽 kShim 和 arch 单系统根分区。复用本机 Ubuntu 内核与设备树，切换为 U-Boot / UEFI 启动。已切换的匹配设备只核对现状。",
+      "description": "适用于 7.2.6-tb710fu-20261124 内核、A 槽 kShim 和 arch 单系统根分区。复用本机 Ubuntu 内核与设备树，切换为 U-Boot / UEFI 启动。已切换的匹配设备只核对现状。 当前为 1118 的用户可先单独运行「Ubuntu 内核升级：1118 → 1124」，重启确认后再选择本项。",
       "risk": "仅可单独安装。需要管理员权限和网络，写入 boot_a，启动中断可能需要电脑恢复。脚本校验固件和 GPT 并保存原镜像，完成后请将备份另存到电脑，再手动重启。支持只读检查及使用本机备份回退。",
       "script": {
         "path": "contributions/ubuntu-uboot-uefi/script.sh",

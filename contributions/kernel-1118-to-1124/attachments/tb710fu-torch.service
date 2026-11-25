@@ -1,0 +1,22 @@
+[Unit]
+ConditionKernelVersion=|7.2.6-tb710fu-20261117
+ConditionKernelVersion=|7.2.6-tb710fu-20261118
+ConditionKernelVersion=|7.2.6-tb710fu-20261124
+Description=TB710FU PM8550 torch control
+Requires=tb710fu-flash-hardware.service
+After=tb710fu-flash-hardware.service dbus.service
+
+[Service]
+Type=dbus
+BusName=org.tb710fu.Torch1
+ExecStart=/usr/bin/python3 /usr/local/libexec/tb-torch-daemon.py
+ExecStopPost=/usr/local/libexec/tb-flash-off
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+
+[Install]
+WantedBy=multi-user.target
