@@ -1,0 +1,24 @@
+{
+  "camss_sha256": "0701239d50c3b75093efe1ec44ca0231c68949bd9620590652ba7c804bf63854",
+  "clock_hz": 24000000,
+  "csi_phy": 3,
+  "files": {
+    "gc02m1_raw.ko": "eb9338a54bd414e3628673d187d6ddff36659103886e005e6856b519deeba952",
+    "tb-macro-raw.dtbo": "2c2dfd3c4a0faded43dcec0434d56a9c64c4a3b59206bf0a8e7ded351f6cf39c",
+    "tb_macro_registration.ko": "c6e4584713a42d448572e1190774d178df7f06b306e46d8bbdacc8d1150fa5f9"
+  },
+  "focus": "fixed macro",
+  "lanes": 1,
+  "note": "OEM mode/register values only; no EEPROM/calibration/identity dump.",
+  "raw_size": [
+    1600,
+    1200
+  ],
+  "rgb_size": [
+    1592,
+    1200
+  ],
+  "sensor": "GC02M1",
+  "sensor_id": "0x02e0",
+  "version": "7.2.6-tb710fu-20261117"
+}

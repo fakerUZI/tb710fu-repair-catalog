@@ -1,0 +1,19 @@
+{
+  "config_sha256": "94ed6923155155f4d3f8175e9fb1b681a121b8ca07271f9c4f55d2dd110027d3",
+  "files": {
+    "leds-qcom-flash.ko": "13b78f8e4afaa8d8fe941e6d6fa09aa927a19ea67f4c76d8562f789d7f25a3b6",
+    "tb-flash.dtbo": "0b4491fda57f23d2668062911c0db073c589797e128b2a0b903f3e6757488635",
+    "tb_flash_overlay.ko": "77034234f09c5859ee270f2deb652e6755ad6968b000e2a079ff3484c843665e",
+    "v4l2-flash-led-class.ko": "06a1b2b45335e9767cde97ae69e79e87b086b4abd4155ff9471689758bd0cbf3"
+  },
+  "oem_limits": {
+    "channels": [
+      1,
+      4
+    ],
+    "flash_per_channel_ua": 500000,
+    "flash_timeout_us": 500000,
+    "source_dtb_sha256": "21c8a018152152605979a1f135e60ed1b62ef08a6b2271766f40344997de44ff",
+    "torch_per_channel_ua": 100000
+  }
+}

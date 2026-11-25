@@ -1,0 +1,19 @@
+[Unit]
+Description=TB710FU GC02M1 rear macro camera
+After=tb710fu-front-camera.service
+BindsTo=tb710fu-front-camera.service
+Before=tb710fu-flash-hardware.service display-manager.service
+ConditionKernelVersion=|7.2.6-tb710fu-20261117
+ConditionKernelVersion=|7.2.6-tb710fu-20261118
+ConditionKernelVersion=|7.2.6-tb710fu-20261124
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/libexec/tb-macro-hardware.py start
+ExecStop=/usr/local/libexec/tb-macro-hardware.py stop
+TimeoutStartSec=100
+TimeoutStopSec=50
+
+[Install]
+WantedBy=multi-user.target

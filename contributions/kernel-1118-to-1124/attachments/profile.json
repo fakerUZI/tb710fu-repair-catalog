@@ -1,0 +1,252 @@
+{
+  "firmware": {
+    "abl_a": "6a651633a08d1eef678c24de17ec36e249600589db4f9cf8cf3a770a9e015871",
+    "abl_b": "dcb879bbfde77519b131b87ab5d09c903a0d785cff70127d792244aa88b35ccb",
+    "xbl_a": "ac78eb393c0170d67fd03aeb4b8de68d7e023e65835dd084c16b0842cf033bd1",
+    "xbl_b": "ea23d98ce78048e425235aa3f834257e137a44a9ef52da80104d8600db9bf7d9",
+    "xbl_config_a": "8498b8dc40c0248e9625b86d21c60ed5d78d0c22af9d0ed6071359c7e80fded0",
+    "xbl_config_b": "e763d921fbee00097d0428fa750c427cbe06135cff5cb36413884a7de3c42700",
+    "dtbo_a": "408901bcf1c6862f226f218996cf2c0089e219f6c406d9c857df9482924a7873",
+    "vendor_boot_a": "0a3c13edf9af8c315906b784aead9cd40b8fb35ce4f583df6c64fb50065be34c"
+  },
+  "boot_before": "12ba30a883b792d8f89dddd21f759558d26c5c833b2d5cc61b0d35e8233da977",
+  "boot_after": "3f3694ab3f18e656b1117fdaa399bbdfac855b0dba9941b0d4c420d88525382a",
+  "boot_size": 100663296,
+  "config_before": "2930add704f3c7fd10285916ed7a3256e0c8b7e9ca18f536813194a2cb557e1f",
+  "legacy": "d83ee187bce60b30c2f28c177b3ab158ea96e5688547e06d3dd4d7a7ed1d6e10",
+  "uefi": "d70027712f411095cc9d3c0a7d54dacac8c4891be93388eb7b40e66648d3e3fe",
+  "shared": [
+    {
+      "target": "/usr/local/libexec/tb-macro-hardware.py",
+      "group": "macro",
+      "accepted": [
+        "08dc912ff9129ef1ae2ca7631a6cc04f26cd238ccb23a2bbdf4e5de81b2f0e6c",
+        "5cdbdc40ecc69a6785b3bc8a072f9bc14c4d299cb4f1c72c058945d84075979b",
+        "6273dd602d56116a079495b42674d40be26d6e9c23f1c0a8491316b0ed0a3ef6"
+      ],
+      "asset": "tb-macro-hardware.py",
+      "mode": 493,
+      "dispatch": true
+    },
+    {
+      "target": "/usr/local/libexec/tb-flash-hardware.py",
+      "group": "flash",
+      "accepted": [
+        "6757f664472b07288d0b9e7c3798e35bb3d23872d6627c2011cf5fb2dfa7a3b2",
+        "7fb3b2d164d41ff4245913396dd463c814edeabc6b0a3aaa7f712e5b960e75db",
+        "ac5f04188b619d44f51f62c9b071c50e7cb7d8e1f86090f2a881985dc3302553"
+      ],
+      "asset": "tb-flash-hardware.py",
+      "mode": 493,
+      "dispatch": true
+    },
+    {
+      "target": "/usr/local/libexec/tb-camera-focus-permission.py",
+      "group": "camera-test",
+      "accepted": [
+        "98b4a370573aa2a337d771476d3a033974c19ba5cb21273ff414059bde62ff0d"
+      ],
+      "asset": "tb-camera-focus-permission.py",
+      "mode": 493,
+      "dispatch": false
+    },
+    {
+      "target": "/opt/tb710fu-camera-test/tb-camera-live.sh",
+      "group": "camera-test",
+      "accepted": [
+        "8e5caf76a7087a5e4120788ac2013d1ddf1c593cf71de6a769a215cbdcc3eef2"
+      ],
+      "asset": "tb-camera-live.sh",
+      "mode": 493,
+      "dispatch": false
+    },
+    {
+      "target": "/opt/tb710fu-camera-test/tb-camera-focus.sh",
+      "group": "camera-test",
+      "accepted": [
+        "d55e15762fe18891d61ab20b975fbd64c319f873957585a8037c29e8ab7927fa"
+      ],
+      "asset": "tb-camera-focus.sh",
+      "mode": 493,
+      "dispatch": false
+    },
+    {
+      "target": "/opt/tb710fu-front-camera/tb-front-camera.sh",
+      "group": "front-camera",
+      "accepted": [
+        "997182320a23e400b48ace95200944296897dad8068292c1cf7c6a1eb80dc146"
+      ],
+      "asset": "tb-front-camera.sh",
+      "mode": 493,
+      "dispatch": false
+    },
+    {
+      "target": "/etc/systemd/system/tb710fu-macro-camera.service",
+      "group": "macro",
+      "accepted": [
+        "e816030bd32106ab33849d69091effe38b46fccdc7f7015669ab86d80b0781db"
+      ],
+      "asset": "tb710fu-macro-camera.service",
+      "mode": 420,
+      "dispatch": false
+    },
+    {
+      "target": "/etc/systemd/system/tb710fu-flash-hardware.service",
+      "group": "flash",
+      "accepted": [
+        "5215467429659dcced64785de14da6fea22ba92360ac034766c3085fe94f6d04"
+      ],
+      "asset": "tb710fu-flash-hardware.service",
+      "mode": 420,
+      "dispatch": false
+    },
+    {
+      "target": "/etc/systemd/system/tb710fu-torch.service",
+      "group": "flash",
+      "accepted": [
+        "bfef308f7f0835249117bc044009bddb3a0a7c0e4e94bdb8f8b803bd96ebed10"
+      ],
+      "asset": "tb710fu-torch.service",
+      "mode": 420,
+      "dispatch": false
+    }
+  ],
+  "addons": [
+    {
+      "target": "/opt/tb710fu-camera-test/7.2.6-tb710fu-20261124/ov13b10-rggb-UNTESTED.ko",
+      "group": "camera-test",
+      "sha": "385724b709d651f97bd0dc1c04771b25e24d46dc4010963b2649838cc67fb2f6",
+      "mode": 420,
+      "patch": "ov13b10-rggb-UNTESTED.ko.patch",
+      "source_sha": "31e6f964d7e63f8f8ced5c99d3725c91e0270d3f99ee34e0ee7b7a5d408062d4"
+    },
+    {
+      "target": "/opt/tb710fu-camera-test/7.2.6-tb710fu-20261124/qcom-camss-graph-UNTESTED.ko",
+      "group": "camera-test",
+      "sha": "0701239d50c3b75093efe1ec44ca0231c68949bd9620590652ba7c804bf63854",
+      "mode": 420,
+      "patch": "qcom-camss-graph-UNTESTED.ko.patch",
+      "source_sha": "37732b92c429d4e0d6bab1c20a9575310c5be964f6750a0f02eb6e9d2692d129"
+    },
+    {
+      "target": "/opt/tb710fu-camera-test/7.2.6-tb710fu-20261124/tb_camera_alias.ko",
+      "group": "camera-test",
+      "sha": "89d3a30e180395018a426980f616b1c5aa8eb540c3d881b0e549b4f223e25193",
+      "mode": 420,
+      "patch": "tb_camera_alias.ko.patch",
+      "source_sha": "8a4cd20557cbc964fa2e09af395f7f61095a46072adfd7d1735d5648be8b8028"
+    },
+    {
+      "target": "/opt/tb710fu-camera-test/7.2.6-tb710fu-20261124/tb_camera_overlay.ko",
+      "group": "camera-test",
+      "sha": "3cfbbee4846b81e99684f797926031185945ab21709c1c8dccf4bc7af5b92eb4",
+      "mode": 420,
+      "patch": "tb_camera_overlay.ko.patch",
+      "source_sha": "757ab5b05401f616ba08bdcef46922d449225da3709ebc4d0f8531342b57927f"
+    },
+    {
+      "target": "/opt/tb710fu-camera-test/7.2.6-tb710fu-20261124/tb_camss_alias.ko",
+      "group": "camera-test",
+      "sha": "24fdb8f80d1cc3372eb618bc37b5b00aa30105e67857a3c34913bdad1f15d55b",
+      "mode": 420,
+      "patch": "tb_camss_alias.ko.patch",
+      "source_sha": "af7de486d4037be2c5eda72cf8f70f58bb6efaeee965bf8d2133a5427e3ec0e0"
+    },
+    {
+      "target": "/opt/tb710fu-camera-test/7.2.6-tb710fu-20261124/tb_focus_manual.ko",
+      "group": "camera-test",
+      "sha": "437543936a2c2ce159f9eee1f12aaf3db1c7995e0fa8d06d073195d02f55d165",
+      "mode": 420,
+      "patch": "tb_focus_manual.ko.patch",
+      "source_sha": "57dc644ab8e6f695e8fdcc9000ed116ebb9045881dcf1c32e48ab2afdb22f107"
+    },
+    {
+      "target": "/opt/tb710fu-front-camera/7.2.6-tb710fu-20261124/gc13a2_raw.ko",
+      "group": "front-camera",
+      "sha": "0db585318cb0aec747591b0ac2f64c312af3e2f0175766db3db9558b1579fbb9",
+      "mode": 384,
+      "patch": "gc13a2_raw.ko.patch",
+      "source_sha": "0868b73ed8158b98138f8900ccd6b583ae34ab292861092931d3e8b38e773f27"
+    },
+    {
+      "target": "/opt/tb710fu-front-camera/7.2.6-tb710fu-20261124/tb_front_registration.ko",
+      "group": "front-camera",
+      "sha": "c783e6654b71b343caba466f29e3ec46bf831b58dda6e2cd67f1f0414d3dc850",
+      "mode": 384,
+      "patch": "tb_front_registration.ko.patch",
+      "source_sha": "ac9d51863a59b4cf48194c9a617953302ee062fbf8e3dbadd41701789781328a"
+    },
+    {
+      "target": "/opt/tb710fu-macro/7.2.6-tb710fu-20261124/gc02m1_raw.ko",
+      "group": "macro",
+      "sha": "eb9338a54bd414e3628673d187d6ddff36659103886e005e6856b519deeba952",
+      "mode": 384,
+      "patch": "gc02m1_raw.ko.patch",
+      "source_sha": "b92358c31dda92ee974758b1be64bd40477eec8a8ab5959b5027b60c8b0799e4"
+    },
+    {
+      "target": "/opt/tb710fu-macro/7.2.6-tb710fu-20261124/tb_macro_registration.ko",
+      "group": "macro",
+      "sha": "c6e4584713a42d448572e1190774d178df7f06b306e46d8bbdacc8d1150fa5f9",
+      "mode": 384,
+      "patch": "tb_macro_registration.ko.patch",
+      "source_sha": "8a3c9b0abdd3c5ad15d60934a9a021c7ae2e3197e00298f6a59943f17241ffb5"
+    },
+    {
+      "target": "/opt/tb710fu-macro/7.2.6-tb710fu-20261124/tb-macro-raw.dtbo",
+      "group": "macro",
+      "sha": "2c2dfd3c4a0faded43dcec0434d56a9c64c4a3b59206bf0a8e7ded351f6cf39c",
+      "mode": 384
+    },
+    {
+      "target": "/opt/tb710fu-macro/7.2.6-tb710fu-20261124/macro-manifest.json",
+      "group": "macro",
+      "sha": "88d1afc412f919d5962dbe12b38c85e025fbc03008a28271b1f954042482fe23",
+      "mode": 384,
+      "asset": "macro-profile.json"
+    },
+    {
+      "target": "/opt/tb710fu-flash/7.2.6-tb710fu-20261124/leds-qcom-flash.ko",
+      "group": "flash",
+      "sha": "13b78f8e4afaa8d8fe941e6d6fa09aa927a19ea67f4c76d8562f789d7f25a3b6",
+      "mode": 384,
+      "patch": "leds-qcom-flash.ko.patch",
+      "source_sha": "a73d59788553127cdf954d5e040f78302dd2a702443de228daa41a177797f9f5"
+    },
+    {
+      "target": "/opt/tb710fu-flash/7.2.6-tb710fu-20261124/tb_flash_overlay.ko",
+      "group": "flash",
+      "sha": "77034234f09c5859ee270f2deb652e6755ad6968b000e2a079ff3484c843665e",
+      "mode": 384,
+      "patch": "tb_flash_overlay.ko.patch",
+      "source_sha": "a770b3451a7d3490fab042317d3936ca877cbb5a11b723cc6aef5c88b7c80c20"
+    },
+    {
+      "target": "/opt/tb710fu-flash/7.2.6-tb710fu-20261124/v4l2-flash-led-class.ko",
+      "group": "flash",
+      "sha": "06a1b2b45335e9767cde97ae69e79e87b086b4abd4155ff9471689758bd0cbf3",
+      "mode": 384,
+      "patch": "v4l2-flash-led-class.ko.patch",
+      "source_sha": "25f450fad2fe215533b75591337154d8b4e5ff977fbc3f983104de9413a7b920"
+    },
+    {
+      "target": "/opt/tb710fu-flash/7.2.6-tb710fu-20261124/tb-flash.dtbo",
+      "group": "flash",
+      "sha": "0b4491fda57f23d2668062911c0db073c589797e128b2a0b903f3e6757488635",
+      "mode": 384
+    },
+    {
+      "target": "/opt/tb710fu-flash/7.2.6-tb710fu-20261124/manifest.json",
+      "group": "flash",
+      "sha": "0ece831c6baae799c00221e270a989c2d4ff199e7a104d71f87fbc643cd34805",
+      "mode": 384,
+      "asset": "flash-profile.json"
+    }
+  ],
+  "archive": "d11d6793147b23ed979adb0f86edcf8fc930ad6316d2615e9bad739f1bbd488e",
+  "parts": [
+    "modules.part1",
+    "modules.part2",
+    "modules.part3"
+  ]
+}

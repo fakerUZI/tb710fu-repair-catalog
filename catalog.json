@@ -928,11 +928,154 @@
       ]
     },
     {
+      "id": "kernel-1118-to-1124",
+      "title": "Ubuntu 内核升级：1118 → 1124（可选）",
+      "device": "TB710FU",
+      "status": "manual-install",
+      "description": "适用于公开 1118 及 BOOTFIX / SLOT-FIX 的 arch 单系统。升级为 7.2.6-tb710fu-20261124，保留 kShim，安装匹配的内核模块和现有相机配套。重启确认后可自行选择 U-Boot。已运行匹配的 1124 时仅检查状态。",
+      "risk": "单独安装，需要管理员权限。会备份并写入 boot_a，保持供电并准备电脑端恢复方式。完成后备份原镜像到电脑并手动重启。支持只读检查和从本机备份回退。",
+      "script": {
+        "path": "contributions/kernel-1118-to-1124/script.sh",
+        "sha256": "ab06a0cd8b1af5a12028d101a955da310eb1683b70d49d98ff767612c39b3990",
+        "requires_admin": true
+      },
+      "attachments": [
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/README.md",
+          "sha256": "b129129ae06b058575f0442a54e3a4a38f10a2bd8e80c08349e0e38ba50e6be6"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/boot.patch",
+          "sha256": "fafc4045ef72b792e08862a28a542bb9123d6d52f2fc3f915f921d800a18de26"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/flash-profile.json",
+          "sha256": "0ece831c6baae799c00221e270a989c2d4ff199e7a104d71f87fbc643cd34805"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/gc02m1_raw.ko.patch",
+          "sha256": "1b3d645cecfcdf236b5ba5ffc61b3dc1ea5e87dbee22c95463bf56f7e92a0d0f"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/gc13a2_raw.ko.patch",
+          "sha256": "550bf18b406e4f71cfbdb0f768501ad080cc7d1be4f7de3e06d0c44b447cfd72"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/leds-qcom-flash.ko.patch",
+          "sha256": "bb46ad96d442b532e84ca0faae5aa643ed838571804c903b4c790f460caeb4f2"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/legacy.patch",
+          "sha256": "c825e600b6c1e9b088c779299c288719126575fd7e8524b48337c3694a9e03b9"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/macro-profile.json",
+          "sha256": "88d1afc412f919d5962dbe12b38c85e025fbc03008a28271b1f954042482fe23"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/modules.part1",
+          "sha256": "a64199720d2975a71925341d4ada79a663c403e964538daa7659652bbafb2eb2"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/modules.part2",
+          "sha256": "7c4c569272b782f170e87cc640778c8071154fec32e76da3786f1091a7407401"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/modules.part3",
+          "sha256": "899e412f361e8d0d1fd764e0c4b4536f5b3b4db945d2164fc981d68e45b70bb9"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/ov13b10-rggb-UNTESTED.ko.patch",
+          "sha256": "55b54c0db8ae2a3cc44da8429fa4a8c6ccefc30593a80b5941aa2c87118f2975"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/profile.json",
+          "sha256": "e4ba8ff8f3b0694127ba20b04b4048d81736f063cb1880ebf7d0a9d52dec0929"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/qcom-camss-graph-UNTESTED.ko.patch",
+          "sha256": "73b04b9467f219a59f47cb08594703f65788374670a4246251d7b27e2b0eb4ab"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/tb-camera-focus-permission.py",
+          "sha256": "6608cb6e87d7111ae0e652d2eb635e42d1f4c98184593ffcc6028a0dcbfc92e2"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/tb-camera-focus.sh",
+          "sha256": "7318179d1c0406f44245d568bb49fa5236830c2ebd54b2a654809e1fc37decee"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/tb-camera-live.sh",
+          "sha256": "88a8cb12df77471f34681005bd5a55c4bdd05184eff824a9ac560774bc6fdd1a"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/tb-flash-hardware.py",
+          "sha256": "3db6de1993be63e7772b4d40c5e7352c06f23d4f28cbd523efee3bde8496b7be"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/tb-front-camera.sh",
+          "sha256": "24f5fedd88ab5e15d25fd5efb51ab565ce56287e9b9c993fc51f6fd3d84b20f3"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/tb-macro-hardware.py",
+          "sha256": "15e3982cfff3f544a4ffc695a2fdceaef4eb0693a12b9a66a4f54561a37bb19b"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/tb710fu-flash-hardware.service",
+          "sha256": "c6609c5a8a0b43c6be327462e8d30bed6b892cce6896c3f29e94ca319f655260"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/tb710fu-macro-camera.service",
+          "sha256": "fcb3eea185be4737a5a171f63aaf4e3481cda82f957261a556dbf33e44573477"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/tb710fu-torch.service",
+          "sha256": "43f0c629f20762cca5872f8905aac00306b0c0711fac97782562329f5000a92a"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/tb_camera_alias.ko.patch",
+          "sha256": "aa5d3ff81a65b8ec777542a1bfc69b78eb9dd2d216ac3d11221205c0cf8ec25d"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/tb_camera_overlay.ko.patch",
+          "sha256": "f7530481c4f0e115d660a724b5361915bbb87a52d58af6f9688f345ffc0e6a6f"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/tb_camss_alias.ko.patch",
+          "sha256": "7713be11e6050254603772b1e45f85c491a75ef4093a260ab74fa9f01cd6307b"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/tb_flash_overlay.ko.patch",
+          "sha256": "e24496802ece9187ea09932580bbe08d5dd0ce26ab96763f017c9a998566a855"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/tb_focus_manual.ko.patch",
+          "sha256": "cb49fbbe6999d2c4aea6fd09ee41fa0a71d3ec6035192785f0f1c283ecc5b220"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/tb_front_registration.ko.patch",
+          "sha256": "6ae2ab339ba85303e4de8686602b5124694eeb497b2f2209f8b988743215b80f"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/tb_macro_registration.ko.patch",
+          "sha256": "b361481c724cf3609abf6098093085f0680b84e7ce452f4909508efc09c9d8e1"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/upgrade.py",
+          "sha256": "ba9a57543f448e11552fe5bc03585a58fc6483a3681e4273095fa853a5cb4dc3"
+        },
+        {
+          "path": "contributions/kernel-1118-to-1124/attachments/v4l2-flash-led-class.ko.patch",
+          "sha256": "b994e50ec51d78d05681a81a0458a489c59807aef36ea48f6710005c8f757136"
+        }
+      ]
+    },
+    {
       "id": "ubuntu-uboot-uefi",
       "title": "Ubuntu 启动器切换到 U-Boot（可选）",
       "device": "TB710FU",
       "status": "manual-install",
-      "description": "适用于 7.2.6-tb710fu-20261124 内核、A 槽 kShim 和 arch 单系统根分区。复用本机 Ubuntu 内核与设备树，切换为 U-Boot / UEFI 启动。已切换的匹配设备只核对现状。",
+      "description": "适用于 7.2.6-tb710fu-20261124 内核、A 槽 kShim 和 arch 单系统根分区。复用本机 Ubuntu 内核与设备树，切换为 U-Boot / UEFI 启动。已切换的匹配设备只核对现状。 当前为 1118 的用户可先单独运行「Ubuntu 内核升级：1118 → 1124」，重启确认后再选择本项。",
       "risk": "仅可单独安装。需要管理员权限和网络，写入 boot_a，启动中断可能需要电脑恢复。脚本校验固件和 GPT 并保存原镜像，完成后请将备份另存到电脑，再手动重启。支持只读检查及使用本机备份回退。",
       "script": {
         "path": "contributions/ubuntu-uboot-uefi/script.sh",
