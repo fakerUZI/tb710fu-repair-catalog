@@ -79,3 +79,7 @@ Ubuntu 电源菜单缺少「挂起」时，可更新仓库并运行[恢复系统
 切换或连接新 Wi-Fi 时密码提示未打开，或右上角 Wi-Fi 密码框触屏键盘无法输入时，可更新仓库并运行[修复 Wi-Fi 密码提示和触屏输入](contributions/wifi-password-input/attachments/README.md)。
 
 使用 `7.2.6-tb710fu-20261118` 内核的用户，可在修复助手单独安装[手写笔、磁吸键盘与触控板（联合测试版）](contributions/pogo-keyboard-trial/attachments/README.md)。键盘服务在安装后启动，手写笔模块在重启后生效。
+
+## 磁吸键盘背折与屏幕键盘
+
+2026 年 11 月 25 日，背折修复已并入正式条目。旧正式版和背折测试版用户可直接从修复助手详情页更新或安装。[实测记录与目录归并](docs/REVIEW-20261125-pogo-osk.md)

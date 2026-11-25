@@ -53,9 +53,7 @@ def plan(workspace, reverse):
                 break
         if depth == 0 and patch_source(source, diffs[0], False) is None:
             raise ValueError(f"现有扩展与补丁不匹配：{uuid}")
-        # Retain the independently released base recognition policy on rollback.
-        keep = 1 if uuid == POLICY else 0
-        pending = reversed(diffs[keep:depth]) if reverse else diffs[depth:]
+        pending = reversed(diffs[:depth]) if reverse else diffs[depth:]
         for diff in pending:
             updated = patch_source(source, diff, reverse)
             if updated is None:

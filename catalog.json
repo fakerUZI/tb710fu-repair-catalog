@@ -620,20 +620,52 @@
     },
     {
       "id": "pogo-osk",
-      "title": "磁吸键盘连接时收起屏幕键盘",
+      "title": "磁吸键盘背折与屏幕键盘",
       "device": "TB710FU",
       "status": "manual-install",
-      "description": "在 GNOME 中识别联想 Yoga Tab 磁吸键盘。吸附后按现有外接键盘策略收起屏幕键盘，拔下最后一把实体键盘后恢复触摸输入。",
-      "risk": "需要管理员权限，重新登录 GNOME 后生效，支持回退。",
+      "description": "适用于 TB710FU Ubuntu GNOME 50。展开磁吸键盘时收起屏幕键盘，背折后触摸输入框可自动弹出。顶栏按钮可手动开关，另接 USB 或蓝牙打字键盘时仍屏蔽自动弹出。",
+      "risk": "单独安装，需要管理员权限。更新 GNOME 扩展并安装磁吸键盘姿态服务。旧正式版和背折测试版均可直接升级，安装或回退后需注销并重新登录桌面。",
       "script": {
         "path": "contributions/pogo-osk/script.sh",
-        "sha256": "0cba8f863b8593f52b6bcdc878a19fdb05b41111bdbc2f698eee82c746fa9415",
+        "sha256": "faa9634ac2e36f6e3c5be7e2a47ecc1a9341d28a540ff954e4a3be7c33b23d02",
         "requires_admin": true
       },
       "attachments": [
         {
+          "path": "contributions/pogo-osk/attachments/90-tb710fu-pogo-fold.rules",
+          "sha256": "dbb08be14c952ef15004ca99d9b6747b5e05e5077873b24afdf3853e20a8bfe6"
+        },
+        {
+          "path": "contributions/pogo-osk/attachments/README.md",
+          "sha256": "da1c384c5fb09483f7dd31ba1e2e1c00c4d738881b7bd59a1aaf74c64c2f2df5"
+        },
+        {
+          "path": "contributions/pogo-osk/attachments/evdev-policy.patch",
+          "sha256": "5fd671fce4d306340ebd057ad230240293225c9ecf7269cfbc29c78238727d02"
+        },
+        {
+          "path": "contributions/pogo-osk/attachments/fold-policy.patch",
+          "sha256": "3e30c6700c5704a4133ff07eae600586093d4f4fa7a24e32983051c76e37cc1e"
+        },
+        {
+          "path": "contributions/pogo-osk/attachments/fold-reader.py",
+          "sha256": "0c4553d050bb048cfbcd1001864c91fc6b69b56476ce666fa1fe389a71270b7a"
+        },
+        {
           "path": "contributions/pogo-osk/attachments/input-policy.patch",
           "sha256": "fcd6442ffde66ecfcbaddb27e5d0ed663c9cbc08fb9e8cb6b19ef7fe234d015d"
+        },
+        {
+          "path": "contributions/pogo-osk/attachments/install.py",
+          "sha256": "147cb9f014b6bf43a945d0ee0cf4ff7d584c9a00fd740a3c6117794460199c5c"
+        },
+        {
+          "path": "contributions/pogo-osk/attachments/panel-toggle.patch",
+          "sha256": "0b3602513017481b60239e3ee00a29bb86ccf25c890501836adff1d7c5dc7070"
+        },
+        {
+          "path": "contributions/pogo-osk/attachments/tb710fu-pogo-fold@.service",
+          "sha256": "e8a8eba498505974eb7ae5b65aa3aa709cfba559ef5b81b0fab90a3562e9f529"
         }
       ]
     },
@@ -814,61 +846,6 @@
         {
           "path": "contributions/wifi-connectivity-check/attachments/README.md",
           "sha256": "1fd7aff83d5a09cde056827fbc14058a0bdd85bcc84dc60ae647021f8e200f77"
-        }
-      ]
-    },
-    {
-      "id": "pogo-osk-fold-test",
-      "title": "磁吸键盘背折与顶栏屏幕键盘（测试版）",
-      "description": "背折测试版第 2 版。直接读取磁吸键盘驱动的姿态，修复翻回打字位置后屏幕键盘仍自动弹出的问题。顶栏键盘按钮可手动开关。适用于 Ubuntu GNOME 50。",
-      "device": "TB710FU",
-      "status": "manual-install",
-      "risk": "单独安装，禁止一键安装。需要管理员权限，安装姿态读取服务并更新 GNOME 扩展。安装后保存工作、注销并重新登录。1118 原装键盘上的新版桌面行为待验证。",
-      "script": {
-        "path": "contributions/pogo-osk-fold-test/script.sh",
-        "sha256": "dc3ae6405cfc2dae32c552ccb1426f791efc7f3b6d3dff993bd12d2bb6db2325",
-        "requires_admin": true
-      },
-      "attachments": [
-        {
-          "path": "contributions/pogo-osk-fold-test/attachments/90-tb710fu-pogo-fold.rules",
-          "sha256": "dbb08be14c952ef15004ca99d9b6747b5e05e5077873b24afdf3853e20a8bfe6"
-        },
-        {
-          "path": "contributions/pogo-osk-fold-test/attachments/README.md",
-          "sha256": "44282fdaab161d71abfe159acbaa01a4e848ac482a444e9ddeb50d9e2ad69b48"
-        },
-        {
-          "path": "contributions/pogo-osk-fold-test/attachments/check-input.py",
-          "sha256": "cace651dc3d61cf2dfbb0f6af37401771e4efb27bdf56d5c5a5acfae7f2fda9f"
-        },
-        {
-          "path": "contributions/pogo-osk-fold-test/attachments/evdev-policy.patch",
-          "sha256": "5fd671fce4d306340ebd057ad230240293225c9ecf7269cfbc29c78238727d02"
-        },
-        {
-          "path": "contributions/pogo-osk-fold-test/attachments/fold-policy.patch",
-          "sha256": "3e30c6700c5704a4133ff07eae600586093d4f4fa7a24e32983051c76e37cc1e"
-        },
-        {
-          "path": "contributions/pogo-osk-fold-test/attachments/fold-reader.py",
-          "sha256": "0c4553d050bb048cfbcd1001864c91fc6b69b56476ce666fa1fe389a71270b7a"
-        },
-        {
-          "path": "contributions/pogo-osk-fold-test/attachments/input-policy.patch",
-          "sha256": "fcd6442ffde66ecfcbaddb27e5d0ed663c9cbc08fb9e8cb6b19ef7fe234d015d"
-        },
-        {
-          "path": "contributions/pogo-osk-fold-test/attachments/install.py",
-          "sha256": "71fb0f9b34830623a6dd9b0b8b261aeb8ae1774de29deb53c5a35552230c7802"
-        },
-        {
-          "path": "contributions/pogo-osk-fold-test/attachments/panel-toggle.patch",
-          "sha256": "0b3602513017481b60239e3ee00a29bb86ccf25c890501836adff1d7c5dc7070"
-        },
-        {
-          "path": "contributions/pogo-osk-fold-test/attachments/tb710fu-pogo-fold@.service",
-          "sha256": "e8a8eba498505974eb7ae5b65aa3aa709cfba559ef5b81b0fab90a3562e9f529"
         }
       ]
     },
