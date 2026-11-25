@@ -1,0 +1,546 @@
+diff --git a/android/framework/droidloom-window-policy/jni/DroidloomInput.cpp b/android/framework/droidloom-window-policy/jni/DroidloomInput.cpp
+index fe5d144..0fc4f75 100644
+--- a/android/framework/droidloom-window-policy/jni/DroidloomInput.cpp
++++ b/android/framework/droidloom-window-policy/jni/DroidloomInput.cpp
+@@ -14,6 +14,8 @@ namespace android {
+ namespace {
+ // Registration and task-publication Binder calls borrow this ownership. Input
+ // events use the Rust worker's existing callback and never touch the registry.
++// The host reads this guest capability before sending the optional stylus record.
++[[gnu::used, gnu::retain]] constexpr char kStylusWire[] = "DROIDLOOM_STYLUS_WIRE=1;";
+ std::mutex gManagersLock;
+ std::map<InputManager*, std::shared_ptr<DroidloomInput>> gManagers;
+ }
+@@ -44,11 +46,13 @@ void DroidloomInput::unregisterManager(InputManager* manager) {
+ struct DroidloomInputPointer { int32_t id; float x, y, pressure; };
+ struct DroidloomInputEvent {
+     int32_t kind, display, action, keyCode, scanCode, meta, repeat, flags, count;
++    uint32_t stylusIds;
+     uint64_t downTime, eventTime, serial;
+     DroidloomInputPointer pointers[32];
+     float verticalScroll, horizontalScroll;
+ };
+ static_assert(sizeof(DroidloomInputEvent) == 584);
++static_assert(offsetof(DroidloomInputEvent, stylusIds) == 36);
+ static_assert(offsetof(DroidloomInputEvent, downTime) == 40);
+ extern "C" void* droidloom_input_create(uintptr_t,
+         bool (*)(uintptr_t, const DroidloomInputEvent*, uintptr_t), bool (*)(uintptr_t, bool));
+@@ -149,13 +153,14 @@ bool DroidloomInput::inject(uintptr_t context, const DroidloomInputEvent* event,
+         std::array<PointerCoords, 32> coords{};
+         for (int32_t i = 0; i < event->count; ++i) {
+             properties[i].id = event->pointers[i].id;
+-            properties[i].toolType = ToolType::FINGER;
++            properties[i].toolType = (event->stylusIds & (uint32_t{1} << properties[i].id))
++                    ? ToolType::STYLUS : ToolType::FINGER;
+             coords[i].setAxisValue(AMOTION_EVENT_AXIS_X, event->pointers[i].x);
+             coords[i].setAxisValue(AMOTION_EVENT_AXIS_Y, event->pointers[i].y);
+             coords[i].setAxisValue(AMOTION_EVENT_AXIS_PRESSURE, event->pointers[i].pressure);
+             coords[i].setAxisValue(AMOTION_EVENT_AXIS_SIZE, 1.0f);
+         }
+-        motion.initialize(ids.nextId(), 0, AINPUT_SOURCE_TOUCHSCREEN, ui::LogicalDisplayId{event->display},
++        motion.initialize(ids.nextId(), 0, AINPUT_SOURCE_TOUCHSCREEN | AINPUT_SOURCE_STYLUS, ui::LogicalDisplayId{event->display},
+                 {}, event->action, 0, ftl::Flags<MotionFlag>(event->flags), 0, 0, 0, MotionClassification::NONE,
+                 ui::Transform{}, 1.0f, 1.0f, AMOTION_EVENT_INVALID_CURSOR_POSITION,
+                 AMOTION_EVENT_INVALID_CURSOR_POSITION, ui::Transform{}, event->downTime,
+diff --git a/android/framework/droidloom-window-policy/src/input.rs b/android/framework/droidloom-window-policy/src/input.rs
+index fdad5b6..3d2203c 100644
+--- a/android/framework/droidloom-window-policy/src/input.rs
++++ b/android/framework/droidloom-window-policy/src/input.rs
+@@ -52,6 +52,7 @@ pub struct Event {
+     pub repeat: i32,
+     pub flags: i32,
+     pub count: i32,
++    pub stylus_ids: u32,
+     pub down_time: u64,
+     pub event_time: u64,
+     pub serial: u64,
+@@ -72,6 +73,7 @@ struct Gesture {
+     down_time: u64,
+     last_time: u64,
+     pointers: BTreeMap<u32, Pointer>,
++    stylus_ids: u32,
+ }
+ 
+ #[derive(Clone, Copy)]
+@@ -139,11 +141,16 @@ impl Engine {
+             return Ok(None);
+         };
+         let event = match sample.payload {
+-            Payload::Touch { x, y, pressure } => {
++            Payload::Touch {
++                x,
++                y,
++                pressure,
++                stylus,
++            } => {
+                 if self.suppress_touch(sample) {
+                     return Ok(None);
+                 }
+-                self.touch(sample, target, x, y, pressure)?
++                self.touch(sample, target, x, y, pressure, stylus)?
+             }
+             Payload::Scroll {
+                 x,
+@@ -156,6 +163,26 @@ impl Engine {
+         Ok(Some(RoutedEvent { target, event }))
+     }
+ 
++    /// A MOVE changes only one existing pointer and the gesture timestamp.
++    /// Keep these for rejection recovery instead of cloning all tasks and keys.
++    pub fn stylus_move_checkpoint(&self, sample: Sample) -> Option<(Pointer, u64)> {
++        if sample.action != 1 || !matches!(sample.payload, Payload::Touch { stylus: true, .. }) {
++            return None;
++        }
++        let gesture = self.gestures.get(&sample.task)?;
++        let previous = *gesture.pointers.get(&sample.code)?;
++        Some((previous, gesture.last_time))
++    }
++
++    pub fn restore_move(&mut self, sample: Sample, (pointer, time): (Pointer, u64)) {
++        let gesture = self
++            .gestures
++            .get_mut(&sample.task)
++            .expect("MOVE retained its gesture");
++        gesture.pointers.insert(sample.code, pointer);
++        gesture.last_time = time;
++    }
++
+     fn suppress_touch(&mut self, sample: Sample) -> bool {
+         let identity = (sample.task, sample.code);
+         if self.suppressed.contains(&identity) {
+@@ -200,6 +227,7 @@ impl Engine {
+         x: f32,
+         y: f32,
+         pressure: f32,
++        stylus: bool,
+     ) -> Result<Event, &'static str> {
+         if sample.code > droidloom_input_protocol::MAX_POINTER_ID || sample.action > 3 {
+             return Err("invalid touch sample");
+@@ -216,6 +244,7 @@ impl Engine {
+                 down_time: sample.timestamp,
+                 last_time: sample.timestamp,
+                 pointers: BTreeMap::new(),
++                stylus_ids: 0,
+             });
+         }
+         let gesture = self
+@@ -225,6 +254,18 @@ impl Engine {
+         if sample.action != 0 && !gesture.pointers.contains_key(&sample.code) {
+             return Err("touch pointer has no down");
+         }
++        let bit = 1_u32 << sample.code;
++        if sample.action == 3 {
++            // Cancellation is route-wide and may arrive as a generic touch record.
++            let event = Self::motion(target, gesture, 3, sample.timestamp);
++            self.gestures.remove(&sample.task);
++            return Ok(event);
++        }
++        if sample.action == 0 && stylus {
++            gesture.stylus_ids |= bit;
++        } else if (gesture.stylus_ids & bit != 0) != stylus {
++            return Err("contact tool changed during stroke");
++        }
+         gesture.pointers.insert(
+             sample.code,
+             Pointer {
+@@ -246,14 +287,14 @@ impl Engine {
+             (1, _) => 2,
+             (2, 1) => 1,
+             (2, _) => 6 | (i32::try_from(index).unwrap() << 8),
+-            (3, _) => 3,
+             _ => return Err("touch action"),
+         };
+         let event = Self::motion(target, gesture, action, sample.timestamp);
+         if sample.action == 2 {
+             gesture.pointers.remove(&sample.code);
++            gesture.stylus_ids &= !bit;
+         }
+-        if sample.action == 3 || gesture.pointers.is_empty() {
++        if gesture.pointers.is_empty() {
+             self.gestures.remove(&sample.task);
+         }
+         Ok(event)
+@@ -298,6 +339,7 @@ impl Engine {
+             action,
+             flags: if action == 3 { FLAG_CANCELED } else { 0 },
+             count: i32::try_from(gesture.pointers.len()).unwrap(),
++            stylus_ids: gesture.stylus_ids,
+             down_time: gesture.down_time,
+             event_time: gesture.last_time,
+             ..Event::default()
+@@ -447,6 +489,7 @@ mod tests {
+             action,
+             code: id,
+             payload: Payload::Touch {
++                stylus: false,
+                 x: 2.5,
+                 y: 3.0,
+                 pressure: 1.0,
+diff --git a/android/framework/droidloom-window-policy/src/input_ffi.rs b/android/framework/droidloom-window-policy/src/input_ffi.rs
+index 47cfee6..96bc19d 100644
+--- a/android/framework/droidloom-window-policy/src/input_ffi.rs
++++ b/android/framework/droidloom-window-policy/src/input_ffi.rs
+@@ -117,6 +117,16 @@ impl State {
+         if self.recovering && !self.reset() {
+             return Err("Android cancellation still rejected");
+         }
++        if let Some(undo) = self.engine.stylus_move_checkpoint(sample) {
++            if let Some(event) = self.engine.process(sample)? {
++                if !self.dispatch_routed(&event) {
++                    self.engine.restore_move(sample, undo);
++                    self.recovering = true;
++                    return Err("Android input dispatch rejected");
++                }
++            }
++            return Ok(());
++        }
+         let mut next = self.engine.clone();
+         if let Some(event) = next.process(sample)? {
+             if !self.dispatch_routed(&event) {
+@@ -626,12 +636,54 @@ mod tests {
+             action,
+             code: id,
+             payload: droidloom_input_protocol::Payload::Touch {
++                stylus: false,
+                 x: 2.0,
+                 y: 3.0,
+                 pressure: 1.0,
+             },
+         }
+     }
++    #[test]
++    fn stylus_and_finger_keep_their_tool_pressure_and_lifecycle() {
++        use droidloom_input_protocol::{decode, encode_contact, Record};
++        let mut verifier = Verifier::default();
++        let mut state = verified_state(&mut verifier);
++        let pen = |action, pressure, x| {
++            let bytes =
++                encode_contact(0, 42, 105, action, 31, x << 16, 0, pressure, 7, true).unwrap();
++            let Record::Input(sample) = decode(&bytes).unwrap() else {
++                panic!("input")
++            };
++            sample
++        };
++        state.process(sample(2, 0)).unwrap();
++        for (action, pressure) in [(0, 128_u16), (1, 10000), (1, 60000), (1, 1024)] {
++            state.process(pen(action, pressure, 7)).unwrap();
++            let event = verifier.events.last().unwrap();
++            assert_eq!(event.stylus_ids, 1_u32 << 31);
++            assert_eq!(event.count, 2);
++            assert_eq!(event.pointers[0].id, 2);
++            assert_eq!(event.pointers[0].pressure, 1.0);
++            assert_eq!(event.pointers[1].pressure, f32::from(pressure) / 65535.0);
++        }
++        // A rejected MOVE must not leak its newer position into CANCEL.
++        verifier.pointers.get_mut(&0).unwrap().insert(17);
++        assert!(state.process(pen(1, 3000, 99)).is_err());
++        verifier.pointers.get_mut(&0).unwrap().remove(&17);
++        assert!(state.reset());
++        let end = verifier.events.last().unwrap();
++        assert_eq!(end.action, 3);
++        assert_eq!(end.stylus_ids, 1_u32 << 31);
++        assert_eq!(end.pointers[1].x, 7.0);
++        state.process(pen(0, 100, 2)).unwrap();
++        state.process(pen(2, 0, 2)).unwrap();
++        let up = verifier.events.last().unwrap();
++        assert_eq!(up.stylus_ids, 1_u32 << 31);
++        assert_eq!(up.pointers[0].pressure, 0.0);
++        state.process(sample(31, 0)).unwrap();
++        assert_eq!(verifier.events.last().unwrap().stylus_ids, 0);
++    }
++
+     #[test]
+     fn rejected_cancel_retains_exact_android_pointer_set_until_retry_accepts() {
+         let mut verifier = Verifier::default();
+@@ -728,6 +780,7 @@ mod tests {
+     #[test]
+     #[allow(clippy::too_many_lines)] // Exercise the full reconnect/retire/shutdown lifecycle.
+     fn inherited_socket_dispatches_cancels_and_replaces_without_an_idle_poll() {
++        assert_eq!(std::mem::offset_of!(Event, stylus_ids), 36);
+         assert_eq!(std::mem::size_of::<Event>(), 584);
+         let dir = tempfile::tempdir().unwrap();
+         let listener = SeqPacketListener::bind(dir.path().join("input")).unwrap();
+diff --git a/graphics/droidloom-input-protocol/src/lib.rs b/graphics/droidloom-input-protocol/src/lib.rs
+index 0cd06aa..6736f58 100644
+--- a/graphics/droidloom-input-protocol/src/lib.rs
++++ b/graphics/droidloom-input-protocol/src/lib.rs
+@@ -47,6 +47,10 @@ pub const KIND_TASK_CLOSE: u8 = 5;
+ pub const KIND_DISPLAY_POWER: u8 = 6;
+ /// Record kind for one wheel or touchpad scroll at a task-local position.
+ pub const KIND_SCROLL: u8 = 7;
++/// Optional stylus contact record. Only sent to a guest advertising STYLUS_MARKER.
++pub const KIND_STYLUS: u8 = 8;
++/// Optional receiver feature within input ABI 8.
++pub const STYLUS_MARKER: &[u8; 24] = b"DROIDLOOM_STYLUS_WIRE=1;";
+ /// Highest pointer identity accepted by Android `MotionEvent`.
+ pub const MAX_POINTER_ID: u32 = 31;
+ /// Highest key identity defined by Linux's evdev input ABI.
+@@ -130,6 +134,37 @@ pub fn encode_touch(
+     y_fixed: i32,
+     pressure: u16,
+     incarnation: u64,
++) -> Result<[u8; RECORD_BYTES], InputProtocolError> {
++    encode_contact(
++        android_display,
++        task_id,
++        timestamp_nanos,
++        action,
++        pointer_id,
++        x_fixed,
++        y_fixed,
++        pressure,
++        incarnation,
++        false,
++    )
++}
++
++/// Encode a finger or a stylus without reserving an Android pointer ID.
++///
++/// # Errors
++/// Rejects the same invalid route, pointer and action as `encode_touch`.
++#[allow(clippy::too_many_arguments)]
++pub fn encode_contact(
++    android_display: u32,
++    task_id: u64,
++    timestamp_nanos: u64,
++    action: u8,
++    pointer_id: u32,
++    x_fixed: i32,
++    y_fixed: i32,
++    pressure: u16,
++    incarnation: u64,
++    stylus: bool,
+ ) -> Result<[u8; RECORD_BYTES], InputProtocolError> {
+     if incarnation == 0 || incarnation > i64::MAX as u64 {
+         return Err(InputProtocolError::Incarnation);
+@@ -151,7 +186,7 @@ pub fn encode_touch(
+     let mut record = [0_u8; RECORD_BYTES];
+     record[0..4].copy_from_slice(&MAGIC);
+     record[4..6].copy_from_slice(&PROTOCOL_MAJOR.to_le_bytes());
+-    record[6] = KIND_TOUCH;
++    record[6] = if stylus { KIND_STYLUS } else { KIND_TOUCH };
+     record[7] = action;
+     record[8..12].copy_from_slice(&android_display.to_le_bytes());
+     record[12..16].copy_from_slice(&pointer_id.to_le_bytes());
+@@ -386,6 +421,8 @@ pub struct Sample {
+ pub enum Payload {
+     /// Task-local physical pixel coordinates and normalized pressure.
+     Touch {
++        /// The Wayland tablet tip produced this contact.
++        stylus: bool,
+         /// Horizontal task-local coordinate.
+         x: f32,
+         /// Vertical task-local coordinate.
+@@ -482,8 +519,11 @@ pub fn decode(bytes: &[u8]) -> Result<Record, InputProtocolError> {
+         }));
+     }
+     let payload = match bytes[6] {
+-        KIND_TOUCH if action <= 3 && code <= MAX_POINTER_ID && bytes[34..36] == [0, 0] => {
++        KIND_TOUCH | KIND_STYLUS
++            if action <= 3 && code <= MAX_POINTER_ID && bytes[34..36] == [0, 0] =>
++        {
+             Payload::Touch {
++                stylus: bytes[6] == KIND_STYLUS,
+                 x: fixed(24),
+                 y: fixed(28),
+                 pressure: f32::from(u16::from_le_bytes(bytes[32..34].try_into().unwrap()))
+@@ -523,6 +563,7 @@ mod tests {
+         assert_eq!(
+             sample.payload,
+             Payload::Touch {
++                stylus: false,
+                 x: 5.0,
+                 y: -3.0,
+                 pressure: 1.0
+diff --git a/graphics/droidloom-wayland/src/input.rs b/graphics/droidloom-wayland/src/input.rs
+index 9f11a72..b73d920 100644
+--- a/graphics/droidloom-wayland/src/input.rs
++++ b/graphics/droidloom-wayland/src/input.rs
+@@ -2,8 +2,8 @@
+ use droidloom_denial_ipc::{IpcError, SeqPacket};
+ use droidloom_denial_protocol::{InputEvent, TouchAction};
+ use droidloom_input_protocol::{
+-    MAX_POINTER_ID, PROTOCOL_MAJOR, RECORD_BYTES, encode_display_power, encode_key, encode_scroll,
+-    encode_touch, scale_fixed,
++    MAX_POINTER_ID, PROTOCOL_MAJOR, RECORD_BYTES, STYLUS_MARKER, encode_contact,
++    encode_display_power, encode_key, encode_scroll, encode_touch, scale_fixed,
+ };
+ use std::{
+     collections::{BTreeMap, VecDeque},
+@@ -26,10 +26,24 @@ pub(super) struct DirectInput {
+     pointers: BTreeMap<(u32, u32), (u32, Route)>,
+     generation: u64,
+     requested: bool,
++    native_stylus: bool,
+     power: Option<bool>,
+ }
+ 
+ impl DirectInput {
++    pub fn installed() -> Self {
++        let native_stylus = std::fs::read("/usr/lib/droidloom/current/lib64/libinputflinger.so")
++            .is_ok_and(|image| {
++                image
++                    .windows(STYLUS_MARKER.len())
++                    .any(|w| w == STYLUS_MARKER)
++            });
++        Self {
++            native_stylus,
++            ..Self::default()
++        }
++    }
++
+     pub fn next_request(&mut self) -> Option<u64> {
+         if self.socket.is_some() || self.requested {
+             return None;
+@@ -186,7 +200,7 @@ impl DirectInput {
+                         id
+                     }
+                 };
+-                encode_touch(
++                encode_contact(
+                     route.display,
+                     route.task,
+                     timestamp,
+@@ -196,6 +210,7 @@ impl DirectInput {
+                     y,
+                     pressure,
+                     route.incarnation,
++                    self.native_stylus && pointer_id == crate::stylus::PEN_CONTACT_ID,
+                 )
+             }
+             InputEvent::Key {
+@@ -442,6 +457,7 @@ mod tests {
+         assert_eq!(
+             down.payload,
+             Payload::Touch {
++                stylus: false,
+                 x: 3.0,
+                 y: -4.5,
+                 pressure: 1.0
+@@ -468,6 +484,23 @@ mod tests {
+         assert_eq!((up.task, up.incarnation, up.code), (42, 7, 0));
+     }
+ 
++    #[test]
++    fn native_pen_record_requires_a_capable_guest_and_a_tablet_tip() {
++        for capable in [false, true] {
++            let (mut writer, receiver) = connected();
++            writer.native_stylus = capable;
++            for id in [5, crate::stylus::PEN_CONTACT_ID, u32::MAX] {
++                writer
++                    .send(route(), (1, 1), 1, 100, touch(id, TouchAction::Down))
++                    .unwrap();
++                let Payload::Touch { stylus, .. } = sample(&receiver).payload else {
++                    panic!("touch")
++                };
++                assert_eq!(stylus, capable && id == crate::stylus::PEN_CONTACT_ID);
++            }
++        }
++    }
++
+     #[test]
+     fn backpressure_keeps_fifo_order_and_wakes_for_writability_only_while_queued() {
+         let (mut input, receiver) = connected();
+diff --git a/graphics/droidloom-wayland/src/main.rs b/graphics/droidloom-wayland/src/main.rs
+index 324af23..549ba00 100644
+--- a/graphics/droidloom-wayland/src/main.rs
++++ b/graphics/droidloom-wayland/src/main.rs
+@@ -336,6 +336,22 @@ struct Contact {
+     position_fixed: (i32, i32),
+ }
+ 
++// A tablet stroke never pastes. Bypass an in-progress clipboard transfer
++// unless older input is already deferred; then preserve mixed-contact ordering.
++fn waits_for_clipboard(event: &InputEvent, has_deferred_input: bool) -> bool {
++    match event {
++        InputEvent::Touch {
++            action: TouchAction::Cancel,
++            ..
++        } => false,
++        InputEvent::Touch {
++            pointer_id: stylus::PEN_CONTACT_ID,
++            ..
++        } => has_deferred_input,
++        _ => true,
++    }
++}
++
+ impl Contact {
+     fn event(self, action: TouchAction) -> InputEvent {
+         InputEvent::Touch {
+@@ -2203,13 +2219,8 @@ impl App {
+         event: InputEvent,
+         timestamp: u64,
+     ) -> Result<bool, PresenterError> {
+-        if !matches!(
+-            event,
+-            InputEvent::Touch {
+-                action: TouchAction::Cancel,
+-                ..
+-            }
+-        ) && self.clipboard.blocked()
++        if self.clipboard.blocked()
++            && waits_for_clipboard(&event, !self.clipboard_inputs.is_empty())
+             && self.clipboard_inputs.len() < 512
+         {
+             self.clipboard_inputs.push_back((object, event, timestamp));
+@@ -3654,7 +3665,7 @@ fn run() -> Result<(), PresenterError> {
+         input_timestamps: input_time::Timestamps::new(globals.bind(&qh, 1..=1, ()).ok()),
+         next_buffer_id: 0,
+         next_input_serial: 0,
+-        direct_input: input::DirectInput::default(),
++        direct_input: input::DirectInput::installed(),
+         socket_path,
+         fatal: None,
+     };
+@@ -4219,6 +4230,28 @@ mod output_power_test;
+ mod tests {
+     use super::*;
+ 
++    #[test]
++    fn stylus_bypasses_clipboard_io_without_overtaking_held_input() {
++        let mut contact = Contact {
++            object: TaskObjectId(1),
++            pointer_id: stylus::PEN_CONTACT_ID,
++            position_fixed: (0, 0),
++        };
++        for action in [TouchAction::Down, TouchAction::Motion, TouchAction::Up] {
++            assert!(!waits_for_clipboard(&contact.event(action), false));
++            assert!(waits_for_clipboard(&contact.event(action), true));
++        }
++        assert!(!waits_for_clipboard(
++            &contact.event(TouchAction::Cancel),
++            true
++        ));
++        contact.pointer_id = 1;
++        assert!(waits_for_clipboard(
++            &contact.event(TouchAction::Down),
++            false
++        ));
++    }
++
+     #[test]
+     fn an_output_scale_comes_from_its_logical_size() {
+         assert_eq!(output_scale_120((1216, 2688), Some((608, 1344)), 2), 240);
+diff --git a/graphics/droidloom-wayland/src/stylus.rs b/graphics/droidloom-wayland/src/stylus.rs
+index f269bfd..37996bd 100644
+--- a/graphics/droidloom-wayland/src/stylus.rs
++++ b/graphics/droidloom-wayland/src/stylus.rs
+@@ -16,7 +16,7 @@ use wayland_protocols::wp::tablet::zv2::client::{
+ use crate::{App, Contact, InputEvent, TouchAction, monotonic_timestamp_nanos};
+ 
+ // wl_touch uses nonnegative i32 identifiers. The mouse uses u32::MAX.
+-const PEN_CONTACT_ID: u32 = u32::MAX - 1;
++pub(super) const PEN_CONTACT_ID: u32 = u32::MAX - 1;
+ 
+ pub(super) struct Stylus {
+     manager: Option<ZwpTabletManagerV2>,
+@@ -72,7 +72,7 @@ impl Tool {
+             x_fixed,
+             y_fixed,
+             pressure: match action {
+-                TouchAction::Down | TouchAction::Motion => pressure.unwrap_or(u16::MAX),
++                TouchAction::Down | TouchAction::Motion => pressure.unwrap_or(0),
+                 TouchAction::Up | TouchAction::Cancel => 0,
+             },
+         }
