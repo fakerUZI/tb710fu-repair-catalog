@@ -1,0 +1,11 @@
+[Unit]
+Description=Read Droidloom application activity for idle shutdown
+
+[Socket]
+ListenStream=/run/tb710fu-droidloom-inspect.sock
+Accept=yes
+SocketMode=0600
+MaxConnections=2
+
+[Install]
+WantedBy=sockets.target

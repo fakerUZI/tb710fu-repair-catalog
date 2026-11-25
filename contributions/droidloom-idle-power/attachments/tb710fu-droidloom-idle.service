@@ -1,0 +1,7 @@
+[Unit]
+Description=Stop Droidloom after the last Android app exits
+After=droidloom.service
+[Service]
+ExecStart=/usr/bin/python3 -I /usr/local/libexec/tb710fu-droidloom-power/idle-stop.py
+Restart=on-failure
+RestartSec=10

@@ -1,0 +1,15 @@
+[Unit]
+Description=TB710FU CPU and GPU limits for Ubuntu power profiles
+After=power-profiles-daemon.service
+Wants=power-profiles-daemon.service
+ConditionPathExists=/sys/class/devfreq/3d00000.gpu
+
+[Service]
+ExecStart=/usr/bin/python3 -I /usr/local/libexec/tb710fu-droidloom-power/power-policy.py
+ExecStopPost=/usr/bin/python3 -I /usr/local/libexec/tb710fu-droidloom-power/power-policy.py restore
+RuntimeDirectory=tb710fu-profile-tuning
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=graphical.target

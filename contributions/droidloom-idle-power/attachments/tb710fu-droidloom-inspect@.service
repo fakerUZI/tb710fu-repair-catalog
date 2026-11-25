@@ -1,0 +1,8 @@
+[Unit]
+Description=Inspect live Android tasks and foreground services
+
+[Service]
+ExecStart=/usr/bin/python3 -I /usr/local/libexec/tb710fu-droidloom-power/inspect-cell.py
+StandardInput=socket
+RuntimeMaxSec=16
+NoNewPrivileges=yes

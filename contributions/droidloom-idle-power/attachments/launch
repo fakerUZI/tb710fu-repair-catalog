@@ -1,0 +1,21 @@
+#!/bin/sh
+set -eu
+log=$(mktemp "${XDG_RUNTIME_DIR:?}/droidloom-launch.XXXXXX")
+trap 'rm -f "$log"' EXIT
+exec 9>>"$XDG_RUNTIME_DIR/droidloom-on-demand.lock"
+flock -x 9
+touch "$XDG_RUNTIME_DIR/droidloom-on-demand.lock"
+if ! /usr/bin/droidloomctl --json status 2>/dev/null | /usr/bin/python3 -c 'import json,sys; sys.exit(json.load(sys.stdin).get("state") != "running")' 2>/dev/null; then
+    notify-send "安卓容器" "正在启动，请稍候…" 2>/dev/null || :
+    if ! /usr/bin/droidloomctl start >"$log" 2>&1; then
+        flock -u 9
+        zenity --error --title="安卓容器启动失败" --text="$(cat "$log")" || :
+        exit 1
+    fi
+fi
+if ! /usr/bin/droidloomctl launch "$@" >"$log" 2>&1; then
+    flock -u 9
+    zenity --error --title="安卓应用启动失败" --text="$(cat "$log")" || :
+    exit 1
+fi
+flock -u 9

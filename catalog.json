@@ -824,6 +824,84 @@
           "sha256": "0b3602513017481b60239e3ee00a29bb86ccf25c890501836adff1d7c5dc7070"
         }
       ]
+    },
+    {
+      "id": "droidloom-idle-power",
+      "title": "DroidLoom 空闲 120 秒自动关闭与电源调度",
+      "description": "最后一个安卓应用退出且无前台服务后，连续空闲 120 秒即请求关闭容器，让 Ubuntu 能按桌面设置自动挂起。下次点击安卓应用会重新启动容器。平衡和节能档位分别应用对应的 CPU、GPU 调度参数。",
+      "device": "TB710FU",
+      "status": "manual-install",
+      "risk": "需要管理员权限和兼容的 BOOTFIX 按需启动器。容器关停会结束安卓后台进程，节能档位会限制峰值性能。可按附件说明恢复原启动器并撤销服务。",
+      "script": {
+        "path": "contributions/droidloom-idle-power/script.sh",
+        "sha256": "7dc929fb18a94cf202e8ad48bc85737d45bc784323eae6b34cd6d2cace8d5746",
+        "requires_admin": true
+      },
+      "attachments": [
+        {
+          "path": "contributions/droidloom-idle-power/attachments/README.md",
+          "sha256": "a337729fbad1683bb962fcf43eb09238774e55b184e6cc42e4952475346bc077"
+        },
+        {
+          "path": "contributions/droidloom-idle-power/attachments/idle-stop.py",
+          "sha256": "0cf565ebfb86612f7e06243cb36f9de5635cf9176a54e86e0e5093fd15650faa"
+        },
+        {
+          "path": "contributions/droidloom-idle-power/attachments/inspect-cell.py",
+          "sha256": "b78757626bc604b8f7910317f664ce0e92f80f2499488daa4f7928d74f73fa2e"
+        },
+        {
+          "path": "contributions/droidloom-idle-power/attachments/install.sh",
+          "sha256": "fbdd2e103ec52d150fb34868ec15698185ba82791df55f3a995e95c52dd8ba8d"
+        },
+        {
+          "path": "contributions/droidloom-idle-power/attachments/launch",
+          "sha256": "2df108d0976c048d151dbaf60707932f6d30b5e456fe926c979460f92f2d3973"
+        },
+        {
+          "path": "contributions/droidloom-idle-power/attachments/power-policy.py",
+          "sha256": "95d15bec670c82205419f0bd7f931bc81c5fdbcd2170f7fc162f3ef7cb3160c5"
+        },
+        {
+          "path": "contributions/droidloom-idle-power/attachments/tb710fu-droidloom-idle.service",
+          "sha256": "03f93d209c9fe0443f24d5d69c3bad371b839e168970804fd33d5be7f10ca55b"
+        },
+        {
+          "path": "contributions/droidloom-idle-power/attachments/tb710fu-droidloom-inspect.socket",
+          "sha256": "f7f663c4a81aba7e9fd2f88918f97f43c299c040d739fe136bb38b0ba5acd7ff"
+        },
+        {
+          "path": "contributions/droidloom-idle-power/attachments/tb710fu-droidloom-inspect@.service",
+          "sha256": "e49913b416b3b974beabd74e6c54d3628b28fa4fd8d6066b1e319afe1ec398f0"
+        },
+        {
+          "path": "contributions/droidloom-idle-power/attachments/tb710fu-profile-tuning.service",
+          "sha256": "c0c6561314c8b2fc6cab469db16a1c74b580ec68c8aba5a227f22c3d7e3c61c3"
+        }
+      ]
+    },
+    {
+      "id": "pogo-suspend-wake",
+      "title": "修复拔下磁吸键盘后首次挂起失败（EBUSY）",
+      "description": "适用于 Pogo 键盘已拔下且未供电时，开机后首次挂起被 GPIO137 的残留中断取消的问题。挂起前临时关闭该键盘的唤醒源，恢复后还原。实机自重启后首次挂起起连续五轮 RTC 唤醒通过。",
+      "device": "TB710FU",
+      "status": "manual-install",
+      "risk": "需要管理员权限。键盘拔下时暂时屏蔽该键盘的唤醒事件，连接状态由联想 Pogo 驱动提供。下一次挂起生效，撤销步骤见附件。",
+      "script": {
+        "path": "contributions/pogo-suspend-wake/script.sh",
+        "sha256": "b5e9f1722643595b8bcf4b3b0772ff0975f9432f576fbac3c61d8497e8632ba4",
+        "requires_admin": true
+      },
+      "attachments": [
+        {
+          "path": "contributions/pogo-suspend-wake/attachments/README.md",
+          "sha256": "de622dda7c321cfbd3a53add30637f8e1acc3a9fb8e71cb90c6916adbd064a0f"
+        },
+        {
+          "path": "contributions/pogo-suspend-wake/attachments/tb710fu-pogo-sleep",
+          "sha256": "159363617ca69896f83b5dc67125c09799d80fe5b0ab84b7139e9c3ef99730d6"
+        }
+      ]
     }
   ]
 }

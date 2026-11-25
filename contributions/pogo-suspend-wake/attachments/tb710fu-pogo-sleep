@@ -1,0 +1,37 @@
+#!/bin/sh
+# systemd-sleep hook for the TB710FU built-in Pogo keyboard driver.
+set -eu
+[ "${2:-}" = suspend ] || exit 0
+dev=/sys/bus/platform/devices/pogo-keyboard
+wake=$dev/power/wakeup
+marker=/run/tb710fu-pogo-sleep.restore
+restore() {
+    [ -f "$marker" ] || return 0
+    if [ -e "$wake" ] && [ "$(cat "$wake")" = disabled ]; then
+        printf '%s\n' enabled > "$wake"
+    fi
+    rm -f "$marker"
+}
+detached() {
+    [ "$(cat "$dev/kb_hall_status")" = 1 ] &&
+        [ "$(cat "$dev/kb_connect_status")" = 0 ] &&
+        [ "$(cat "$dev/kb_power_status")" = 0 ]
+}
+case "${1:-}" in
+pre)
+    restore
+    [ -e "$wake" ] || exit 0
+    [ "$(basename "$(readlink -f "$dev/driver")")" = 'lenovo,lenovo_keyboard' ] || exit 0
+    detached && [ "$(cat "$wake")" = enabled ] || exit 0
+    # GPIO137 can deliver a latched falling edge when the driver unmasks
+    # its IRQ in suspend. With the keyboard detached there is no key press.
+    (umask 077; : > "$marker")
+    printf '%s\n' disabled > "$wake"
+    if detached; then
+        echo 'Suppressed detached Pogo keyboard wake events for this suspend'
+    else
+        restore
+    fi
+    ;;
+post) restore ;;
+esac
