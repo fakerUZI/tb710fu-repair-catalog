@@ -4,7 +4,7 @@ from tempfile import TemporaryDirectory, TemporaryFile
 import unittest
 
 
-ASSET = Path(__file__).resolve().parents[1] / "contributions/pogo-osk-fold-test/attachments/fold-reader.py"
+ASSET = Path(__file__).resolve().parents[1] / "contributions/pogo-osk/attachments/fold-reader.py"
 SPEC = importlib.util.spec_from_file_location("pogo_fold_reader", ASSET)
 reader = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(reader)
