@@ -920,7 +920,7 @@
       "title": "Ubuntu 内核升级：1118 → 1124（可选）",
       "device": "TB710FU",
       "status": "manual-install",
-      "description": "适用于公开 1118 及 BOOTFIX / SLOT-FIX 的 arch 单系统。升级为 7.2.6-tb710fu-20261124，保留 kShim，安装匹配的内核模块和现有相机配套。重启确认后可自行选择 U-Boot。已运行匹配的 1124 时仅检查状态。",
+      "description": "适用于公开 1118 及 BOOTFIX / SLOT-FIX 的 arch 单系统。升级为 7.2.6-tb710fu-20261124，保留 kShim，安装匹配的内核模块和现有相机配套。重启确认后可自行选择 U-Boot。已运行匹配的 1124 时仅检查状态。 只读核对本机固件，参考机固件哈希差异仅作提示。仍严格校验源 boot 和目标镜像。",
       "risk": "单独安装，需要管理员权限。会备份并写入 boot_a，保持供电并准备电脑端恢复方式。完成后备份原镜像到电脑并手动重启。支持只读检查和从本机备份回退。",
       "script": {
         "path": "contributions/kernel-1118-to-1124/script.sh",
@@ -930,7 +930,7 @@
       "attachments": [
         {
           "path": "contributions/kernel-1118-to-1124/attachments/README.md",
-          "sha256": "b129129ae06b058575f0442a54e3a4a38f10a2bd8e80c08349e0e38ba50e6be6"
+          "sha256": "ae8673e03a8d3adb40a22dd80f81bec920d5a692bd358b7934c3f6e66f360d2a"
         },
         {
           "path": "contributions/kernel-1118-to-1124/attachments/boot.patch",
@@ -994,7 +994,7 @@
         },
         {
           "path": "contributions/kernel-1118-to-1124/attachments/upgrade.py",
-          "sha256": "94b5e9ef0b7809b36285a660bfa95ff472bb8a248c7acdbbbec3b6e4578eae73"
+          "sha256": "4f454860c769680f9dc11fbf5fb790ba295b480506db1acb9580cc5f2b7d3a86"
         }
       ]
     },

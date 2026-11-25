@@ -37,6 +37,22 @@ def run(*args):
     return subprocess.check_output(args, text=True).strip()
 
 
+def inspect_firmware(devices, reference_hashes):
+    # These partitions are inspected for diagnostics. Neither kShim nor the upgrade
+    # patch is taken from them; the patch input is the separately verified boot_a.
+    differences = []
+    for name, reference in reference_hashes.items():
+        try:
+            actual = digest(devices[name])
+        except OSError as exc:
+            raise ValueError(f"无法读取固件分区 {name}：{exc.strerror}") from exc
+        if actual != reference:
+            differences.append(name)
+    if differences:
+        print("固件参考信息：以下分区与参考机不同，本次升级不会写入这些分区："
+              + "、".join(differences))
+
+
 def inspect(profile):
     require(Path("/etc/os-release").is_file() and platform.machine() == "aarch64"
             and b"lenovo,tb710fu" in Path("/proc/device-tree/compatible").read_bytes().split(b"\0"),
@@ -70,8 +86,7 @@ def inspect(profile):
     flags = int(match[1], 16)
     require(flags & (1 << 50) and flags & (1 << 54) and not flags & (1 << 55),
             "A 槽须已确认为成功启动。BOOTFIX 用户可先核对修复助手的 A 槽启动确认条目。")
-    for name, expected in profile["firmware"].items():
-        require(digest(devices[name]) == expected, "固件不匹配：" + name)
+    inspect_firmware(devices, profile["firmware"])
     return boot, digest(boot)
 
 
@@ -327,7 +342,7 @@ def execute(action, profile):
     require(hashlib.sha256(gzip.decompress(Path("/proc/config.gz").read_bytes())).hexdigest()
             == profile["config_before"], "1118 内核配置不同")
     if action == "check":
-        print("1118 启动镜像、固件与 GPT 检查通过。安装时将校验完整模块包和本机配套文件。")
+        print("1118 启动镜像、内核配置、A 槽和 GPT 检查通过。安装时将校验完整模块包和本机配套文件。")
         return
     with tempfile.TemporaryDirectory(prefix="tb-kernel-1124-") as tmp:
         install(Path(tmp), boot, current, profile)
