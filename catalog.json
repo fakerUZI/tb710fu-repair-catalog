@@ -588,6 +588,77 @@
       ]
     },
     {
+      "id": "droidloom-native-pen",
+      "title": "Droidloom 49 安卓原生手写笔与压感",
+      "device": "TB710FU",
+      "status": "manual-install",
+      "description": "适用于 TB710FU Ubuntu ARM64 GNOME Wayland 和 Droidloom 0.1.0 release 49。安卓笔尖使用手写笔类型，手指保持触控类型。适合启用仅手写笔模式或压感笔刷的笔记应用。安装前先确认 Ubuntu 能识别笔。",
+      "risk": "单独安装，需要管理员权限。会备份并替换安卓输入库，且仅为当前桌面账号配置窗口程序。已保存安卓内容后运行 droidloomctl restart 生效。支持回退。",
+      "script": {
+        "path": "contributions/droidloom-native-pen/script.sh",
+        "sha256": "f41cd9039e0f7c181f83ed30911eb236d7acffcbd9d498b165a4741a2c2dbd47",
+        "requires_admin": true
+      },
+      "attachments": [
+        {
+          "path": "contributions/droidloom-native-pen/attachments/README.md",
+          "sha256": "728c42550bb1075c55ea53fd66f99d24d2107a4f2444e3c2e0a5680012cf6b98"
+        },
+        {
+          "path": "contributions/droidloom-native-pen/attachments/droidloom-wayland.gz.001",
+          "sha256": "7138a87dbc15f496f1777b7f726b5913c488cb0f7c4cedd01411720ae9a923d9"
+        },
+        {
+          "path": "contributions/droidloom-native-pen/attachments/droidloom-wayland.gz.002",
+          "sha256": "fdad82e014a7badcba4b0113c5c9d1e51fd730f641bc1aa0fdf50ceeb80cfb97"
+        },
+        {
+          "path": "contributions/droidloom-native-pen/attachments/droidloom-wayland.gz.003",
+          "sha256": "fc377b4c91be9f2be632b362f8d0831901faa649b0a29e58db66f55a1e5d6983"
+        },
+        {
+          "path": "contributions/droidloom-native-pen/attachments/droidloom-wayland.gz.004",
+          "sha256": "63c8400b3e0e5e2e7fbc5bc2c5ecb292a019d578df53cd4c23ae181e723fa532"
+        },
+        {
+          "path": "contributions/droidloom-native-pen/attachments/droidloom-wayland.gz.005",
+          "sha256": "a94c3a24a25fa088fdf21c9f8cbe98698acf946af55c0ad2327e788fb56ceae2"
+        },
+        {
+          "path": "contributions/droidloom-native-pen/attachments/install.py",
+          "sha256": "b1da3a0906995f2dc964ecbc92020dafdf9f87992ba12dbcbee51af5a4728c9a"
+        },
+        {
+          "path": "contributions/droidloom-native-pen/attachments/libinputflinger.so.gz.001",
+          "sha256": "4549b0577c9476642e794cc910801a7636889761a735cd6a8642b1941537b7d1"
+        },
+        {
+          "path": "contributions/droidloom-native-pen/attachments/libinputflinger.so.gz.002",
+          "sha256": "f5a847a65fa5d5e32f1ee191567090eb81a236dc07ca1a44026d30ce8c36d8a9"
+        },
+        {
+          "path": "contributions/droidloom-native-pen/attachments/libinputflinger.so.gz.003",
+          "sha256": "baef31e0c4450adabe669c0801f07de3067332fd285230f154c7b870388341da"
+        },
+        {
+          "path": "contributions/droidloom-native-pen/attachments/libinputflinger.so.gz.004",
+          "sha256": "0800d4246c6131b422fa1f7deaf5343c66669a53ddbd9099a782d14288128564"
+        },
+        {
+          "path": "contributions/droidloom-native-pen/attachments/libinputflinger.so.gz.005",
+          "sha256": "cd819fddf8b473a5c803d14c4605301079fad57ab9443dd573985ea9abb860d5"
+        },
+        {
+          "path": "contributions/droidloom-native-pen/attachments/libinputflinger.so.gz.006",
+          "sha256": "50557520a6be11413f959c5612db9a65275a6bee26c3f4ff86846a1c445aca95"
+        },
+        {
+          "path": "contributions/droidloom-native-pen/attachments/payload.json",
+          "sha256": "1b85c728e8bb6dc726354b7ade8a89782c02552e5575f85e78cb4c161ae1c512"
+        }
+      ]
+    },
+    {
       "id": "droidloom-pen-compat",
       "title": "Droidloom 手写笔触控兼容（测试版）",
       "device": "TB710FU",

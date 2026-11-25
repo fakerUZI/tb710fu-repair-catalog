@@ -1,4 +1,4 @@
-# Droidloom 手写笔测试版对应源码
+# Droidloom 手写笔修复对应源码
 
 测试程序来自 [Droidloom 0.1.0 release 49](https://github.com/denialwm/droidloom/tree/572e1c51c5caf75183efe25ad811f98c1268bf56)，应用同目录的 `droidloom-49-pen-compat.patch`。沿用上游 GPL-3.0-or-later 许可，许可及版权声明随附。
 
@@ -22,9 +22,9 @@ git apply --include='*/stylus.rs' /path/to/droidloom-49-pen-compat.patch
 git apply /path/to/droidloom-42-presenter.patch
 ```
 
-### release 49 安卓原生笔候选补丁
+### release 49 安卓原生笔与压感补丁
 
-`droidloom-49-native-stylus.patch` 叠加在上述 release 49 触控兼容补丁上。它需要配套构建 Wayland 窗口程序和 Android 的 `libinputflinger.so`。窗口程序读取系统中接收库的功能标记，匹配后才发送原生笔记录。现有修复助手分发的二进制使用上一版触控通道。
+`droidloom-49-native-stylus.patch` 叠加在上述 release 49 触控兼容补丁上。它需要配套构建 Wayland 窗口程序和 Android 的 `libinputflinger.so`。窗口程序读取系统中接收库的功能标记，匹配后才发送原生笔记录。修复助手的「Droidloom 手写笔触控兼容（测试版）」使用触控通道。「Droidloom 49 安卓原生手写笔与压感」使用本补丁，并安装配套的安卓输入库。
 
 在应用两份补丁的源码根目录可运行 `cargo test --locked -p droidloom-wayland -p droidloom-input-protocol -p droidloom-android-policy`。这些测试覆盖笔、手指共存、轻重压力、取消和拒收恢复。Android 系统库需使用同一 release 的上游 AOSP/Soong 构建流程生成，随后核对安装到容器的库内含 `DROIDLOOM_STYLUS_WIRE=1;`。
 

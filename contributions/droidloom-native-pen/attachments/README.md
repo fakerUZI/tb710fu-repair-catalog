@@ -7,3 +7,5 @@
 打开笔记软件，关闭「手指书写」，选择压感笔刷，依次轻写、重写、抬笔后重新落笔。手指可以用于笔记软件自身支持的缩放或平移。切入应用后的第一笔和连续书写时的跟笔表现可分别观察。
 
 `TB710FU_FIX_ACTION=check` 只读核对适用条件。`TB710FU_FIX_ACTION=rollback` 恢复备份的输入库并移除本版的用户启动覆盖，重启容器后生效。后续升级 Droidloom 时，启动器检测到版本改变会使用系统程序。其他 Droidloom 版本的触控兼容范围见原测试条目。
+
+本版基于 Droidloom 0.1.0 release 49。配套的宿主端与安卓输入库源码补丁、上游提交及许可证可在[修复仓库的源码目录](https://github.com/fakerUZI/tb710fu-repair-catalog/tree/main/contributions/droidloom-pen-compat/source)查看。笔刷对压力的响应和实际跟笔延迟仍待实体笔实测。
