@@ -949,28 +949,8 @@
           "sha256": "fafc4045ef72b792e08862a28a542bb9123d6d52f2fc3f915f921d800a18de26"
         },
         {
-          "path": "contributions/kernel-1118-to-1124/attachments/flash-profile.json",
-          "sha256": "0ece831c6baae799c00221e270a989c2d4ff199e7a104d71f87fbc643cd34805"
-        },
-        {
-          "path": "contributions/kernel-1118-to-1124/attachments/gc02m1_raw.ko.patch",
-          "sha256": "1b3d645cecfcdf236b5ba5ffc61b3dc1ea5e87dbee22c95463bf56f7e92a0d0f"
-        },
-        {
-          "path": "contributions/kernel-1118-to-1124/attachments/gc13a2_raw.ko.patch",
-          "sha256": "550bf18b406e4f71cfbdb0f768501ad080cc7d1be4f7de3e06d0c44b447cfd72"
-        },
-        {
-          "path": "contributions/kernel-1118-to-1124/attachments/leds-qcom-flash.ko.patch",
-          "sha256": "bb46ad96d442b532e84ca0faae5aa643ed838571804c903b4c790f460caeb4f2"
-        },
-        {
           "path": "contributions/kernel-1118-to-1124/attachments/legacy.patch",
           "sha256": "c825e600b6c1e9b088c779299c288719126575fd7e8524b48337c3694a9e03b9"
-        },
-        {
-          "path": "contributions/kernel-1118-to-1124/attachments/macro-profile.json",
-          "sha256": "88d1afc412f919d5962dbe12b38c85e025fbc03008a28271b1f954042482fe23"
         },
         {
           "path": "contributions/kernel-1118-to-1124/attachments/modules.part1",
@@ -985,16 +965,8 @@
           "sha256": "899e412f361e8d0d1fd764e0c4b4536f5b3b4db945d2164fc981d68e45b70bb9"
         },
         {
-          "path": "contributions/kernel-1118-to-1124/attachments/ov13b10-rggb-UNTESTED.ko.patch",
-          "sha256": "55b54c0db8ae2a3cc44da8429fa4a8c6ccefc30593a80b5941aa2c87118f2975"
-        },
-        {
           "path": "contributions/kernel-1118-to-1124/attachments/profile.json",
-          "sha256": "e4ba8ff8f3b0694127ba20b04b4048d81736f063cb1880ebf7d0a9d52dec0929"
-        },
-        {
-          "path": "contributions/kernel-1118-to-1124/attachments/qcom-camss-graph-UNTESTED.ko.patch",
-          "sha256": "73b04b9467f219a59f47cb08594703f65788374670a4246251d7b27e2b0eb4ab"
+          "sha256": "b9bbbd89a0a613ca1b50d71b67e93c9b0bad3f6c572696397c4dc4340074770b"
         },
         {
           "path": "contributions/kernel-1118-to-1124/attachments/tb-camera-focus-permission.py",
@@ -1033,40 +1005,8 @@
           "sha256": "43f0c629f20762cca5872f8905aac00306b0c0711fac97782562329f5000a92a"
         },
         {
-          "path": "contributions/kernel-1118-to-1124/attachments/tb_camera_alias.ko.patch",
-          "sha256": "aa5d3ff81a65b8ec777542a1bfc69b78eb9dd2d216ac3d11221205c0cf8ec25d"
-        },
-        {
-          "path": "contributions/kernel-1118-to-1124/attachments/tb_camera_overlay.ko.patch",
-          "sha256": "f7530481c4f0e115d660a724b5361915bbb87a52d58af6f9688f345ffc0e6a6f"
-        },
-        {
-          "path": "contributions/kernel-1118-to-1124/attachments/tb_camss_alias.ko.patch",
-          "sha256": "7713be11e6050254603772b1e45f85c491a75ef4093a260ab74fa9f01cd6307b"
-        },
-        {
-          "path": "contributions/kernel-1118-to-1124/attachments/tb_flash_overlay.ko.patch",
-          "sha256": "e24496802ece9187ea09932580bbe08d5dd0ce26ab96763f017c9a998566a855"
-        },
-        {
-          "path": "contributions/kernel-1118-to-1124/attachments/tb_focus_manual.ko.patch",
-          "sha256": "cb49fbbe6999d2c4aea6fd09ee41fa0a71d3ec6035192785f0f1c283ecc5b220"
-        },
-        {
-          "path": "contributions/kernel-1118-to-1124/attachments/tb_front_registration.ko.patch",
-          "sha256": "6ae2ab339ba85303e4de8686602b5124694eeb497b2f2209f8b988743215b80f"
-        },
-        {
-          "path": "contributions/kernel-1118-to-1124/attachments/tb_macro_registration.ko.patch",
-          "sha256": "b361481c724cf3609abf6098093085f0680b84e7ce452f4909508efc09c9d8e1"
-        },
-        {
           "path": "contributions/kernel-1118-to-1124/attachments/upgrade.py",
-          "sha256": "ba9a57543f448e11552fe5bc03585a58fc6483a3681e4273095fa853a5cb4dc3"
-        },
-        {
-          "path": "contributions/kernel-1118-to-1124/attachments/v4l2-flash-led-class.ko.patch",
-          "sha256": "b994e50ec51d78d05681a81a0458a489c59807aef36ea48f6710005c8f757136"
+          "sha256": "94b5e9ef0b7809b36285a660bfa95ff472bb8a248c7acdbbbec3b6e4578eae73"
         }
       ]
     },

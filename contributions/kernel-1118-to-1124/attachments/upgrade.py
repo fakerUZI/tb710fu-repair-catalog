@@ -125,15 +125,16 @@ def companion_files(work, profile):
         directory.mkdir(parents=True, exist_ok=True)
         directories[parent] = directory
         candidate = directory / absolute.name
-        if "asset" in row:
-            shutil.copyfile(ASSETS / row["asset"], candidate)
+        if "text" in row:
+            candidate.write_bytes(row["text"].encode())
         else:
             source = old_dir / absolute.name
             require(source.is_file() and not source.is_symlink(), "缺少 1118 配套文件：" + str(source))
             shutil.copyfile(source, candidate)
             if "patch" in row:
                 require(digest(candidate) == row["source_sha"], "1118 模块版本不同：" + source.name)
-                patch(directory, row["patch"])
+                subprocess.run(["git", "apply", "--binary", "-"], cwd=directory,
+                               input=row["patch"].encode("ascii"), check=True)
         require(digest(candidate) == row["sha"], "1124 配套文件校验失败：" + candidate.name)
         candidate.chmod(row["mode"])
     for i, row in enumerate(profile["shared"]):

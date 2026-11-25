@@ -117,7 +117,7 @@
       "group": "camera-test",
       "sha": "385724b709d651f97bd0dc1c04771b25e24d46dc4010963b2649838cc67fb2f6",
       "mode": 420,
-      "patch": "ov13b10-rggb-UNTESTED.ko.patch",
+      "patch": "diff --git a/ov13b10-rggb-UNTESTED.ko b/ov13b10-rggb-UNTESTED.ko\nindex ad6d43ac89141e14796eb7908455a4386880879c..d8dfeafd750cf9280fbc0a2b49dd71bcab9baa75 100644\nGIT binary patch\ndelta 46\nzcmV+}0MY;8%mLuc0kFj=0x~p{$0*4Z&99IASPc8|ln?aES?0U9AG1JblQ9+?v%o2!\nEJT9LX4*&oF\n\n",
       "source_sha": "31e6f964d7e63f8f8ced5c99d3725c91e0270d3f99ee34e0ee7b7a5d408062d4"
     },
     {
@@ -125,7 +125,7 @@
       "group": "camera-test",
       "sha": "0701239d50c3b75093efe1ec44ca0231c68949bd9620590652ba7c804bf63854",
       "mode": 420,
-      "patch": "qcom-camss-graph-UNTESTED.ko.patch",
+      "patch": "diff --git a/qcom-camss-graph-UNTESTED.ko b/qcom-camss-graph-UNTESTED.ko\nindex e055745fc8409cb759277300293c18741753f237..feac4db9aa5e3a36d65b95fb04d3d96c2a2942e0 100644\nGIT binary patch\ndelta 77\nzcmV-T0J8tk(Jau>EP#XogaU*Egam{Iga(8Mv<Otz0x~q0R@Mks6Ie;!1NE0UycoQ?\njqB*55gD;uJm*MjP8J9p#0R)HK)(D5()(N-V)(Z4d%he%{\n\n",
       "source_sha": "37732b92c429d4e0d6bab1c20a9575310c5be964f6750a0f02eb6e9d2692d129"
     },
     {
@@ -133,7 +133,7 @@
       "group": "camera-test",
       "sha": "89d3a30e180395018a426980f616b1c5aa8eb540c3d881b0e549b4f223e25193",
       "mode": 420,
-      "patch": "tb_camera_alias.ko.patch",
+      "patch": "diff --git a/tb_camera_alias.ko b/tb_camera_alias.ko\nindex 7b87bd71285a29d67a24ba50609e51797f4737f4..4acbcdd89899d473af2fc891bbe02b7a98f69b40 100644\nGIT binary patch\ndelta 42\nzcmV+_0M-AXH=sAL-U0$LG?U;0@Dvf8tAyLi`uU2}ROt~-dQqpm`friJ9I^zU7q|Qr\nA{r~^~\n\n",
       "source_sha": "8a4cd20557cbc964fa2e09af395f7f61095a46072adfd7d1735d5648be8b8028"
     },
     {
@@ -141,7 +141,7 @@
       "group": "camera-test",
       "sha": "3cfbbee4846b81e99684f797926031185945ab21709c1c8dccf4bc7af5b92eb4",
       "mode": 420,
-      "patch": "tb_camera_overlay.ko.patch",
+      "patch": "diff --git a/tb_camera_overlay.ko b/tb_camera_overlay.ko\nindex d496912e62c51ec7a4ce6206588a6b7d015ebf0e..fd7e8d3fe3a09ab767439bc80e69bfab8dc43deb 100644\nGIT binary patch\ndelta 44\nzcmV+{0Mq}-H^?`zn*#zeG?SeJ^A!KMI<|^-a4TSc7w-sksidCWRcVva1RS%#1PB+q\nChZ8aY\n\n",
       "source_sha": "757ab5b05401f616ba08bdcef46922d449225da3709ebc4d0f8531342b57927f"
     },
     {
@@ -149,7 +149,7 @@
       "group": "camera-test",
       "sha": "24fdb8f80d1cc3372eb618bc37b5b00aa30105e67857a3c34913bdad1f15d55b",
       "mode": 420,
-      "patch": "tb_camss_alias.ko.patch",
+      "patch": "diff --git a/tb_camss_alias.ko b/tb_camss_alias.ko\nindex 98c3beba83f2293292b225d868af62f5adda1580..d4e75c9a35aacd2ec2a14654d035522b8605a6af 100644\nGIT binary patch\ndelta 43\nzcmZoLZ7|)y#>`}7GMR(<gox<Qq$$kCznLC4sO`%5B6(wPn(DgAii|RwSQ^9tMqUq~\n\n",
       "source_sha": "af7de486d4037be2c5eda72cf8f70f58bb6efaeee965bf8d2133a5427e3ec0e0"
     },
     {
@@ -157,7 +157,7 @@
       "group": "camera-test",
       "sha": "437543936a2c2ce159f9eee1f12aaf3db1c7995e0fa8d06d073195d02f55d165",
       "mode": 420,
-      "patch": "tb_focus_manual.ko.patch",
+      "patch": "diff --git a/tb_focus_manual.ko b/tb_focus_manual.ko\nindex 6a827f91b91077c3dabb1d6a3399ffbc7af5fd33..6f545b4dc171ecdd6cdbec7643c83936f96a5b48 100644\nGIT binary patch\ndelta 45\nzcmV+|0Mh@UPoPh*tp)-zG_$V;837a-1Ox+9xy+f_Vdt%NVmztT;U~$H!2%q!_y?#T\nDkhl`>\n\n",
       "source_sha": "57dc644ab8e6f695e8fdcc9000ed116ebb9045881dcf1c32e48ab2afdb22f107"
     },
     {
@@ -165,7 +165,7 @@
       "group": "front-camera",
       "sha": "0db585318cb0aec747591b0ac2f64c312af3e2f0175766db3db9558b1579fbb9",
       "mode": 384,
-      "patch": "gc13a2_raw.ko.patch",
+      "patch": "diff --git a/gc13a2_raw.ko b/gc13a2_raw.ko\nindex 931c4b5ebdf15fb624cbfaf15bf33254f56b05e5..b78081feb8ca30b286fb4f2eb79ceef1f035ccdb 100644\nGIT binary patch\ndelta 46\nzcmV+}0MY;OfCBJ<0<ft~0x~p{t4+le<=8sP8s%iC&QIgakjm<rYrVW;lK~GLv!G7U\nEF(arKasU7T\n\n",
       "source_sha": "0868b73ed8158b98138f8900ccd6b583ae34ab292861092931d3e8b38e773f27"
     },
     {
@@ -173,7 +173,7 @@
       "group": "front-camera",
       "sha": "c783e6654b71b343caba466f29e3ec46bf831b58dda6e2cd67f1f0414d3dc850",
       "mode": 384,
-      "patch": "tb_front_registration.ko.patch",
+      "patch": "diff --git a/tb_front_registration.ko b/tb_front_registration.ko\nindex 5a9d7708469c4ac920b1504c90dec48ba91ac89c..abd566595207e659c6bf5ba8a9f1cedf9182847b 100644\nGIT binary patch\ndelta 44\nzcmV+{0Mq}7G>9~?wgLh&G?Taj@Dy+=1-C7Q@7&_W<%%;SXuGA}aO9Km101v1127h~\nCO%zH1\n\n",
       "source_sha": "ac9d51863a59b4cf48194c9a617953302ee062fbf8e3dbadd41701789781328a"
     },
     {
@@ -181,7 +181,7 @@
       "group": "macro",
       "sha": "eb9338a54bd414e3628673d187d6ddff36659103886e005e6856b519deeba952",
       "mode": 384,
-      "patch": "gc02m1_raw.ko.patch",
+      "patch": "diff --git a/gc02m1_raw.ko b/gc02m1_raw.ko\nindex fdc9b8b4dcd8222d58e450a92af77ed2e0f3a302..57ff396bdb1dfe9e491997d4fba776d928387d46 100644\nGIT binary patch\ndelta 46\nzcmV+}0MY-btO2O30kDZ90x~p{izCGpsESW=A5ZBs8c3jL=#_M7D#tTLld%pQvw$S1\nEF}mIo&;S4c\n\n",
       "source_sha": "b92358c31dda92ee974758b1be64bd40477eec8a8ab5959b5027b60c8b0799e4"
     },
     {
@@ -189,7 +189,7 @@
       "group": "macro",
       "sha": "c6e4584713a42d448572e1190774d178df7f06b306e46d8bbdacc8d1150fa5f9",
       "mode": 384,
-      "patch": "tb_macro_registration.ko.patch",
+      "patch": "diff --git a/tb_macro_registration.ko b/tb_macro_registration.ko\nindex 1aae3e1b3b304d53fb16474d764f0113618d7ef0..e15654b2146df91078a956cff2fb4478310f0ffd 100644\nGIT binary patch\ndelta 44\nzcmV+{0Mq~AGvG6@jRFEPG?R}4@f6E>R*0ZEtS=;az$^4jU9CgYN3fI8101uk127h`\nCEE3xQ\n\n",
       "source_sha": "8a3c9b0abdd3c5ad15d60934a9a021c7ae2e3197e00298f6a59943f17241ffb5"
     },
     {
@@ -203,14 +203,14 @@
       "group": "macro",
       "sha": "88d1afc412f919d5962dbe12b38c85e025fbc03008a28271b1f954042482fe23",
       "mode": 384,
-      "asset": "macro-profile.json"
+      "text": "{\n  \"camss_sha256\": \"0701239d50c3b75093efe1ec44ca0231c68949bd9620590652ba7c804bf63854\",\n  \"clock_hz\": 24000000,\n  \"csi_phy\": 3,\n  \"files\": {\n    \"gc02m1_raw.ko\": \"eb9338a54bd414e3628673d187d6ddff36659103886e005e6856b519deeba952\",\n    \"tb-macro-raw.dtbo\": \"2c2dfd3c4a0faded43dcec0434d56a9c64c4a3b59206bf0a8e7ded351f6cf39c\",\n    \"tb_macro_registration.ko\": \"c6e4584713a42d448572e1190774d178df7f06b306e46d8bbdacc8d1150fa5f9\"\n  },\n  \"focus\": \"fixed macro\",\n  \"lanes\": 1,\n  \"note\": \"OEM mode/register values only; no EEPROM/calibration/identity dump.\",\n  \"raw_size\": [\n    1600,\n    1200\n  ],\n  \"rgb_size\": [\n    1592,\n    1200\n  ],\n  \"sensor\": \"GC02M1\",\n  \"sensor_id\": \"0x02e0\",\n  \"version\": \"7.2.6-tb710fu-20261117\"\n}\n"
     },
     {
       "target": "/opt/tb710fu-flash/7.2.6-tb710fu-20261124/leds-qcom-flash.ko",
       "group": "flash",
       "sha": "13b78f8e4afaa8d8fe941e6d6fa09aa927a19ea67f4c76d8562f789d7f25a3b6",
       "mode": 384,
-      "patch": "leds-qcom-flash.ko.patch",
+      "patch": "diff --git a/leds-qcom-flash.ko b/leds-qcom-flash.ko\nindex c18157e93ff9ec904b8da36e8427fe22a66f4248..f71309610ca6eeeebd9e834cce09127a4a641cdb 100644\nGIT binary patch\ndelta 46\nzcmV+}0MY;Oo&oTl0kAP40x~p{Ga>a9IFcG~3jJ<2OYq#}2clu65FLkSld%;XvsfY+\nEExF|qBLDyZ\n\n",
       "source_sha": "a73d59788553127cdf954d5e040f78302dd2a702443de228daa41a177797f9f5"
     },
     {
@@ -218,7 +218,7 @@
       "group": "flash",
       "sha": "77034234f09c5859ee270f2deb652e6755ad6968b000e2a079ff3484c843665e",
       "mode": 384,
-      "patch": "tb_flash_overlay.ko.patch",
+      "patch": "diff --git a/tb_flash_overlay.ko b/tb_flash_overlay.ko\nindex 55af9cc38a2e9cffd68672ac015ba7aec295435a..3f9c803a984a0f2e590bed6d6176ebaa008b39f7 100644\nGIT binary patch\ndelta 44\nzcmexh^1)<-5;K#L$z&DgGa~Q9qVC8<ul3=U^0-hN?dZKE?xOi*Ll&9M3M>I)0DGAa\nA*8l(j\n\n",
       "source_sha": "a770b3451a7d3490fab042317d3936ca877cbb5a11b723cc6aef5c88b7c80c20"
     },
     {
@@ -226,7 +226,7 @@
       "group": "flash",
       "sha": "06a1b2b45335e9767cde97ae69e79e87b086b4abd4155ff9471689758bd0cbf3",
       "mode": 384,
-      "patch": "v4l2-flash-led-class.ko.patch",
+      "patch": "diff --git a/v4l2-flash-led-class.ko b/v4l2-flash-led-class.ko\nindex 38bff873031ec69ab1162beff5b08930f945abb8..7e63d29448153d41eb3afa957f637089cbaf0efc 100644\nGIT binary patch\ndelta 40\nycmV+@0N4N6XxM15jt~MeG?S1J$P|qOm9zr2oF_P6L5OX$yz)hBHeR!A5$qyk91%$X\n\n",
       "source_sha": "25f450fad2fe215533b75591337154d8b4e5ff977fbc3f983104de9413a7b920"
     },
     {
@@ -240,7 +240,7 @@
       "group": "flash",
       "sha": "0ece831c6baae799c00221e270a989c2d4ff199e7a104d71f87fbc643cd34805",
       "mode": 384,
-      "asset": "flash-profile.json"
+      "text": "{\n  \"config_sha256\": \"94ed6923155155f4d3f8175e9fb1b681a121b8ca07271f9c4f55d2dd110027d3\",\n  \"files\": {\n    \"leds-qcom-flash.ko\": \"13b78f8e4afaa8d8fe941e6d6fa09aa927a19ea67f4c76d8562f789d7f25a3b6\",\n    \"tb-flash.dtbo\": \"0b4491fda57f23d2668062911c0db073c589797e128b2a0b903f3e6757488635\",\n    \"tb_flash_overlay.ko\": \"77034234f09c5859ee270f2deb652e6755ad6968b000e2a079ff3484c843665e\",\n    \"v4l2-flash-led-class.ko\": \"06a1b2b45335e9767cde97ae69e79e87b086b4abd4155ff9471689758bd0cbf3\"\n  },\n  \"oem_limits\": {\n    \"channels\": [\n      1,\n      4\n    ],\n    \"flash_per_channel_ua\": 500000,\n    \"flash_timeout_us\": 500000,\n    \"source_dtb_sha256\": \"21c8a018152152605979a1f135e60ed1b62ef08a6b2271766f40344997de44ff\",\n    \"torch_per_channel_ua\": 100000\n  }\n}\n"
     }
   ],
   "archive": "d11d6793147b23ed979adb0f86edcf8fc930ad6316d2615e9bad739f1bbd488e",
