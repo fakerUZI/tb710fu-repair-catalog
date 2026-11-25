@@ -1,0 +1,14 @@
+--- extension.js
++++ extension.js
+@@ -16,4 +16,9 @@
+             } else {
+-                GLib.idle_add_once(GLib.PRIORITY_DEFAULT_IDLE, () =>
+-                    Main.keyboard.open(Main.layoutManager.focusIndex));
++                GLib.idle_add_once(GLib.PRIORITY_DEFAULT_IDLE, () => {
++                    const policy = Main.extensionManager.lookup('tb-osk-input-policy@tb710fu')?.stateObj;
++                    if (policy?._enabled && policy.openFromPanel)
++                        policy.openFromPanel();
++                    else
++                        Main.keyboard.open(Main.layoutManager.focusIndex);
++                });
+             }

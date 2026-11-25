@@ -785,6 +785,45 @@
           "sha256": "1fd7aff83d5a09cde056827fbc14058a0bdd85bcc84dc60ae647021f8e200f77"
         }
       ]
+    },
+    {
+      "id": "pogo-osk-fold-test",
+      "title": "磁吸键盘背折与顶栏屏幕键盘（测试版）",
+      "description": "展开磁吸键盘时屏蔽自动弹出，驱动上报键盘禁用后恢复触屏输入。点顶栏键盘图标可手动开关。适用 GNOME 50，附件可采集手写笔压力和背折事件。",
+      "device": "TB710FU",
+      "status": "manual-install",
+      "risk": "单独安装，禁止一键安装。需要管理员权限，修改两项 GNOME 扩展，重新登录生效。实物翻折待验证。回退保留基础磁吸识别策略。",
+      "script": {
+        "path": "contributions/pogo-osk-fold-test/script.sh",
+        "sha256": "faa9634ac2e36f6e3c5be7e2a47ecc1a9341d28a540ff954e4a3be7c33b23d02",
+        "requires_admin": true
+      },
+      "attachments": [
+        {
+          "path": "contributions/pogo-osk-fold-test/attachments/README.md",
+          "sha256": "d86b9dfb90fb725cf9c6fd6d62e1a4afb6f12e818187dafe32bd47a63f9ad22b"
+        },
+        {
+          "path": "contributions/pogo-osk-fold-test/attachments/check-input.py",
+          "sha256": "cace651dc3d61cf2dfbb0f6af37401771e4efb27bdf56d5c5a5acfae7f2fda9f"
+        },
+        {
+          "path": "contributions/pogo-osk-fold-test/attachments/fold-policy.patch",
+          "sha256": "3e30c6700c5704a4133ff07eae600586093d4f4fa7a24e32983051c76e37cc1e"
+        },
+        {
+          "path": "contributions/pogo-osk-fold-test/attachments/input-policy.patch",
+          "sha256": "fcd6442ffde66ecfcbaddb27e5d0ed663c9cbc08fb9e8cb6b19ef7fe234d015d"
+        },
+        {
+          "path": "contributions/pogo-osk-fold-test/attachments/install.py",
+          "sha256": "f8cc54d038fce540fef7813abfce420b7e645a885e4afbc486c0c32da0fda656"
+        },
+        {
+          "path": "contributions/pogo-osk-fold-test/attachments/panel-toggle.patch",
+          "sha256": "0b3602513017481b60239e3ee00a29bb86ccf25c890501836adff1d7c5dc7070"
+        }
+      ]
     }
   ]
 }
