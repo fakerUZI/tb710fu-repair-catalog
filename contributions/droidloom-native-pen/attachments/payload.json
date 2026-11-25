@@ -1,0 +1,12 @@
+{
+  "droidloom-wayland": {
+    "parts": 5,
+    "size": 5054472,
+    "sha256": "fb23637ff0b46169926492d7991bf76ff1e41386cf6bba02b091f3c7db47bd71"
+  },
+  "libinputflinger.so": {
+    "parts": 6,
+    "size": 5730464,
+    "sha256": "f319be0b987080756a6d39fc62a11231a82453bc606ea8fa4b42655cf578aecf"
+  }
+}
