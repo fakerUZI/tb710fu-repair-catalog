@@ -14,6 +14,7 @@ import tempfile
 ASSETS = Path(__file__).resolve().parent
 ROOT = Path("/usr/local/libexec/tb710fu-droidloom-native-pen")
 LIVE = Path("/usr/lib/droidloom/runtime/lib64/libinputflinger.so")
+SPEC = Path("/etc/droidloom/cell.json")
 META = Path("/usr/share/droidloom/package.json")
 STOCK = Path("/usr/bin/droidloom-wayland")
 FACTORY_SHA = "a61a37dc57fc5ec2bb7b80366452329ae9576426bcd65cec94d576a36dc3cc3d"
@@ -31,6 +32,14 @@ def digest(file):
 def release_matches():
     info = json.loads(META.read_bytes())
     return (info.get("architecture"), info.get("version"), info.get("release")) == ("aarch64", "0.1.0", 49)
+
+
+def check_guest_binding():
+    spec = json.loads(SPEC.read_bytes())
+    overrides = [entry for entry in spec.get("android_file_overrides", [])
+                 if isinstance(entry, dict) and entry.get("target") == "/system/lib64/libinputflinger.so"]
+    if len(overrides) != 1 or Path(overrides[0].get("source", "")).resolve() != LIVE:
+        raise ValueError("当前容器使用不同的安卓输入库。")
 
 
 def unpack(folder, name, spec):
@@ -175,6 +184,8 @@ def main(action):
     if (action != "rollback" and not release_matches()) or LIVE.resolve() != LIVE or Path("/usr/lib/droidloom/current/lib64/libinputflinger.so").resolve() != LIVE:
         raise ValueError("此原生笔版本仅适用于标准 Droidloom 0.1.0 release 49。")
     release = json.loads((ASSETS / "payload.json").read_bytes())
+    if action != "rollback":
+        check_guest_binding()
     if action == "check":
         current = digest(LIVE)
         if current not in (FACTORY_SHA, release[GUEST]["sha256"]):
