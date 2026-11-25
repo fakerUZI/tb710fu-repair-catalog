@@ -1,0 +1,6 @@
+Name: TB710FU local desktop face verification
+Default: yes
+Priority: 260
+Auth-Type: Primary
+Auth:
+	[success=end default=ignore] /usr/local/lib/tb710fu-face-unlock/pam-face-password.so
