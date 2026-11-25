@@ -588,11 +588,30 @@
       ]
     },
     {
+      "id": "pogo-osk",
+      "title": "磁吸键盘连接时收起屏幕键盘",
+      "device": "TB710FU",
+      "status": "manual-install",
+      "description": "在 GNOME 中识别联想 Yoga Tab 磁吸键盘。吸附后按现有外接键盘策略收起屏幕键盘，拔下最后一把实体键盘后恢复触摸输入。",
+      "risk": "需要管理员权限，重新登录 GNOME 后生效，支持回退。",
+      "script": {
+        "path": "contributions/pogo-osk/script.sh",
+        "sha256": "0cba8f863b8593f52b6bcdc878a19fdb05b41111bdbc2f698eee82c746fa9415",
+        "requires_admin": true
+      },
+      "attachments": [
+        {
+          "path": "contributions/pogo-osk/attachments/input-policy.patch",
+          "sha256": "fcd6442ffde66ecfcbaddb27e5d0ed663c9cbc08fb9e8cb6b19ef7fe234d015d"
+        }
+      ]
+    },
+    {
       "id": "droidloom-native-pen",
       "title": "Droidloom 49 安卓原生手写笔与压感",
       "device": "TB710FU",
       "status": "manual-install",
-      "description": "适用于 TB710FU Ubuntu ARM64 GNOME Wayland 和 Droidloom 0.1.0 release 49。安卓笔尖使用手写笔类型，手指保持触控类型。适合启用仅手写笔模式或压感笔刷的笔记应用。安装前先确认 Ubuntu 能识别笔。",
+      "description": "适用于 TB710FU Ubuntu ARM64 GNOME Wayland 和 Droidloom 0.1.0 release 49。安卓笔尖使用手写笔类型，手指保持触控类型。适合启用仅手写笔模式或压感笔刷的笔记应用。安装前先确认 Ubuntu 能识别笔。 单内屏的安卓刷新率随 GNOME 切换，支持 60、120、144 Hz。",
       "risk": "单独安装，需要管理员权限。会备份并替换安卓输入库，且仅为当前桌面账号配置窗口程序。已保存安卓内容后运行 droidloomctl restart 生效。支持回退。",
       "script": {
         "path": "contributions/droidloom-native-pen/script.sh",
@@ -602,31 +621,31 @@
       "attachments": [
         {
           "path": "contributions/droidloom-native-pen/attachments/README.md",
-          "sha256": "728c42550bb1075c55ea53fd66f99d24d2107a4f2444e3c2e0a5680012cf6b98"
+          "sha256": "25a749ecfcf031a4ca99136b225c7299925cc705de9b767854f177f3521a0268"
         },
         {
           "path": "contributions/droidloom-native-pen/attachments/droidloom-wayland.gz.001",
-          "sha256": "7138a87dbc15f496f1777b7f726b5913c488cb0f7c4cedd01411720ae9a923d9"
+          "sha256": "0c1c65337a31a3190269ed620c2dcfd21b5ed0968f2f9091e11a85ca89e9d2ad"
         },
         {
           "path": "contributions/droidloom-native-pen/attachments/droidloom-wayland.gz.002",
-          "sha256": "fdad82e014a7badcba4b0113c5c9d1e51fd730f641bc1aa0fdf50ceeb80cfb97"
+          "sha256": "d53dcad2c2a6302df0b258815e4fcd5a68475344e636baed3d1cbfabf9b41982"
         },
         {
           "path": "contributions/droidloom-native-pen/attachments/droidloom-wayland.gz.003",
-          "sha256": "fc377b4c91be9f2be632b362f8d0831901faa649b0a29e58db66f55a1e5d6983"
+          "sha256": "69d13ee831b8900fb238ceecd3dae90ee48698326da6ea56ea24d6c0515cf7ae"
         },
         {
           "path": "contributions/droidloom-native-pen/attachments/droidloom-wayland.gz.004",
-          "sha256": "63c8400b3e0e5e2e7fbc5bc2c5ecb292a019d578df53cd4c23ae181e723fa532"
+          "sha256": "d77b1c155a5ae07f3930878247f687a78646099290e583c22e53e7552d6c5a39"
         },
         {
           "path": "contributions/droidloom-native-pen/attachments/droidloom-wayland.gz.005",
-          "sha256": "a94c3a24a25fa088fdf21c9f8cbe98698acf946af55c0ad2327e788fb56ceae2"
+          "sha256": "5378d4fd9d48ea269cb026464f0cacdbd9acab585bbf9ac7ec5d13b2cc6b315a"
         },
         {
           "path": "contributions/droidloom-native-pen/attachments/install.py",
-          "sha256": "b1da3a0906995f2dc964ecbc92020dafdf9f87992ba12dbcbee51af5a4728c9a"
+          "sha256": "ba4a2fa6e8c63e1d773604ec0a119fb3df3bf7e42242cf0b2f4114f112cd7cba"
         },
         {
           "path": "contributions/droidloom-native-pen/attachments/libinputflinger.so.gz.001",
@@ -654,7 +673,7 @@
         },
         {
           "path": "contributions/droidloom-native-pen/attachments/payload.json",
-          "sha256": "1b85c728e8bb6dc726354b7ade8a89782c02552e5575f85e78cb4c161ae1c512"
+          "sha256": "0bb5a4ab56bae5879ccd85db088f31c9e1c344dc8527a7ee6c2deb843a4d90c5"
         }
       ]
     },

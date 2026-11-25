@@ -29,3 +29,5 @@ git apply /path/to/droidloom-42-presenter.patch
 在应用两份补丁的源码根目录可运行 `cargo test --locked -p droidloom-wayland -p droidloom-input-protocol -p droidloom-android-policy`。这些测试覆盖笔、手指共存、轻重压力、取消和拒收恢复。Android 系统库需使用同一 release 的上游 AOSP/Soong 构建流程生成，随后核对安装到容器的库内含 `DROIDLOOM_STYLUS_WIRE=1;`。
 
 实机验收时，在安卓笔记软件关闭手指书写并选择压感笔刷。用笔轻写、重写、抬笔后再落笔，再用手指滑动。分别记录刚切入应用后的第一笔，以及连续书写时笔尖与墨迹的距离。切入延迟和持续跟笔延迟应分别测量。
+
+单屏刷新率改动在上述两份 release 49 补丁之后应用 `droidloom-49-single-output-refresh.patch`，仅需重新构建并 strip 宿主端 `droidloom-wayland`。Android 输入库沿用原生笔版本。
