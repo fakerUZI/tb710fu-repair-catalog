@@ -602,7 +602,7 @@
       "attachments": [
         {
           "path": "contributions/pogo-osk/attachments/input-policy.patch",
-          "sha256": "90cac15a53a1a015cfbba2eb3231063e39539bf9979e870338aeaa80aef8d25a"
+          "sha256": "fcd6442ffde66ecfcbaddb27e5d0ed663c9cbc08fb9e8cb6b19ef7fe234d015d"
         }
       ]
     },
@@ -611,7 +611,7 @@
       "title": "Droidloom 49 安卓原生手写笔与压感",
       "device": "TB710FU",
       "status": "manual-install",
-      "description": "适用于 TB710FU Ubuntu ARM64 GNOME Wayland 和 Droidloom 0.1.0 release 49。安卓笔尖使用手写笔类型，手指保持触控类型。适合启用仅手写笔模式或压感笔刷的笔记应用。安装前先确认 Ubuntu 能识别笔。",
+      "description": "适用于 TB710FU Ubuntu ARM64 GNOME Wayland 和 Droidloom 0.1.0 release 49。安卓笔尖使用手写笔类型，手指保持触控类型。适合启用仅手写笔模式或压感笔刷的笔记应用。安装前先确认 Ubuntu 能识别笔。 单内屏的安卓刷新率随 GNOME 切换，支持 60、120、144 Hz。",
       "risk": "单独安装，需要管理员权限。会备份并替换安卓输入库，且仅为当前桌面账号配置窗口程序。已保存安卓内容后运行 droidloomctl restart 生效。支持回退。",
       "script": {
         "path": "contributions/droidloom-native-pen/script.sh",
@@ -621,7 +621,7 @@
       "attachments": [
         {
           "path": "contributions/droidloom-native-pen/attachments/README.md",
-          "sha256": "71e625e61e14f452dc37fce0a407a221fdf6890ad951778936332d0c36ed17ff"
+          "sha256": "25a749ecfcf031a4ca99136b225c7299925cc705de9b767854f177f3521a0268"
         },
         {
           "path": "contributions/droidloom-native-pen/attachments/droidloom-wayland.gz.001",

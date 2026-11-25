@@ -1,6 +1,6 @@
 --- extension.js
 +++ extension.js
-@@ -26,6 +26,13 @@
+@@ -26,5 +26,12 @@
 -function isExternalTypingKeyboard(bus, sysfsTarget, keyBits) {
 -    if (![3, 5].includes(Number.parseInt(bus, 16)) ||
 -        sysfsTarget.includes('/devices/virtual/input/'))
@@ -16,12 +16,39 @@
          return false;
 +    }
      // These typing keys all belong to the final 64-bit capability word.
-     // Concatenating sysfs words loses zero padding and misclassifies pens.
-@@ -183,5 +190,6 @@
-             };
+@@ -78,3 +85,6 @@
+         });
+-        this._deviceId = global.backend.connect('last-device-changed', (_backend, device) => {
++        // GNOME can replace keyboardActor on either signal, even without a settings change.
++        this._touchModeId = this._seat.connect_after('notify::touch-mode', () => this._wrapKeyboard());
++        this._deviceId = global.backend.connect_after('last-device-changed', (_backend, device) => {
++            this._wrapKeyboard();
+             const type = device.get_device_type();
+@@ -184,3 +194,4 @@
              return isExternalTypingKeyboard(read(`${base}/device/id/bustype`),
 -                GLib.file_read_link(base), read(`${base}/device/capabilities/key`));
 +                GLib.file_read_link(base), read(`${base}/device/capabilities/key`),
 +                field => read(`${base}/device/${field}`).trim());
          } catch (_error) {
-             return false; // Hot-unplug or a virtual/master device with no node.
+@@ -194,6 +205,11 @@
+             .filter(device => this._physicalTypingDevice(device)).length;
+-        if (this.hasPhysicalKeyboard() && (oldCount === 0 || this._manager.visible))
+-            this._manager.close();
+-        else if (oldCount > 0 && !this.hasPhysicalKeyboard())
++        if (this.hasPhysicalKeyboard()) {
++            const keyboard = this._manager.keyboardActor;
++            if (oldCount === 0 || this._manager.visible || keyboard?._keyboardRequested)
++                keyboard?.close(true);
++            this._manager._bottomDragGesture.enabled = false;
++        } else if (oldCount > 0) {
++            this._manager._bottomDragGesture.enabled = !this._manager.visible;
+             this._mode = 'touch';
++        }
+     }
+@@ -301,2 +317,6 @@
+             global.backend.disconnect(this._deviceId);
++        if (this._touchModeId)
++            this._seat.disconnect(this._touchModeId);
++        if (this.hasPhysicalKeyboard())
++            this._manager._bottomDragGesture.enabled = !this._manager.visible;
+         if (this._deviceAddedId)

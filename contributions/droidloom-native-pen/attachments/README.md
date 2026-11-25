@@ -8,6 +8,6 @@
 
 `TB710FU_FIX_ACTION=check` 只读核对适用条件。`TB710FU_FIX_ACTION=rollback` 恢复备份的输入库并移除本版的用户启动覆盖，重启容器后生效。后续升级 Droidloom 时，启动器检测到版本改变会使用系统程序。其他 Droidloom 版本的触控兼容范围见原测试条目。
 
-本版基于 Droidloom 0.1.0 release 49。配套的宿主端与安卓输入库源码补丁、上游提交及许可证可在[修复仓库的源码目录](https://github.com/fakerUZI/tb710fu-repair-catalog/tree/main/contributions/droidloom-pen-compat/source)查看。笔刷对压力的响应和实际跟笔延迟仍待实体笔实测。
+本版基于 Droidloom 0.1.0 release 49。配套的宿主端与安卓输入库源码补丁、上游提交及许可证可在[修复仓库的源码目录](https://github.com/fakerUZI/tb710fu-repair-catalog/tree/main/contributions/droidloom-pen-compat/source)查看。已有用户反馈笔记软件可响应笔压，本次刷新率更新的笔尖到墨迹延迟仍待实体笔测量。
 
-单屏平板启动 Droidloom 时，窗口程序使用该输出当前的刷新率初始化安卓内置显示器。多屏沿用原有的窗口所在屏幕选择逻辑。已有 release 49 原生笔修复可直接应用此版本，重启 Droidloom 后载入新的窗口程序。
+单屏平板启动 Droidloom 时，窗口程序使用内屏当前的刷新率初始化安卓内置显示器。运行中可在 GNOME 切换 60、120 或 144 Hz，安卓随内屏切换，无需重启容器。多屏沿用原有的窗口所在屏幕选择逻辑。已有 release 49 原生笔修复可直接应用此版本，重启 Droidloom 后载入新的窗口程序。
