@@ -87,3 +87,5 @@ Ubuntu 电源菜单缺少「挂起」时，可更新仓库并运行[恢复系统
 ## 安卓手写笔测试版归档
 
 Droidloom 49 请在修复助手中单独安装「Droidloom 49 安卓原生手写笔与压感」。旧版将笔尖模拟为手指，已从当前清单下架。仍在使用 42–48 或需要撤销旧测试版的用户，可以从[固定版本的安装脚本与全部附件](https://github.com/fakerUZI/tb710fu-repair-catalog/tree/913abacc413c12e35c085d3589923a1c0e469369/contributions/droidloom-pen-compat)取回旧包。在该条目目录内，以原桌面账号运行 `TB710FU_ATTACHMENTS_DIR="$PWD/attachments" TB710FU_FIX_ACTION=rollback bash script.sh`，保存安卓工作后重启 Droidloom。清理下载缓存不会撤销已安装的修复。
+
+Droidloom 的安卓应用无法取得摄像头或录音全为静音时，可在修复助手运行[安卓容器摄像头与麦克风修复](contributions/droidloom-camera-mic/attachments/README.md)。三路摄像头预览和内置麦克风已通过真机测试，原生 JPEG 拍照补丁随条目提供。

@@ -796,6 +796,49 @@
       ]
     },
     {
+      "id": "droidloom-camera-mic",
+      "title": "安卓容器摄像头与麦克风修复",
+      "device": "TB710FU",
+      "status": "community-review",
+      "description": "适用于 Droidloom 安卓容器，可在容器更新后重新安装。后置主摄、前摄、后置微距预览和内置麦克风录音已在 Droidloom 49 真机验证。随附 Camera2 原生 JPEG 拍照补丁，应用内 JPEG 成片待实机验证。",
+      "risk": "使用助手的系统管理员授权。安装前请保存安卓应用里的工作，正在运行的容器会自动重启。首次安装备份原配置，可回退。",
+      "script": {
+        "path": "contributions/droidloom-camera-mic/script.sh",
+        "sha256": "f41cd9039e0f7c181f83ed30911eb236d7acffcbd9d498b165a4741a2c2dbd47",
+        "requires_admin": true
+      },
+      "attachments": [
+        {
+          "path": "contributions/droidloom-camera-mic/attachments/README.md",
+          "sha256": "dd760c27bff594c4b48742433a6bfb378ca89a373e0cd0a876cf695cef054be8"
+        },
+        {
+          "path": "contributions/droidloom-camera-mic/attachments/android.hardware.camera.provider-service.droidloom",
+          "sha256": "eef469cc57982a2b2d1ba67ddf084913d6c472e6a3d95cc13842f0a9ebff18bd"
+        },
+        {
+          "path": "contributions/droidloom-camera-mic/attachments/camera.py",
+          "sha256": "3c1e047e0bdd24578d4365b33e1a39750168e5dc4301810f9048ece9a17f0273"
+        },
+        {
+          "path": "contributions/droidloom-camera-mic/attachments/droidloom-audio",
+          "sha256": "65815152cbec3f66eb701fb1362064ed235d13359623b7807560f72799b5ab92"
+        },
+        {
+          "path": "contributions/droidloom-camera-mic/attachments/install.py",
+          "sha256": "db38ebfba441f5f48b41157db72d156ef472ac714edf594cebd1f8cbcbb8520c"
+        },
+        {
+          "path": "contributions/droidloom-camera-mic/attachments/install.sh",
+          "sha256": "4b3bace6812d04abcbf24b4fe1b202ae107f556acef6223feb4fec4af7a413f6"
+        },
+        {
+          "path": "contributions/droidloom-camera-mic/attachments/libdroidloom_minigbm.dylib.so",
+          "sha256": "53589e6350c4cabcc6b23558a3e01ee406a772e67500cae5c5597d9a9889fab4"
+        }
+      ]
+    },
+    {
       "id": "droidloom-upgrade",
       "title": "Droidloom 升级到最新版（测试版）",
       "device": "TB710FU",

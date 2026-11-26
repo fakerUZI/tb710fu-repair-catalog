@@ -1,0 +1,84 @@
+--- a/graphics/droidloom-minigbm/src/lib.rs
++++ b/graphics/droidloom-minigbm/src/lib.rs
+@@ -141,6 +141,16 @@
+     fd_count: usize,
+     ints: &[i32],
+ ) -> Result<MinigbmMetadata, MinigbmError> {
++    parse_handle(fd_count, ints, false)
++}
++
++/// Accept a bounded, single-row Android JPEG BLOB in addition to ordinary images.
++/// Android stores its byte capacity in the width of a linear R8 allocation.
++pub fn parse_camera_handle(fd_count: usize, ints: &[i32]) -> Result<MinigbmMetadata, MinigbmError> {
++    parse_handle(fd_count, ints, true)
++}
++
++fn parse_handle(fd_count: usize, ints: &[i32], camera: bool) -> Result<MinigbmMetadata, MinigbmError> {
+     if fd_count == 0 || fd_count > CROS_GRALLOC_MAX_FDS {
+         return Err(MinigbmError::DescriptorCount(fd_count));
+     }
+@@ -222,7 +232,15 @@
+         },
+         planes,
+     };
+-    buffer.validate()?;
++    let camera_blob = camera && words.u32(DROID_FORMAT_WORD)? == 0x21
++        && buffer.format.fourcc == u32::from_le_bytes(*b"R8  ")
++        && buffer.format.modifier == 0 && buffer.height == 1
++        && buffer.width > 0 && buffer.planes.len() == 1
++        && buffer.planes[0].offset == 0 && buffer.planes[0].stride >= buffer.width
++        && words.u32(SIZES_WORD)? >= buffer.width && total_size <= 64 * 1024 * 1024;
++    if !camera_blob {
++        buffer.validate()?;
++    }
+ 
+     Ok(MinigbmMetadata {
+         buffer,
+@@ -296,6 +314,27 @@
+     }
+ 
+     #[test]
++    fn large_android_jpeg_is_a_bounded_byte_array() {
++        let mut words = valid_words(1, 0);
++        let bytes = 384 * 1024;
++        words[WIDTH_WORD] = bytes;
++        words[HEIGHT_WORD] = 1;
++        words[STRIDES_WORD] = bytes;
++        words[SIZES_WORD] = bytes;
++        words[TOTAL_SIZE_WORD] = bytes;
++        words[FORMAT_WORD] = u32::from_le_bytes(*b"R8  ");
++        words[DROID_FORMAT_WORD] = 0x21;
++        let encoded = split(&words, 1);
++        assert!(parse_minigbm_handle(1, &encoded).is_err());
++        assert_eq!(parse_camera_handle(1, &encoded).unwrap().buffer.width, bytes);
++        words[SIZES_WORD] -= 1;
++        assert!(parse_camera_handle(1, &split(&words, 1)).is_err());
++        words[SIZES_WORD] = bytes;
++        words[HEIGHT_WORD] = 2;
++        assert!(parse_camera_handle(1, &split(&words, 1)).is_err());
++    }
++
++    #[test]
+     fn parses_one_plane_handle_after_binder_fd_split() {
+         let words = valid_words(1, 0);
+         let parsed = parse_minigbm_handle(1, &split(&words, 1)).unwrap();
+--- a/android/camera/droidloom-camera-service/src/main.rs
++++ b/android/camera/droidloom-camera-service/src/main.rs
+@@ -74,7 +74,7 @@
+ use droidloom_camera::tags;
+ use droidloom_denial_ipc::{IpcError, SeqPacket};
+ use droidloom_device_protocol::{Camera, Facing, MAX_RECORD, Message};
+-use droidloom_minigbm::{MinigbmMetadata, parse_minigbm_handle};
++use droidloom_minigbm::{MinigbmMetadata, parse_camera_handle};
+ 
+ const SERVICE_NAME: &str = "android.hardware.camera.provider.ICameraProvider/internal/0";
+ /// The supervisor binds the broker's camera socket here.
+@@ -236,7 +236,7 @@
+             .iter()
+             .map(|fd| fd.as_ref().try_clone())
+             .collect::<io::Result<Vec<_>>>()?;
+-        let layout = parse_minigbm_handle(fds.len(), &handle.ints).ok();
++        let layout = parse_camera_handle(fds.len(), &handle.ints).ok();
+         Ok(Self { fds, layout })
+     }
+ 
