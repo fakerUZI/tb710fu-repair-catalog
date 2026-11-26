@@ -1095,6 +1095,53 @@
           "sha256": "876f12b5290f441f3ac7a6d797f843cfa8e37b9a840cfa3849802ed655172cec"
         }
       ]
+    },
+    {
+      "id": "osk-right-alt-voice",
+      "title": "屏幕键盘右 Alt 语音输入（WowType）",
+      "device": "TB710FU",
+      "status": "manual-install",
+      "description": "在 GNOME 字母键盘的空格右侧增加右 Alt。切到 WowType 中文输入后，长按约 450 毫秒开始离线听写，松手上屏。短按可选中右 Alt 修饰键。已在 TB710FU 上验证实际文本提交与内置麦克风拾音。",
+      "risk": "可选，使用当前桌面账号单独安装。需要 GNOME Shell 50、Fcitx5 和支持离线语音的 WowType，首次缺少模型时需联网下载约 103 MB。适配不同分区布局和启动器。安装后保存工作并重新登录。支持恢复本机原键盘与语音键设置，共享模型保留。",
+      "script": {
+        "path": "contributions/osk-right-alt-voice/script.sh",
+        "sha256": "7b3d4dc8fb8310a16367c0cafb8067062d23c42774c92c29e5b79e6ec6c37c0c",
+        "requires_admin": false
+      },
+      "attachments": [
+        {
+          "path": "contributions/osk-right-alt-voice/attachments/README.md",
+          "sha256": "1bc7c44d4ba823c32713d65a952ba955f0f933caa3d2d64702324243eff6d23d"
+        },
+        {
+          "path": "contributions/osk-right-alt-voice/attachments/extension/arrow-repeat.js",
+          "sha256": "cfa586c1c60595342b083e6779da51e587e6c6e89e19675a0cd6ff33d0e27489"
+        },
+        {
+          "path": "contributions/osk-right-alt-voice/attachments/extension/candidate-row.js",
+          "sha256": "c09290852f5929e6f3e404127fa6d3320876fd0a9d64fac087a110129641e614"
+        },
+        {
+          "path": "contributions/osk-right-alt-voice/attachments/extension/extension.js",
+          "sha256": "aca7a4ebeb45aee2081fa968cbfdbf0680ade7a85f92a6b34b5bc4f6a2f9dc2c"
+        },
+        {
+          "path": "contributions/osk-right-alt-voice/attachments/extension/metadata.json",
+          "sha256": "8c89699610b32ee90c8a6dedbf79fab735cef3db9565169a7e472afbab83dc28"
+        },
+        {
+          "path": "contributions/osk-right-alt-voice/attachments/extension/shift-modifier.js",
+          "sha256": "342efb79fa07b5460d94985fb79a7d7bad2b3c2e302e237ba474888ce52a7e33"
+        },
+        {
+          "path": "contributions/osk-right-alt-voice/attachments/extension/stylesheet.css",
+          "sha256": "cb28e30f8599e9601e20bbae3a25173306526c26b3bba713ad8d6807de393d82"
+        },
+        {
+          "path": "contributions/osk-right-alt-voice/attachments/manage.py",
+          "sha256": "2f1727ef18436a6a0778769eb2ea1b159da84f47e23b7052c02bb8187bd9f2f8"
+        }
+      ]
     }
   ]
 }
