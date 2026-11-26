@@ -7,11 +7,10 @@ fail() { printf '错误：%s\n' "$*" >&2; exit 1; }
 action=${1:-${TB710FU_FIX_ACTION:-apply}}
 [[ $# -le 1 && ( $action == apply || $action == check ) ]] || fail '用法：sudo bash script.sh [apply|check]。回退步骤见条目说明。'
 [[ $EUID == 0 ]] || fail '请在修复助手使用管理员权限，或在桌面用户终端使用 sudo。'
-grep -zFxq 'lenovo,tb710fu' /proc/device-tree/compatible || fail '此条目适用于 TB710FU。'
-# shellcheck source=/dev/null
-. /etc/os-release
-[[ ${ID:-} == ubuntu ]] || fail '此条目适用于 Ubuntu。'
-[[ -f /usr/lib/python3/dist-packages/UpdateManager/Core/UpdateList.py ]] || fail '未找到 Ubuntu 软件更新器。'
+if [[ ! -f /usr/lib/python3/dist-packages/UpdateManager/Core/UpdateList.py ]]; then
+    echo '系统未安装软件更新器，跳过其权限修复。'
+    exit 0
+fi
 
 # The GTK assistant uses pkexec. Terminal invocations use sudo.
 uid=${PKEXEC_UID:-${SUDO_UID:-}}

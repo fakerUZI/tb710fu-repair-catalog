@@ -2,23 +2,18 @@
   "schema_version": 1,
   "issues": [
     {
-      "id": "one-click-upgrade",
-      "title": "一键升级",
+      "id": "ubuntu-setup",
+      "title": "Ubuntu 一次安装（1118 → 1124）",
       "device": "TB710FU",
-      "status": "community-review",
-      "description": "刷新仓库并清理失效缓存。确认所选修复后，先下载和校验脚本与附件，再按顺序执行。本次批量执行中的管理员修复只需要一次系统授权，普通用户修复沿用当前账号。成功项逐条记录，重试时跳过已安装且未更新的项目。",
-      "risk": "需要网络及 TB710FU 修复助手 0.10.15 或更新版本。可逐项取消勾选；各修复的适用条件和回退方式见各条目说明。GNOME 显示相关项目可能短暂熄屏。",
+      "status": "manual-install",
+      "description": "选择要安装的功能。新装 1118 会先确认 A 槽，再升级至 1124；手动重启并登录桌面后，继续安装所选功能。已经运行 1124 的平板直接安装修复。",
+      "risk": "在 1118 上会核对当前固件、GPT 和启动镜像，按需确认 A 槽，并备份和写入 boot_a。保持供电，重启前将原启动镜像另存到电脑。需要修复助手 0.10.20 或更新版本。",
       "script": {
-        "path": "contributions/one-click-upgrade/script.sh",
-        "sha256": "de1957e5ff66bbd909c8d807605f5a0d28629b4edd0b6bde187e5aa761d28b74",
+        "path": "contributions/ubuntu-setup/script.sh",
+        "sha256": "9ce45b7e92331e3814d3bb0fd264a5f778a24da49e2f1818bd228ff772fd6233",
         "requires_admin": false
       },
-      "attachments": [
-        {
-          "path": "contributions/one-click-upgrade/attachments/upgrade.py",
-          "sha256": "abac4e01677695b3f695435e84df89bcf5172b59bef7d6a79295c333389fe26d"
-        }
-      ]
+      "attachments": []
     },
     {
       "id": "bootfix-startup-services",
@@ -39,7 +34,7 @@
         },
         {
           "path": "contributions/bootfix-startup-services/attachments/README.md",
-          "sha256": "bf54d066d5b9d6fd5b3a92ae20861786813164d0122077e6b59ac8d797abe507"
+          "sha256": "361f1ccf61d1c909ce00b40590f99f67ccac95a2c530ea227df23148a384d213"
         }
       ]
     },
@@ -137,7 +132,7 @@
       "risk": "低风险。给当前发起操作的桌面用户增加读取权限。带 ACL 的文件在 stat 中可能显示为 0640，组位显示 ACL 掩码，原有组的有效权限仍按其 ACL 条目计算。文件保留时，ACL 在重启后继续生效。重装或镜像恢复换掉文件后，若症状复现，可再运行脚本。\n\n需要精确回退时，执行前在桌面用户终端运行 `(umask 077; set -C; sudo getfacl -pn /etc/machine-id > \"$HOME/machine-id.acl.before\")`，并将备份留在本机。回退时运行 `sudo setfacl --restore=\"$HOME/machine-id.acl.before\"`，然后用 `sudo bash script.sh check` 确认。回退可能使原来的更新器错误再次出现。",
       "script": {
         "path": "contributions/update-manager-machine-id/script.sh",
-        "sha256": "52fdabbb73de152cdf7459213817a11e4cb20be883a7b9374db6ab5531d4db81",
+        "sha256": "b6f67de039a99ec167d6dc847c33ebb954a3844f6ac000b68d1c1adab45719fd",
         "requires_admin": true
       },
       "attachments": []
@@ -161,7 +156,7 @@
         },
         {
           "path": "contributions/terminal-hostname-fix/attachments/install.py",
-          "sha256": "5fe05f92657dde132190e79a39fcea4227077e93b305bf1ae238ae8e526269e8"
+          "sha256": "49c77adc598df29b3d37f027cdb43cbe822505535a61b98554c151bf179b8a68"
         }
       ]
     },
@@ -340,8 +335,8 @@
       "title": "sudo 与软件安装的人脸验证",
       "device": "TB710FU",
       "status": "manual-install",
-      "description": "先安装「TB710FU 锁屏人脸解锁」并录入。单独安装本项后，在「设置 → 隐私与安全 → 锁屏 → 人脸解锁」选择仅解锁后、仅开机或始终。本机 sudo 和图形软件安装等系统授权可使用前摄，识别时显示提示，失败可输入密码。",
-      "risk": "需要管理员权限及 ARM64 GNOME 设置 50.3-0ubuntu0.2。安装系统 PAM 模块与授权服务，首次安装默认关闭。普通 RGB 前摄没有专门的活体检测。支持只读检查及回退。",
+      "description": "与锁屏人脸解锁一起安装。录入后，从应用列表打开「系统密码人脸验证」选择使用时段。",
+      "risk": "本机 sudo 与图形授权使用 RGB 前摄，识别失败可输入密码。系统级组件由多个账号共用，验证偏好属于各自账号。",
       "script": {
         "path": "contributions/sudo-face-password/script.sh",
         "sha256": "ba0aef4c5d7f815f4086054c37c7d6958b54123dc1e3eec31b1ec59726e5a109",
@@ -350,19 +345,19 @@
       "attachments": [
         {
           "path": "contributions/sudo-face-password/attachments/README.md",
-          "sha256": "7c514e7080a6697573b7d6a879284f6ed0838304306660bd3fb169faddb72f89"
+          "sha256": "3b4148df4a4e387df526553bf5f27ed7ef6f243505b8599ff63be80d7d315d04"
         },
         {
           "path": "contributions/sudo-face-password/attachments/install.py",
-          "sha256": "71ba3f349cc086969b8b7d1a4a1c30543458d52dcd1936a63eeef1282045a888"
+          "sha256": "56081e8b2c1bbf88708cffb6f99b67d870e62e7a33683967010e9eb073d7ffd8"
         },
         {
           "path": "contributions/sudo-face-password/attachments/settings-user.py",
-          "sha256": "5f83581f8895c91b6bb80d6954897716997fbe0aa28a0c419b83af7640a280b8"
+          "sha256": "3ec166b05bbdef574bd621395d3b1b622232b91f75cf6b3d88a39ba180171562"
         },
         {
-          "path": "contributions/sudo-face-password/attachments/tb710fu-face-password_1.0.2_arm64.deb",
-          "sha256": "4133a63ac34d02fec34efe557d410f4b46bef099a6b8caf5813f427e7a76e7fc"
+          "path": "contributions/sudo-face-password/attachments/tb710fu-face-password_1.0.3_arm64.deb",
+          "sha256": "92fc222f47af8af6d90e18ba9ea6f088d0c839cf876c6b9dae3f4fb37d0762c6"
         }
       ]
     },
@@ -381,7 +376,7 @@
       "attachments": [
         {
           "path": "contributions/dp-refresh-profiles/attachments/display-profiles.py",
-          "sha256": "19f1044b71e13a7daec0ab07125a549dc4a71873a719d7aa4be7625ce8a673e6"
+          "sha256": "156d56a080bcdc1bf63542fcb641f014a6d154f14ef24887a9f168db71d88312"
         },
         {
           "path": "contributions/dp-refresh-profiles/attachments/README.md",
@@ -441,41 +436,6 @@
       ]
     },
     {
-      "id": "flash-portable-runtime",
-      "title": "后摄补光灯与手电筒快捷开关修复",
-      "description": "适用于已安装相机和手电筒组件的 TB710FU Ubuntu ARM64（20261117／20261118）。修复不同启动镜像或存储容量造成的补光灯启动失败，并补齐 GNOME 右上角「手电筒」开关。请在平板解锁并登录本机桌面后应用。首次恢复扩展可能需注销并重新登录。",
-      "device": "TB710FU",
-      "status": "community-review",
-      "risk": "需要管理员权限。启动手电筒服务，并为当前桌面账号启用对应 GNOME 扩展。原补光灯脚本备份保留在平板本地。请先关闭相机或手电筒。支持只读检查及启动脚本回退，可在 GNOME「扩展」中单独停用快捷开关。",
-      "script": {
-        "path": "contributions/flash-portable-runtime/script.sh",
-        "sha256": "3cc9705634802e26f96445dd21a09211cacc41ac4c003dc64bc43e39b02bfc9d",
-        "requires_admin": true
-      },
-      "attachments": [
-        {
-          "path": "contributions/flash-portable-runtime/attachments/tb-flash-hardware.py",
-          "sha256": "ac5f04188b619d44f51f62c9b071c50e7cb7d8e1f86090f2a881985dc3302553"
-        },
-        {
-          "path": "contributions/flash-portable-runtime/attachments/README.md",
-          "sha256": "3c568f14ff85335d07e03b19a845f5778dd229cc1a9d9f900b48ee7bfef0bb27"
-        },
-        {
-          "path": "contributions/flash-portable-runtime/attachments/torch-quick-settings.py",
-          "sha256": "b7fc23c3aa9eff1c2b4f0ff2ae631426ca348f314da973cad6065b96e8a58ce0"
-        },
-        {
-          "path": "contributions/flash-portable-runtime/attachments/torch-extension.js",
-          "sha256": "7a5ed13170542a1e64e6f81be3f6009861d188e3f046e7ad4b8f2d9024f1bfd1"
-        },
-        {
-          "path": "contributions/flash-portable-runtime/attachments/torch-metadata.json",
-          "sha256": "c089bf83605a2844e7b11987be03075d412b3ab806cfad7363f60025c53f7d91"
-        }
-      ]
-    },
-    {
       "id": "gnome-login-display",
       "title": "TB710FU GNOME 登录与解锁黑屏恢复（60 / 144 Hz 内屏）",
       "description": "用于开机或注销重登后卡在假锁屏、背光亮但没有画面，以及 60 Hz 下解锁后画面没有恢复。安装后等待下一次 GNOME Wayland 登录，本机会话已解锁时对单独运行的 60 Hz 或 144 Hz 内屏短暂熄屏并恢复一次。普通锁屏解锁时也为 60 Hz 内屏执行一次恢复。外接屏与其他刷新率跳过。",
@@ -503,77 +463,6 @@
       ]
     },
     {
-      "id": "pogo-keyboard-trial",
-      "title": "手写笔、磁吸键盘与触控板（联合测试版）",
-      "device": "TB710FU",
-      "status": "manual-install",
-      "description": "适用小新 Pad Pro GT（TB710FU）的 7.2.6-tb710fu-20261118 内核。安装后键盘服务立即启动，手写笔模块在重启后生效。适配公开的 20261118 原版触控模块及双击唤醒修复版。 已在 20261118 的双击唤醒配置上实测联合安装、重启、笔扫描和键盘串口。",
-      "risk": "需要管理员权限，单独安装。脚本备份并替换匹配的触控模块，不刷写启动分区。修复后仍需使用原装笔和磁吸键盘测试书写、压感、触控板和拔插。",
-      "script": {
-        "path": "contributions/pogo-keyboard-trial/script.sh",
-        "sha256": "5791dd134ac7a2a6fd761d9dd6031f660876b4c52756b60e3b1e8a43a5171fe9",
-        "requires_admin": true
-      },
-      "attachments": [
-        {
-          "path": "contributions/pogo-keyboard-trial/attachments/README.md",
-          "sha256": "aa7ee2f95f341e74d661045603d64d56a22ba3b298efdc8958cda730d842360b"
-        },
-        {
-          "path": "contributions/pogo-keyboard-trial/attachments/build_overlay.py",
-          "sha256": "7f3a8502e5823f1e01b5a77e532bfe0de78d91ffebdbd09fa305331e9d700eff"
-        },
-        {
-          "path": "contributions/pogo-keyboard-trial/attachments/driver/lenovo_keyboard.ko",
-          "sha256": "50988a811e7c994b64ff87e8dad7a3eab6c1715576d95e784543c69aded6e123"
-        },
-        {
-          "path": "contributions/pogo-keyboard-trial/attachments/driver/tb_pogo_overlay.ko",
-          "sha256": "77e4f9920d786c9370bef2552d71557b35b8fa9a3cb408d6d1771ff97c5337cf"
-        },
-        {
-          "path": "contributions/pogo-keyboard-trial/attachments/gnome_shortcuts.py",
-          "sha256": "6e43871ef2ba655643cb6cfe8418957c1843b1bd9e5bf63587aa2dc32b5fa90c"
-        },
-        {
-          "path": "contributions/pogo-keyboard-trial/attachments/pogo-uart-only.dtbo",
-          "sha256": "b911c969543a620275596bd963bbaaabe03683b40430eac1fb26e6721ed84e29"
-        },
-        {
-          "path": "contributions/pogo-keyboard-trial/attachments/pogo-uart-only.dts",
-          "sha256": "8cdfd2a527f51d2d6a3d3ddb5e65441d915f9399ad0a063f5eb4f913d60797f4"
-        },
-        {
-          "path": "contributions/pogo-keyboard-trial/attachments/pogo_install.py",
-          "sha256": "09445d12c2f28ea4e8c7aff2cac699dbebc6a35e7f6ba6866712ad8f218ee3eb"
-        },
-        {
-          "path": "contributions/pogo-keyboard-trial/attachments/pogo_trial.py",
-          "sha256": "928c68af858136dce528354ec15092ba3ddeec135227cfdfca6fc39d4e584123"
-        },
-        {
-          "path": "contributions/pogo-keyboard-trial/attachments/tb710fu-pogo.service",
-          "sha256": "5611eea7dcf033464b57839e4cc723b5af31fb8d074805765c88e2eb88a1c3dd"
-        },
-        {
-          "path": "contributions/pogo-keyboard-trial/attachments/pogo_pen_install.py",
-          "sha256": "efe5c6cd2b65d239c82177f69b143a123eda1b478231036c05d803001d1f492b"
-        },
-        {
-          "path": "contributions/pogo-keyboard-trial/attachments/pen_install.py",
-          "sha256": "41526094cd4f65b0d14a89593b48984c67cdf98064f6d7b329b1e4d6d02277d2"
-        },
-        {
-          "path": "contributions/pogo-keyboard-trial/attachments/driver/pen/stock/nvt_36xxx.ko",
-          "sha256": "bf7824f5e0f0af26817bee28ce6dc2d42e220ce97649353bd340571238399922"
-        },
-        {
-          "path": "contributions/pogo-keyboard-trial/attachments/driver/pen/gestures/nvt_36xxx.ko",
-          "sha256": "c45e19140babff4460833e5b77dc638914558b2c5c7db038154652f5495af34e"
-        }
-      ]
-    },
-    {
       "id": "speaker-playback-headroom",
       "title": "修复内置扬声器播放爆音与无声",
       "description": "适用于 TB710FU 上使用 PipeWire 与 WirePlumber 0.5 的 Ubuntu 桌面，处理 Chrome 等应用经内置扬声器播放时的爆音、断音，以及播放仍在继续但扬声器无声的情况。把内置扬声器的播放缓冲余量设为 960 帧并重新打开音频通道。实机验证环境为 7.2.6-tb710fu-20261118；应用相同配置后，Chrome 连续监测 45 秒，错误计数未增长，扬声器硬件指针持续推进。用户复测最大音量时声音大致正常。安装后可播放原歌曲检查。",
@@ -582,7 +471,7 @@
       "risk": "无需管理员权限。只在当前用户目录添加一条 WirePlumber 扬声器规则。重建音频路由时，播放和录音会短暂中断，内置扬声器缓冲延迟可能增加。应用失败时恢复原配置。支持 TB710FU_FIX_ACTION=check 只读检查和 rollback 移除这条规则。此配置缓解播放卡顿，Q6APM 驱动修复需单独验证。",
       "script": {
         "path": "contributions/speaker-playback-headroom/script.sh",
-        "sha256": "024f023252e686de5065de04f4934b64ae50dfb4f6bf91d71353c2089d58fea1",
+        "sha256": "50cf94e9956bfdc06ae97642bbff2a2745e17455588815ffdfbd8236da11c91b",
         "requires_admin": false
       },
       "attachments": [
@@ -611,7 +500,7 @@
       "attachments": [
         {
           "path": "contributions/wifi-link-speed/attachments/install.py",
-          "sha256": "a88727a8f5cef083a3ebd7e240636600b53d67e9be9a8f400e07bee25f6f18ae"
+          "sha256": "168016f6c443dd9ca6b355f5a25b0d68fe05bfa5154e5c863a3ce7592fa7196a"
         },
         {
           "path": "contributions/wifi-link-speed/attachments/README.md",
@@ -628,7 +517,7 @@
       "risk": "需要管理员权限，涉及主备 GPT 启动属性。仅当成功位尚未设置且设备、引导与 GPT 全部通过校验时写入。操作期间保持供电。原 GPT 备份保存在本机 /var/lib/tb710fu-boot-slot/boot-gpt.before.bin，供离线恢复。支持只读检查和应用。若已停在 Fastboot，应先按随附说明恢复 A 槽启动。",
       "script": {
         "path": "contributions/bootfix-slot-success/script.sh",
-        "sha256": "81344c8b6715f4a5b693ce52d8d17827c32f39a99c71fc8de1f0bcaef73f6ed5",
+        "sha256": "baf659aa304662f7f2cd24e7ce6a623b441f98b5d0dceaec8e99e0b3d3fb23f1",
         "requires_admin": true
       },
       "attachments": [
@@ -648,11 +537,11 @@
     },
     {
       "id": "bootfix-clock-sync",
-      "title": "BOOTFIX 时钟同步修复（单独安装）",
-      "description": "适用于 TB710FU 上仍保留原版 BOOTFIX 校时服务的 Ubuntu ARM64。修复系统只使用单个 HTTP 时间源、长时间未同步或 tb-timesync 服务反复失败的问题。切换到 Ubuntu systemd-timesyncd，提供多个 NTP 缺省地址。随包提供与原版 systemd 共享库匹配的离线 Ubuntu 依赖；其他版本从本机软件源安装匹配版本。支持检查、应用和回退。",
+      "title": "Ubuntu 时钟同步",
+      "description": "恢复 Ubuntu 时间同步。软件源可补齐依赖；已有其他校时软件时保留原服务。",
       "device": "TB710FU",
       "status": "manual-install",
-      "risk": "需要管理员权限，校时可能调整系统时钟。首次网络同步需允许 UDP 123。已运行其他时间服务的系统保留原配置。回退恢复原先校时服务的启用和运行状态；已下载的软件包由 APT 管理。",
+      "risk": "需要管理员权限。原版 systemd 可使用随附的离线包，其他版本通过 Ubuntu 软件源安装。",
       "script": {
         "path": "contributions/bootfix-clock-sync/script.sh",
         "sha256": "315955cbd48c4e9a1ca96ba615c1df31cd1e08ec5080b5e4a2caf88307b5cc21",
@@ -661,11 +550,11 @@
       "attachments": [
         {
           "path": "contributions/bootfix-clock-sync/attachments/install.py",
-          "sha256": "71f28b16ed5277c700c3a28765ba76d3675c01427b0b81fcde3d39e1c7521fe3"
+          "sha256": "5b5161d119054b3effbc218ff281c592cd60890d2a94cd18a8d85c6a0ae7fa8e"
         },
         {
           "path": "contributions/bootfix-clock-sync/attachments/README.md",
-          "sha256": "4dd87e8c76e5bb7175620440a287f6ab00f30be9ef076f25f6bde9ebcb44c39d"
+          "sha256": "d1263fd52650888e5a0e7b4978ba8b2a2b5cc51d685e9bf71e68bc35fffd532e"
         },
         {
           "path": "contributions/bootfix-clock-sync/attachments/systemd-timesyncd_259.5-0ubuntu3.4_arm64.deb",
@@ -763,7 +652,7 @@
         },
         {
           "path": "contributions/droidloom-native-pen/attachments/install.py",
-          "sha256": "ba4a2fa6e8c63e1d773604ec0a119fb3df3bf7e42242cf0b2f4114f112cd7cba"
+          "sha256": "5297cef17b18b45c81167564983089ef4714484380bad5da06f5f138f9c78e39"
         },
         {
           "path": "contributions/droidloom-native-pen/attachments/libinputflinger.so.gz.001",
@@ -911,7 +800,7 @@
         },
         {
           "path": "contributions/droidloom-idle-power/attachments/install.sh",
-          "sha256": "fbdd2e103ec52d150fb34868ec15698185ba82791df55f3a995e95c52dd8ba8d"
+          "sha256": "bcf5589eab41adf0e823f99aa677a0a1f1965c01dbe06b76697772f0cb88f66a"
         },
         {
           "path": "contributions/droidloom-idle-power/attachments/launch",
@@ -948,7 +837,7 @@
       "risk": "需要管理员权限。键盘拔下时暂时屏蔽该键盘的唤醒事件，连接状态由联想 Pogo 驱动提供。下一次挂起生效，撤销步骤见附件。",
       "script": {
         "path": "contributions/pogo-suspend-wake/script.sh",
-        "sha256": "b5e9f1722643595b8bcf4b3b0772ff0975f9432f576fbac3c61d8497e8632ba4",
+        "sha256": "0016f2a7d0f7e4b3d8cc3144453e4776952f7ad11bdaf04f0c5fcd9f77139cf2",
         "requires_admin": true
       },
       "attachments": [
@@ -971,7 +860,7 @@
       "risk": "单独安装，需要管理员权限。会备份并写入 boot_a，保持供电并准备电脑端恢复方式。完成后备份原镜像到电脑并手动重启。支持只读检查和从本机备份回退。",
       "script": {
         "path": "contributions/kernel-1118-to-1124/script.sh",
-        "sha256": "ab06a0cd8b1af5a12028d101a955da310eb1683b70d49d98ff767612c39b3990",
+        "sha256": "2e839e15881ed1ae5adbecd37d018d376af9bb50676e4ea337cac1241ceb3d7f",
         "requires_admin": true
       },
       "attachments": [
@@ -1058,7 +947,7 @@
       "risk": "仅可单独安装。需要管理员权限和网络，写入 boot_a，启动中断可能需要电脑恢复。脚本核对内置 arch、boot_a 与启动镜像并保存原镜像，完成后请将备份另存到电脑，再手动重启。支持只读检查及使用本机备份回退。",
       "script": {
         "path": "contributions/ubuntu-uboot-uefi/script.sh",
-        "sha256": "28987cb9807f647a62921b8843621fb871b76219c2630bae14ff66cc73da16b4",
+        "sha256": "fc11ad4bd026f5f5eb94968f41da1799f6b36cc1e84cbe1d26266e6ba320f111",
         "requires_admin": true
       },
       "attachments": [
@@ -1139,7 +1028,7 @@
         },
         {
           "path": "contributions/osk-right-alt-voice/attachments/manage.py",
-          "sha256": "2f1727ef18436a6a0778769eb2ea1b159da84f47e23b7052c02bb8187bd9f2f8"
+          "sha256": "30678a0fedb2d156a775a1ec3c840bad2339b9ae6559db6146c1395c466316ae"
         }
       ]
     }

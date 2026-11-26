@@ -17,6 +17,7 @@ class BootfixClockSync(unittest.TestCase):
         root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         self.enterContext(patch.object(CLOCK, 'STATE_DIR', root / 'state'))
         self.enterContext(patch.object(CLOCK, 'DROP_IN', root / 'etc/timesyncd.conf.d/60-tb710fu-clock-sync.conf'))
+        self.loaded = self.enterContext(patch.object(CLOCK, 'loaded', return_value=True))
         self.run = self.enterContext(patch.object(CLOCK, 'run'))
         self.installed = self.enterContext(patch.object(CLOCK, 'installed_version', return_value=None))
         self.unit_state = self.enterContext(patch.object(CLOCK, 'unit_state'))
@@ -42,14 +43,19 @@ class BootfixClockSync(unittest.TestCase):
     def test_other_systemd_version_uses_matching_ubuntu_package(self):
         self.installed.return_value = '259.9-0ubuntu0.1'
         with CLOCK.package_source() as name:
-            self.assertEqual(name, 'systemd-timesyncd=259.9-0ubuntu0.1')
+            self.assertEqual(name, 'systemd-timesyncd')
 
-    def test_plan_with_existing_package_upgrade_is_refused(self):
-        self.run.return_value = 'Inst systemd [previous] (next)\nInst systemd-timesyncd (next)'
-        with self.assertRaises(ValueError):
-            CLOCK.install_timesyncd('systemd-timesyncd=next')
-        self.assertEqual(self.run.call_count, 1)
-        self.assertIn('-s', self.calls()[0])
+    def test_apt_can_resolve_dependencies_without_removing_packages(self):
+        CLOCK.install_timesyncd('systemd-timesyncd')
+        args, = self.calls()
+        self.assertIn('--no-remove', args)
+        self.assertNotIn('-s', args)
+
+    def test_absent_legacy_timer_does_not_block_install(self):
+        self.loaded.return_value = False
+        CLOCK.enable_native(None)
+        self.assertFalse(any(CLOCK.OLD_TIMER in cmd for cmd in self.calls()))
+        self.assertIn(('systemctl', 'restart', CLOCK.SERVICE), self.calls())
 
     def test_apply_uses_distro_package_then_starts_native_sync(self):
         self.run.return_value = 'Inst systemd-timesyncd (matched)\nConf systemd-timesyncd (matched)'
@@ -58,9 +64,9 @@ class BootfixClockSync(unittest.TestCase):
         self.assertEqual(CLOCK.DROP_IN.read_bytes(), CLOCK.CONFIG)
         self.assertTrue(CLOCK.load_state()['legacy']['active'])
         calls = self.calls()
-        self.assertEqual(calls[0], ('systemctl', 'disable', '--now', CLOCK.OLD_TIMER))
+        self.assertIn(('systemctl', 'disable', '--now', CLOCK.OLD_TIMER), calls)
         self.assertIn(('systemctl', 'restart', CLOCK.SERVICE), calls)
-        self.assertEqual(sum(cmd[0] == 'apt-get' for cmd in calls), 2)
+        self.assertEqual(sum(cmd[0] == 'apt-get' for cmd in calls), 1)
 
     def test_restart_failure_restores_original_services(self):
         self.installed.return_value = CLOCK.STOCK_VERSION

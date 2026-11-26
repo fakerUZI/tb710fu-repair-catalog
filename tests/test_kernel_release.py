@@ -156,7 +156,7 @@ class UpgradeGate(unittest.TestCase):
         catalog = json.loads((ROOT / 'catalog.json').read_text())
         entries = [x for x in catalog['issues'] if 'kernel' in x['id'] and 'upgrade' in x['id']]
         self.assertEqual(entries, [])
-        self.assertEqual(catalog['issues'][0]['id'], 'one-click-upgrade')
+        self.assertEqual(catalog['issues'][0]['id'], 'ubuntu-setup')
         self.assertFalse((ROOT / 'contributions/snap-kernel-offline-upgrade').exists())
         spec = json.loads((BASE/'bundle-parts.json').read_text())
         self.assertEqual(spec['format'], 2)

@@ -116,11 +116,6 @@ def select(settings, wanted):
 
 
 def environment(settings):
-    model = Path("/sys/firmware/devicetree/base/model")
-    compatible = model.with_name("compatible")
-    if not ((compatible.is_file() and b"lenovo,tb710fu" in compatible.read_bytes().lower().split(b"\0"))
-            or (model.is_file() and b"tb710fu" in model.read_bytes().lower())):
-        raise ValueError("本条目适用于 TB710FU。")
     shell = subprocess.check_output(["gnome-shell", "--version"], text=True)
     if not re.search(r"\b50(?:\.|\s|$)", shell):
         raise ValueError("此键盘扩展适用于 GNOME Shell 50。")

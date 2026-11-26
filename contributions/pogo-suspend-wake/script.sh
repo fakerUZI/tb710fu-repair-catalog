@@ -5,7 +5,6 @@ target=/usr/lib/systemd/system-sleep/tb710fu-pogo-sleep
 dev=/sys/bus/platform/devices/pogo-keyboard
 action=${TB710FU_FIX_ACTION:-check}
 die() { echo "$*" >&2; exit 1; }
-grep -zqx 'lenovo,tb710fu' /proc/device-tree/compatible || die "此修复适用于 TB710FU。"
 case "$action" in
     check|apply|rollback) ;;
     *) die "支持 check、apply 和 rollback。" ;;

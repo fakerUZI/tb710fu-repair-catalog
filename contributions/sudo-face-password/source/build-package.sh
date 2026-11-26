@@ -9,7 +9,8 @@ trap 'rm -rf -- "$stage"' EXIT
 prefix="$stage/usr/local/lib/tb710fu-face-unlock"
 install -d "$prefix" "$stage/DEBIAN" "$stage/var/lib/tb710fu-face-password"
 cc -std=c11 -Wall -Wextra -Werror -O2 -fPIC -shared -Wl,-z,relro,-z,now "$src/pam-face-password.c" -lpam -o "$prefix/pam-face-password.so"
-install -m 0644 "$src/system-password.py" "$src/scan-notice.py" "$prefix/"
+install -m 0644 "$src/system-password.py" "$src/choose-mode.py" "$src/scan-notice.py" "$prefix/"
+install -Dm644 "$src/tb710fu-face-password.desktop" "$stage/usr/share/applications/tb710fu-face-password.desktop"
 install -m 0755 "$src/configure" "$prefix/"
 install -Dm755 "$build/gnome-control-center" "$stage/usr/libexec/tb710fu-face-password/gnome-control-center"
 install -Dm644 "$src/pam-profile" "$stage/usr/share/pam-configs/tb710fu-face-password"
@@ -17,10 +18,10 @@ install -Dm644 "$src/tb710fu-face-password.service" "$stage/usr/lib/systemd/syst
 install -Dm644 "$src/org.tb710fu.face-password.policy" "$stage/usr/share/polkit-1/actions/org.tb710fu.face-password.policy"
 cat > "$stage/DEBIAN/control" <<'CONTROL'
 Package: tb710fu-face-password
-Version: 1.0.2
+Version: 1.0.3
 Architecture: arm64
 Maintainer: TB710FU local adaptations
-Depends: libpam-runtime, libpam0g, python3-gi, pkexec, gnome-control-center (= 1:50.3-0ubuntu0.2), gnome-control-center-data (= 1:50.3-0ubuntu0.2)
+Depends: libpam-runtime, libpam0g, python3-gi, pkexec, gir1.2-gtk-3.0
 Description: Face verification at local GNOME and sudo password prompts for TB710FU
 CONTROL
 cat > "$stage/DEBIAN/postinst" <<'SCRIPT'
@@ -47,4 +48,4 @@ if [ "$1" = remove ] || [ "$1" = deconfigure ]; then
 fi
 SCRIPT
 chmod 755 "$stage/DEBIAN/postinst" "$stage/DEBIAN/prerm"
-dpkg-deb --build --root-owner-group "$stage" "$build/tb710fu-face-password_1.0.2_arm64.deb"
+dpkg-deb --build --root-owner-group "$stage" "$build/tb710fu-face-password_1.0.3_arm64.deb"

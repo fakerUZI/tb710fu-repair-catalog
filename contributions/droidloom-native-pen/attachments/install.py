@@ -188,8 +188,6 @@ def main(action):
         return
     if action not in ("check", "apply", "rollback"):
         raise ValueError("支持 check、apply 和 rollback。")
-    if os.uname().machine != "aarch64" or b"TB710FU" not in Path("/proc/device-tree/model").read_bytes():
-        raise ValueError("该修复适用于 TB710FU ARM64。")
     if (action != "rollback" and not release_matches()) or LIVE.resolve() != LIVE or Path("/usr/lib/droidloom/current/lib64/libinputflinger.so").resolve() != LIVE:
         raise ValueError("此原生笔版本仅适用于标准 Droidloom 0.1.0 release 49。")
     release = json.loads((ASSETS / "payload.json").read_bytes())

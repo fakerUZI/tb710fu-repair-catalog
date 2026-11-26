@@ -10,9 +10,9 @@ import tempfile
 
 HERE = Path(__file__).resolve().parent
 NAME = "tb710fu-face-password"
-VERSION = "1.0.2"
+VERSION = "1.0.3"
 DEB = f"{NAME}_{VERSION}_arm64.deb"
-DIGEST = "4133a63ac34d02fec34efe557d410f4b46bef099a6b8caf5813f427e7a76e7fc"
+DIGEST = "92fc222f47af8af6d90e18ba9ea6f088d0c839cf876c6b9dae3f4fb37d0762c6"
 BACKEND = Path("/usr/local/lib/tb710fu-face-unlock/face-unlock.py")
 FACE_HASH = "7644a4d27a808768335d7feb925df2399e39f1b0197432d4d9f5000a7113edfa"
 
@@ -33,15 +33,8 @@ def pkg(name):
 
 
 def account():
-    session = output("loginctl", "show-seat", "seat0", "--property=ActiveSession", "--value")
-    require(session, "请从平板桌面运行修复助手。")
-    props = dict(line.split("=", 1) for line in output("loginctl", "show-session", session,
-                 "-p", "Active", "-p", "Class", "-p", "Type", "-p", "Seat", "-p", "User").splitlines())
-    uid = int(props["User"])
-    require(props["Active"] == "yes" and props["Class"] == "user" and props["Type"] == "wayland"
-            and props["Seat"] == "seat0" and uid >= 1000, "请从平板的 GNOME 桌面运行。")
-    caller = os.environ.get("PKEXEC_UID") or os.environ.get("SUDO_UID")
-    require(not caller or int(caller) == uid, "当前授权账号与前台账号不同。")
+    uid = int(os.environ.get("PKEXEC_UID") or os.environ.get("SUDO_UID") or 0)
+    require(uid > 0, "请从桌面账号运行修复助手。")
     return pwd.getpwuid(uid)
 
 
@@ -56,21 +49,16 @@ def user_settings(user, action):
 
 def main(action):
     require(os.geteuid() == 0, "请由修复助手申请管理员授权。")
-    user = account()
     current = pkg(NAME)
     if action == "rollback":
         require(not current or current.startswith(("not-installed ", "config-files "))
-                or current.split()[-1] == VERSION, "已安装其他版本，请使用对应版本回退。")
-        user_settings(user, "rollback")
+                or current.split()[-1] in ("1.0.2", VERSION), "已安装其他版本，请使用对应版本回退。")
+        user_settings(account(), "rollback")
         if current and not current.startswith(("not-installed ", "config-files ")):
             subprocess.run(["dpkg", "--remove", NAME], check=True)
         print("已回退系统密码人脸验证。")
         return
     require(action in ("check", "apply"), "不支持的修复操作。")
-    model = Path("/sys/firmware/devicetree/base/model").read_bytes()
-    require(b"TB710FU" in model and output("dpkg", "--print-architecture") == "arm64", "适用于 TB710FU Ubuntu ARM64。")
-    require(all(pkg(p) == "installed 1:50.3-0ubuntu0.2" for p in ("gnome-control-center", "gnome-control-center-data")),
-            "需要 Ubuntu GNOME 设置 50.3-0ubuntu0.2。")
     require(BACKEND.is_file() and hashlib.sha256(BACKEND.read_bytes()).hexdigest() == FACE_HASH,
             "请先从修复助手安装或更新「TB710FU 锁屏人脸解锁」。")
     if current and not current.startswith(("not-installed ", "config-files ")):
@@ -78,9 +66,8 @@ def main(action):
                 "本机已安装更新版本，已停止降级。")
     data = (HERE / DEB).read_bytes()
     require(hashlib.sha256(data).hexdigest() == DIGEST, "人脸验证安装包校验失败。")
-    user_settings(user, "check")
     if action == "check":
-        print("机型、已有识别组件、设置入口和安装包校验通过。")
+        print("已有识别组件和安装包校验通过。")
         return
     with tempfile.TemporaryDirectory(prefix="tb710fu-face-package-") as tmp:
         staged = Path(tmp) / DEB
@@ -92,8 +79,7 @@ def main(action):
             subprocess.run(["dpkg", "--install", staged], check=True)
         require(subprocess.run(["systemctl", "is-active", "--quiet", NAME]).returncode == 0
                 and "/pam-face-password.so" in pam.read_text(), "验证服务或 PAM 配置尚未生效。")
-    user_settings(user, "apply")
-    print("已安装。重新打开「设置 → 隐私与安全 → 锁屏 → 人脸解锁」，选择系统密码的人脸验证模式。")
+    print("已安装。请从应用列表打开「系统密码人脸验证」选择模式。")
 
 
 if __name__ == "__main__":

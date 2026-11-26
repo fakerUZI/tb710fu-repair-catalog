@@ -18,11 +18,6 @@ case $action in
 esac
 
 (( EUID != 0 )) || die "请使用当前 Ubuntu 桌面用户运行这项修复。"
-[[ -r /proc/device-tree/compatible ]] || die "无法读取设备型号。"
-tr '\0' '\n' </proc/device-tree/compatible | grep -Fx 'lenovo,tb710fu' >/dev/null ||
-    die "此修复仅适用于 TB710FU。"
-grep -Eq '^ID=(ubuntu|"ubuntu")$' /etc/os-release || die "此修复适用于 Ubuntu。"
-
 for cmd in wireplumber pw-dump pactl python3 systemctl timeout flock; do
     command -v "$cmd" >/dev/null || die "缺少依赖：$cmd"
 done

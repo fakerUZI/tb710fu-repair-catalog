@@ -13,7 +13,6 @@ case "$action" in
     apply|install|rollback) [ "$(id -u)" = 0 ] || die "请通过修复助手或 sudo 运行。" ;;
     *) die "支持 check、apply 和 rollback。" ;;
 esac
-grep -zqx 'lenovo,tb710fu' /proc/device-tree/compatible || die "不支持的设备。"
 [ -f /etc/droidloom/cell.json ] && [ -x /usr/bin/droidloomctl ] || die "请先安装 DroidLoom。"
 uid=$(python3 -Ic 'import json; print(int(json.load(open("/etc/droidloom/cell.json"))["host_uid"]))')
 [ "$uid" -ge 1000 ] || die "无法识别 DroidLoom 桌面用户。"

@@ -30,11 +30,6 @@ def require(condition, message):
 def native_session():
     uid = os.getuid()
     require(uid != 0, "请以普通 GNOME 桌面用户运行，取消管理员权限。")
-    compatible = Path("/proc/device-tree/compatible").read_bytes().split(b"\0")
-    require(b"lenovo,tb710fu" in compatible, "设备型号与此条目不符。")
-    version = dict(line.split("=", 1) for line in Path("/etc/os-release").read_text().splitlines()
-                   if "=" in line)
-    require(version.get("ID", "").strip('"') == "ubuntu", "此条目适用于 Ubuntu。")
     active = subprocess.check_output(
         ["/usr/bin/loginctl", "show-seat", "seat0", "--property=ActiveSession", "--value"],
         text=True, timeout=4,

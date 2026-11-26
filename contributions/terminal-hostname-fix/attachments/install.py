@@ -128,11 +128,6 @@ def rollback():
 def main(action):
     if action not in {"check", "apply", "rollback"}:
         raise ValueError("操作须为 check、apply 或 rollback")
-    release = dict(line.split("=", 1) for line in Path("/etc/os-release").read_text().splitlines() if "=" in line)
-    model = Path("/sys/firmware/devicetree/base/model")
-    if (os.uname().machine != "aarch64" or not model.is_file() or b"TB710FU" not in model.read_bytes()
-            or release.get("ID", "").strip('"') != "ubuntu"):
-        raise ValueError("适用于 TB710FU Ubuntu ARM64")
     if action == "check":
         name = hostname()
         if needs_repair(read_hosts(), name):
