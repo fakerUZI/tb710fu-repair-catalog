@@ -56,7 +56,7 @@
 
 ## TB710FU 修复助手
 
-Ubuntu 安装包 [下载 0.10.19（.deb）](packages/repair-assistant/tb710fu-repair-assistant_0.10.19_all.deb)。已安装 0.10.14 至 0.10.18 的用户可以点击「更新修复助手」，下载校验后通过系统授权安装。0.10.13 及更早的版本可下载安装包覆盖安装。安装包的 SHA-256 和文件大小见[更新清单](packages/repair-assistant/latest.json)。
+Ubuntu 安装包 [下载 0.10.20（.deb）](packages/repair-assistant/tb710fu-repair-assistant_0.10.20_all.deb)。已安装 0.10.14 至 0.10.19 的用户可以点击「更新修复助手」，下载校验后通过系统授权安装。0.10.13 及更早的版本可下载安装包覆盖安装。安装包的 SHA-256 和文件大小见[更新清单](packages/repair-assistant/latest.json)。
 
 0.10.19 会在启动、更新仓库和运行期间每小时检查官方 Droidloom ARM64 仓库。有新版时，「Droidloom 升级到最新版（测试版）」会出现在「未安装／可更新」，显示当前与目标版本。升级后回到「已安装」。[升级与回退说明](contributions/droidloom-upgrade/attachments/README.md)
 
@@ -67,7 +67,7 @@ Ubuntu 安装包 [下载 0.10.19（.deb）](packages/repair-assistant/tb710fu-re
 
 刷入 BOOTFIX 后遇到 Snap 初始化冲突、anacron 缺少目录，或关机时微距服务报错，可更新仓库并运行「BOOTFIX 安装后服务修复」。
 
-原版 BOOTFIX 能进入 Ubuntu，但 A 槽未标记启动成功时，更新仓库并单独运行[BOOTFIX A 槽启动确认](contributions/bootfix-slot-success/attachments/README.md)。
+一次安装会先核对 1118 的 A 槽。需要单独维护时可运行[BOOTFIX A 槽启动确认](contributions/bootfix-slot-success/attachments/README.md)。
 
 原版 BOOTFIX 时钟长期未同步或旧校时服务反复报错时，可单独运行[BOOTFIX 时钟同步修复](contributions/bootfix-clock-sync/attachments/README.md)。原包内置的修复助手 0.10.11 可通过「应用更新」下载安装包。
 
