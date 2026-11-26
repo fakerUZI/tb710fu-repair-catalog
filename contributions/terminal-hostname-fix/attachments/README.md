@@ -1,6 +1,6 @@
 # 终端 sudo「无法解析主机」修复
 
-适用于 Lenovo TB710FU、Ubuntu 26.04 ARM64。终端执行 `sudo` 时出现
+适用于 Lenovo TB710FU、Ubuntu ARM64。终端执行 `sudo` 时出现
 `sudo: 无法解析主机：<主机名>: 名称或服务未知`，随后仍能正常输密码执行。
 原因是系统主机名没有出现在 `/etc/hosts` 的解析条目里，
 `sudo` 反查主机名失败时就会打印该警告。

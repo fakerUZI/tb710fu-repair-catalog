@@ -1,8 +1,6 @@
 import hashlib
 import importlib.util
-import io
 import json
-from contextlib import redirect_stdout
 from pathlib import Path
 import tempfile
 import unittest
@@ -31,22 +29,6 @@ class Kernel1124Tests(unittest.TestCase):
         for name in profile["parts"]:
             parts.update((ASSETS / name).read_bytes())
         self.assertEqual(parts.hexdigest(), profile["archive"])
-
-    def test_all_firmware_can_differ_and_read_errors_still_stop(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            devices = {name: Path(tmp) / name for name in profile["firmware"]}
-            for name, path in devices.items():
-                path.write_bytes(f"another firmware build: {name}".encode())
-            with redirect_stdout(io.StringIO()) as output:
-                kernel.inspect_firmware(devices, profile["firmware"])
-            self.assertEqual(output.getvalue().strip().split("：")[-1].split("、"), list(devices))
-            matching = {name: kernel.digest(path) for name, path in devices.items()}
-            with redirect_stdout(io.StringIO()) as output:
-                kernel.inspect_firmware(devices, matching)
-            self.assertEqual(output.getvalue(), "")
-            devices["abl_a"].unlink()
-            with self.assertRaisesRegex(ValueError, "无法读取固件分区 abl_a"):
-                kernel.inspect_firmware(devices, profile["firmware"])
 
     def test_unknown_boot_still_stops_before_install(self):
         with patch.object(kernel, "inspect", return_value=(Path("/unused"), "0" * 64)), \

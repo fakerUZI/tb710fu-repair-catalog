@@ -1,6 +1,6 @@
 # BOOTFIX 时钟同步修复
 
-适用于联想 TB710FU 运行 Ubuntu 26.04 ARM64，仍使用原版 BOOTFIX 的 `tb-timesync.timer`，开机后时钟未同步或校时服务反复失败的情况。在修复助手更新仓库，单独下载并运行「BOOTFIX 时钟同步修复」。需要管理员授权，首次同步还需要网络允许访问 NTP 的 UDP 123 端口。
+适用于联想 TB710FU 运行 Ubuntu ARM64，仍使用原版 BOOTFIX 的 `tb-timesync.timer`，开机后时钟未同步或校时服务反复失败的情况。在修复助手更新仓库，单独下载并运行「BOOTFIX 时钟同步修复」。需要管理员授权，首次同步还需要网络允许访问 NTP 的 UDP 123 端口。
 
 修复会恢复 Ubuntu `systemd-timesyncd`，停止旧的单点 HTTP 校时。新服务按系统已有 NTP 配置工作，缺省时在阿里云、Ubuntu 和 Cloudflare 时间源之间重试。原版 BOOTFIX 使用的 `259.5-0ubuntu3.4` 版本配有已校验的 Ubuntu ARM64 软件包，可离线安装。其他版本须能从本机 Ubuntu 软件源取得与 `libsystemd-shared` 匹配的版本。已装有 chrony 等其他时钟服务的设备沿用原服务。
 

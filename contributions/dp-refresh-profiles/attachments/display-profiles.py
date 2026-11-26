@@ -8,7 +8,6 @@ import hashlib
 import json
 import os
 from pathlib import Path
-import platform
 import re
 import stat
 import subprocess
@@ -21,7 +20,6 @@ INTERNAL = "DSI-1"
 INTERFACE = "org.gnome.Mutter.DisplayConfig"
 OBJECT = "/org/gnome/Mutter/DisplayConfig"
 SIGNATURE = "(uua(iiduba(ssa{sv}))a{sv})"
-VERSION = "7.2.6-tb710fu-20261118"
 
 
 def require(condition, message):
@@ -32,13 +30,11 @@ def require(condition, message):
 def native_session():
     uid = os.getuid()
     require(uid != 0, "请以普通 GNOME 桌面用户运行，取消管理员权限。")
-    require(platform.release() == VERSION, "此条目适用于 20261118 TB710FU 内核。")
     compatible = Path("/proc/device-tree/compatible").read_bytes().split(b"\0")
     require(b"lenovo,tb710fu" in compatible, "设备型号与此条目不符。")
     version = dict(line.split("=", 1) for line in Path("/etc/os-release").read_text().splitlines()
                    if "=" in line)
-    require(version.get("ID", "").strip('"') == "ubuntu" and
-            version.get("VERSION_ID", "").strip('"') == "26.04", "此条目适用于 Ubuntu 26.04。")
+    require(version.get("ID", "").strip('"') == "ubuntu", "此条目适用于 Ubuntu。")
     active = subprocess.check_output(
         ["/usr/bin/loginctl", "show-seat", "seat0", "--property=ActiveSession", "--value"],
         text=True, timeout=4,

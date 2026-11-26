@@ -1,6 +1,6 @@
 # 内置扬声器爆音与无声修复
 
-适用于 TB710FU 的 Ubuntu 26.04 桌面用户。需要 PipeWire、WirePlumber 0.5、Python 3、`pactl` 和用户会话的 systemd。修复助手可用当前桌面用户安装，安装前可先暂停播放和录音。
+适用于 TB710FU 的 Ubuntu 桌面用户。需要 PipeWire、WirePlumber 0.5、Python 3、`pactl` 和用户会话的 systemd。修复助手可用当前桌面用户安装，安装前可先暂停播放和录音。
 
 脚本仅为 `alsa_output.platform-sound.pro-output-0` 增加 WirePlumber 播放缓冲余量。实机原值为 256 帧，安装后为 960 帧。在 48 kHz 下，相当于增加约 15 毫秒的缓冲余量。应用会短暂重启 WirePlumber、确认新扬声器节点已加载规则，并恢复原来的左右声道音量和静音状态。
 

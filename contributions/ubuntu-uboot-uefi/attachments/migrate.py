@@ -8,11 +8,15 @@ import json
 import os
 from pathlib import Path
 import platform
-import re
 import struct
 import stat
 import subprocess
+import sys
 import tempfile
+
+# The assistant stages the verified helper beside this script in isolated mode.
+sys.path.append(str(Path(__file__).resolve().parent))
+import boot_targets
 
 ASSETS = Path(__file__).resolve().parent
 FILES = ("boot/Image", "boot/sm8650-lenovo-tb710fu.dtb", "loader/entries/ubuntu.conf",
@@ -39,42 +43,17 @@ def preflight(profile, action):
     require(platform.machine() == "aarch64" and platform.release() == VERSION, "wrong running kernel")
     require(b"lenovo,tb710fu" in Path("/proc/device-tree/compatible").read_bytes().split(b"\0"), "wrong board")
     require("androidboot.slot_suffix=_a" in Path("/proc/cmdline").read_text().split(), "unexpected slot")
+    boot = boot_targets.checked_boot(96 << 20)
+    current = digest(boot)
+    require(current in (profile["previous_boot"], profile["uboot"]), "当前 boot_a 不在本条目适用范围内")
+    if action == "rollback":
+        return boot, current
     require(set(profile["files"]) == set(FILES), "incomplete EFI payload")
     for name, cells in profile["reservations"].items():
         node = Path("/proc/device-tree/reserved-memory") / name
         require((node / "no-map").read_bytes() == b"" and
                 (node / "reg").read_bytes() == struct.pack(">4I", *cells), "handoff reservation changed: " + name)
 
-    rows = []
-    disks = [p for p in Path("/sys/class/block").glob("sd*") if not (p / "partition").exists()]
-    require(len(disks) == 6, "unexpected UFS disk inventory")
-    for disk in disks:
-        dev = Path("/dev") / disk.name
-        require("No problems found." in run("sgdisk", "-v", dev), "invalid GPT on " + disk.name)
-        table = json.loads(run("sfdisk", "--json", dev))["partitiontable"]
-        require(table["label"] == "gpt", "expected GPT on " + disk.name)
-        rows.extend(table["partitions"])
-    devices = {}
-    for label in ("arch", "boot_a", *profile["firmware"]):
-        matches = [p for p in rows if p.get("name") == label]
-        node = (Path("/dev/disk/by-partlabel") / label).resolve(strict=True)
-        require(len(matches) == 1 and str(node) == matches[0]["node"] and stat.S_ISBLK(node.stat().st_mode),
-                "unexpected GPT entry: " + label)
-        devices[label] = node
-    require(run("findmnt", "-n", "-o", "SOURCE,FSTYPE,FSROOT", "/").split()
-            == [str(devices["arch"]), "ext4", "/"], "expected Ubuntu at the root of arch")
-    boot = devices["boot_a"]
-    require(int(run("blockdev", "--getsize64", boot)) == 96 << 20, "boot_a 分区大小不同")
-    current = digest(boot)
-    require(current in (profile["previous_boot"], profile["uboot"]), "当前 boot_a 不在本条目适用范围内")
-    sysboot = Path("/sys/class/block") / boot.name
-    disk = Path("/dev") / run("lsblk", "-ndo", "PKNAME", boot)
-    slot = run("sgdisk", "-i", (sysboot / "partition").read_text().strip(), disk)
-    flags = int(re.search(r"(?m)^Attribute flags: ([0-9a-fA-F]{16})$", slot)[1], 16)
-    require(flags & (1 << 50) and flags & (1 << 54) and not flags & (1 << 55),
-            "GPT does not mark slot A active, successful and bootable")
-    for label, expected in profile["firmware"].items():
-        require(digest(devices[label]) == expected, "firmware changed: " + label)
     require((Path("/lib/modules") / VERSION).is_dir(), "missing Ubuntu kernel modules")
     for name in FILES:
         target = Path("/") / name
@@ -82,8 +61,6 @@ def preflight(profile, action):
         parent = next(p for p in target.parents if p.exists())
         require(run("findmnt", "-no", "TARGET", "-T", target if target.exists() else parent) == "/",
                 "U-Boot cannot read a separate mount: " + name)
-        if action == "rollback":
-            continue
         if current == profile["uboot"] or target.exists():
             require(target.is_file() and digest(target) == profile["files"][name], "existing file differs: " + name)
 
@@ -211,7 +188,7 @@ def migrate(action, profile):
         return
     require(not Path("/sys/firmware/efi").exists(), "当前仍在 EFI 会话，请先重启进入 kShim")
     if action == "check":
-        print("当前 kShim、Ubuntu 内核、固件及 GPT 符合迁移条件。")
+        print("当前 kShim、固件内存保留区、内核及目标分区检查通过。")
         return
     with tempfile.TemporaryDirectory(prefix="tb710fu-uboot-") as folder:
         work = Path(folder)

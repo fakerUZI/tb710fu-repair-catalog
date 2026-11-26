@@ -64,8 +64,8 @@ def preflight():
     models = Path('/proc/device-tree/compatible').read_bytes().split(b'\0')
     release = dict(line.split('=', 1) for line in Path('/etc/os-release').read_text().splitlines() if '=' in line)
     require(b'lenovo,tb710fu' in models and release.get('ID', '').strip('"') == 'ubuntu' and
-            release.get('VERSION_ID', '').strip('"') == '26.04' and run('dpkg', '--print-architecture') == 'arm64',
-            '仅适用于运行 Ubuntu 26.04 ARM64 的 TB710FU。')
+            run('dpkg', '--print-architecture') == 'arm64',
+            '仅适用于运行 Ubuntu ARM64 的 TB710FU。')
     for name, checksum in LEGACY.items():
         path = UNIT_DIR / name
         require(not path.is_symlink() and path.is_file() and hashlib.sha256(path.read_bytes()).hexdigest() == checksum,

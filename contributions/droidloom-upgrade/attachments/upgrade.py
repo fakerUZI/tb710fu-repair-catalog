@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import platform
 import pwd
 import shutil
 import subprocess
@@ -57,12 +58,10 @@ def json_file(path):
 
 
 def host_check():
-    info = Path("/etc/os-release").read_text().splitlines()
+    info = platform.freedesktop_os_release()
     model = Path("/proc/device-tree/model").read_bytes()
-    if os.uname().machine != "aarch64" or b"TB710FU" not in model or "ID=ubuntu" not in info:
+    if os.uname().machine != "aarch64" or b"TB710FU" not in model or info.get("ID") != "ubuntu":
         raise ValueError("该升级仅适用于 TB710FU 的 Ubuntu ARM64。")
-    if 'VERSION_ID="26.04"' not in info:
-        raise ValueError("该升级包适用于 Ubuntu 26.04。")
 
 
 def desktop():

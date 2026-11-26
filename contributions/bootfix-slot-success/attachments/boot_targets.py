@@ -1,0 +1,1 @@
+../../ubuntu-uboot-uefi/attachments/boot_targets.py

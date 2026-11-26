@@ -131,13 +131,13 @@
     {
       "id": "update-manager-machine-id",
       "title": "修复 Ubuntu 软件更新器 machine-id 读取权限",
-      "description": "适用于运行 TB710FU 专用内核的 Ubuntu 26.04 ARM64。软件更新器（update-manager）初始化时读取 /etc/machine-id，桌面用户缺少读取权限时可能出现 PermissionError，导致更新窗口报错。此前曾在 TB710FU 实机上通过为当前用户添加读取 ACL 恢复更新器初始化。\n\n在修复助手以管理员权限运行，或者在平板的桌面用户终端使用 `sudo bash script.sh`。只读检查用 `sudo bash script.sh check`。脚本通过 pkexec 或 sudo 获取发起者 UID，以该用户身份实际打开文件验证。需要 Python 3、util-linux 和 acl；修复后重新打开软件更新器。\n\n只在需要时为该用户添加读取 ACL，保留文件内容、所有者和其他用户的有效权限。脚本无需联网，适用于已初始化、位于可写且支持 ACL 的文件系统上的 /etc/machine-id。遇到其他异常会退出并显示原因。\n\n验证：在 Ubuntu 26.04 ARM64 容器中模拟 TB710FU 内核检查，使用发行版自带的 UpdateManager 复现 PermissionError，并验证修复后更新器可以初始化。sudo、pkexec、重复执行、ACL 回退及容器重启后的读取检查均通过。本次提交的脚本尚未在平板上执行。",
+      "description": "适用于安装 Ubuntu 软件更新器的 TB710FU。软件更新器（update-manager）初始化时读取 /etc/machine-id，桌面用户缺少读取权限时可能出现 PermissionError，导致更新窗口报错。此前曾在 TB710FU 实机上通过为当前用户添加读取 ACL 恢复更新器初始化。\n\n在修复助手以管理员权限运行，或者在平板的桌面用户终端使用 `sudo bash script.sh`。只读检查用 `sudo bash script.sh check`。脚本通过 pkexec 或 sudo 获取发起者 UID，以该用户身份实际打开文件验证。需要 Python 3、util-linux 和 acl；修复后重新打开软件更新器。\n\n只在需要时为该用户添加读取 ACL，保留文件内容、所有者和其他用户的有效权限。脚本无需联网，适用于已初始化、位于可写且支持 ACL 的文件系统上的 /etc/machine-id。遇到其他异常会退出并显示原因。\n\n验证：在 Ubuntu 26.04 ARM64 容器中模拟 TB710FU 内核检查，使用发行版自带的 UpdateManager 复现 PermissionError，并验证修复后更新器可以初始化。sudo、pkexec、重复执行、ACL 回退及容器重启后的读取检查均通过。本次提交的脚本尚未在平板上执行。",
       "device": "TB710FU",
       "status": "community-review",
       "risk": "低风险。给当前发起操作的桌面用户增加读取权限。带 ACL 的文件在 stat 中可能显示为 0640，组位显示 ACL 掩码，原有组的有效权限仍按其 ACL 条目计算。文件保留时，ACL 在重启后继续生效。重装或镜像恢复换掉文件后，若症状复现，可再运行脚本。\n\n需要精确回退时，执行前在桌面用户终端运行 `(umask 077; set -C; sudo getfacl -pn /etc/machine-id > \"$HOME/machine-id.acl.before\")`，并将备份留在本机。回退时运行 `sudo setfacl --restore=\"$HOME/machine-id.acl.before\"`，然后用 `sudo bash script.sh check` 确认。回退可能使原来的更新器错误再次出现。",
       "script": {
         "path": "contributions/update-manager-machine-id/script.sh",
-        "sha256": "f8d6188641e93fcf17670dface7a8fe48027dcaea3ab5dbdfd76fb174f2e817d",
+        "sha256": "52fdabbb73de152cdf7459213817a11e4cb20be883a7b9374db6ab5531d4db81",
         "requires_admin": true
       },
       "attachments": []
@@ -145,7 +145,7 @@
     {
       "id": "terminal-hostname-fix",
       "title": "终端 sudo「无法解析主机」修复",
-      "description": "适用于 TB710FU Ubuntu 26.04 ARM64。终端执行 sudo 时出现「无法解析主机」，且 /etc/hosts 缺少当前主机名映射时，可以使用此条目。应用向 /etc/hosts 追加一行 127.0.1.1 和当前主机名，并保留现有内容、所有者和权限。已有相同映射时无需修复；已有其他地址时会停止。\n\n在修复助手中以管理员权限应用。Bash 入口默认执行 check，使用 TB710FU_FIX_ACTION=apply 进行修复，或使用 TB710FU_FIX_ACTION=rollback 回退。应用后重新运行 sudo，并用 getent hosts 查询当前主机名。应用、重复运行和回退已在隔离的文件样例中验证。",
+      "description": "适用于 TB710FU Ubuntu ARM64。终端执行 sudo 时出现「无法解析主机」，且 /etc/hosts 缺少当前主机名映射时，可以使用此条目。应用向 /etc/hosts 追加一行 127.0.1.1 和当前主机名，并保留现有内容、所有者和权限。已有相同映射时无需修复；已有其他地址时会停止。\n\n在修复助手中以管理员权限应用。Bash 入口默认执行 check，使用 TB710FU_FIX_ACTION=apply 进行修复，或使用 TB710FU_FIX_ACTION=rollback 回退。应用后重新运行 sudo，并用 getent hosts 查询当前主机名。应用、重复运行和回退已在隔离的文件样例中验证。",
       "device": "TB710FU",
       "status": "community-review",
       "risk": "将当前主机名指向回环地址 127.0.1.1。回退恢复应用前的内容，若应用后文件又有改动，则保留现有内容及快照供人工核对。快照保存在 /var/backups/tb710fu-terminal-hostname-fix/。",
@@ -157,11 +157,11 @@
       "attachments": [
         {
           "path": "contributions/terminal-hostname-fix/attachments/README.md",
-          "sha256": "f6133923d71adb7147ffa308eec1946ce3335825fc7b5f7d1bf97cc56971631f"
+          "sha256": "3a04afe8861dea5bc2113b4ed5b916b1760372f93d31ad4e9ca53739b6a14aff"
         },
         {
           "path": "contributions/terminal-hostname-fix/attachments/install.py",
-          "sha256": "3e897f0431c49cd81ce3dd1777be32138960c860a66743c774afc4b8ab42882d"
+          "sha256": "5fe05f92657dde132190e79a39fcea4227077e93b305bf1ae238ae8e526269e8"
         }
       ]
     },
@@ -369,7 +369,7 @@
     {
       "id": "dp-refresh-profiles",
       "title": "DP 外接屏刷新率自动切换",
-      "description": "适用 TB710FU、Ubuntu 26.04、GNOME Wayland、7.2.6-tb710fu-20261118。内屏 144Hz 接 DP 外屏时可能黑屏或灰屏。此条目保存 GNOME 的配对配置，接上同一台 DP 显示器时内屏切到 120Hz，外屏保持当前分辨率并选约 60Hz；拔掉时恢复原来保存的单屏刷新率。请先保存单屏设置，登录后接上一台 DP 外屏，使用“加入显示”。以普通用户运行，并在 GNOME 弹窗点“保留更改”。需要系统 Python 3 和 PyGObject。已实测同一台 2560×1440 显示器的原生配置和拔插切换；投稿脚本在平板上通过只读检查，写入和回退流程使用隔离测试验证。详见附件。",
+      "description": "适用 TB710FU、Ubuntu GNOME Wayland 和提供对应刷新率的显示器。内屏 144Hz 接 DP 外屏时可能黑屏或灰屏。此条目保存 GNOME 的配对配置，接上同一台 DP 显示器时内屏切到 120Hz，外屏保持当前分辨率并选约 60Hz；拔掉时恢复原来保存的单屏刷新率。请先保存单屏设置，登录后接上一台 DP 外屏，使用“加入显示”。以普通用户运行，并在 GNOME 弹窗点“保留更改”。需要系统 Python 3 和 PyGObject。已实测同一台 2560×1440 显示器的原生配置和拔插切换；投稿脚本在平板上通过只读检查，写入和回退流程使用隔离测试验证。详见附件。",
       "device": "TB710FU",
       "status": "community-review",
       "risk": "应用时可能短暂熄屏或闪黑，GNOME 会要求确认；画面异常时等待自动恢复。写入范围为当前账号的 GNOME 显示配置及一份私有回退记录。回退仅在显示配置仍与本条目确认写入的版本一致时恢复原文件，随后须注销并重新登录。若后来修改过显示配置，脚本会保留现有改动和备份，请用 GNOME 显示设置还原。保存的配置属于当前账号及显示器配对。",
@@ -381,11 +381,11 @@
       "attachments": [
         {
           "path": "contributions/dp-refresh-profiles/attachments/display-profiles.py",
-          "sha256": "ea56f92f55b90d454721c10dcd7fc826491644d126d385f84c706c73e3211388"
+          "sha256": "19f1044b71e13a7daec0ab07125a549dc4a71873a719d7aa4be7625ce8a673e6"
         },
         {
           "path": "contributions/dp-refresh-profiles/attachments/README.md",
-          "sha256": "675bbce405f9006bb4299f6504ab63d4a4aeef6632d6e78825d711a9f1e4c6bd"
+          "sha256": "fc9a2a6827e761da64a98d00d06762008ba443486eb63a23fca9a0430a1abe1c"
         }
       ]
     },
@@ -576,13 +576,13 @@
     {
       "id": "speaker-playback-headroom",
       "title": "修复内置扬声器播放爆音与无声",
-      "description": "适用于 TB710FU 上使用 PipeWire 与 WirePlumber 0.5 的 Ubuntu 26.04，处理 Chrome 等应用经内置扬声器播放时的爆音、断音，以及播放仍在继续但扬声器无声的情况。把内置扬声器的播放缓冲余量设为 960 帧并重新打开音频通道。实机验证环境为 7.2.6-tb710fu-20261118；应用相同配置后，Chrome 连续监测 45 秒，错误计数未增长，扬声器硬件指针持续推进。用户复测最大音量时声音大致正常。安装后可播放原歌曲检查。",
+      "description": "适用于 TB710FU 上使用 PipeWire 与 WirePlumber 0.5 的 Ubuntu 桌面，处理 Chrome 等应用经内置扬声器播放时的爆音、断音，以及播放仍在继续但扬声器无声的情况。把内置扬声器的播放缓冲余量设为 960 帧并重新打开音频通道。实机验证环境为 7.2.6-tb710fu-20261118；应用相同配置后，Chrome 连续监测 45 秒，错误计数未增长，扬声器硬件指针持续推进。用户复测最大音量时声音大致正常。安装后可播放原歌曲检查。",
       "device": "TB710FU",
       "status": "community-review",
       "risk": "无需管理员权限。只在当前用户目录添加一条 WirePlumber 扬声器规则。重建音频路由时，播放和录音会短暂中断，内置扬声器缓冲延迟可能增加。应用失败时恢复原配置。支持 TB710FU_FIX_ACTION=check 只读检查和 rollback 移除这条规则。此配置缓解播放卡顿，Q6APM 驱动修复需单独验证。",
       "script": {
         "path": "contributions/speaker-playback-headroom/script.sh",
-        "sha256": "65374028e6037605e2de69b04fda3ab98e0918c18940f1af9d7658c67e9b7cba",
+        "sha256": "024f023252e686de5065de04f4934b64ae50dfb4f6bf91d71353c2089d58fea1",
         "requires_admin": false
       },
       "attachments": [
@@ -592,14 +592,14 @@
         },
         {
           "path": "contributions/speaker-playback-headroom/attachments/README.md",
-          "sha256": "3a8f856fb0dd8e980433db757fcb9efd1e139d783da2e18d6b1665962e101a29"
+          "sha256": "9b3a919ca6be081ec9196a97948e5c9a7c17745f03533f291419cc232ecc573c"
         }
       ]
     },
     {
       "id": "wifi-link-speed",
       "title": "恢复当前 Wi-Fi 的高速协商（单独安装）",
-      "description": "适用于 TB710FU Ubuntu 26.04 上已识别版本的 Wi-Fi 兼容服务。路由器支持 Wi-Fi 6、平板却退回 Wi-Fi 4／40 MHz 时，先连接目标网络，再单独运行此修复并重新连接 Wi-Fi。只为当前网络解除兼容限速。Ubuntu 26.04.1 与 20261118 内核的实机安装和回退验证通过。",
+      "description": "适用于 TB710FU Ubuntu 上已识别版本的 Wi-Fi 兼容服务。路由器支持 Wi-Fi 6、平板却退回 Wi-Fi 4／40 MHz 时，先连接目标网络，再单独运行此修复并重新连接 Wi-Fi。只为当前网络解除兼容限速。Ubuntu 26.04.1 与 20261118 内核的实机安装和回退验证通过。",
       "device": "TB710FU",
       "status": "manual-install",
       "risk": "需要管理员授权。请单独安装。兼容服务原用于缓解高速关联问题，应用后请观察重连；若关联失败或出现不稳定，在平板本地回退并重新连接。支持只读 check 和 rollback。",
@@ -611,11 +611,11 @@
       "attachments": [
         {
           "path": "contributions/wifi-link-speed/attachments/install.py",
-          "sha256": "b6e4981c89d805e54cfc62edcb88b257da54e377e17429388eb1315be4e13718"
+          "sha256": "a88727a8f5cef083a3ebd7e240636600b53d67e9be9a8f400e07bee25f6f18ae"
         },
         {
           "path": "contributions/wifi-link-speed/attachments/README.md",
-          "sha256": "996ce2c06f0b4af7a8bfc4d9df1d7e271151703088fac21108007aa1797943c7"
+          "sha256": "423f54d7cc146f4345367a1df53c3477ac550e7de181627041ee6255a78f5ead"
         }
       ]
     },
@@ -634,18 +634,22 @@
       "attachments": [
         {
           "path": "contributions/bootfix-slot-success/attachments/tb710fu-boot-slot.py",
-          "sha256": "239a5ea04e099b50ab14b4042c5e1faa57d89eb8515b5813ab0fc6beb69b38de"
+          "sha256": "18569940d9189f49b75141be07406e2c146345e45f92f407a7def15c0122bd15"
         },
         {
           "path": "contributions/bootfix-slot-success/attachments/README.md",
           "sha256": "5f135eed62a387dd23f15cb6559ccd11dbeee56b2e6f8469fa748e98e0a031bb"
+        },
+        {
+          "path": "contributions/ubuntu-uboot-uefi/attachments/boot_targets.py",
+          "sha256": "876f12b5290f441f3ac7a6d797f843cfa8e37b9a840cfa3849802ed655172cec"
         }
       ]
     },
     {
       "id": "bootfix-clock-sync",
       "title": "BOOTFIX 时钟同步修复（单独安装）",
-      "description": "适用于 TB710FU 的原版 BOOTFIX Ubuntu 26.04 ARM64。修复系统只使用单个 HTTP 时间源、长时间未同步或 tb-timesync 服务反复失败的问题。切换到 Ubuntu systemd-timesyncd，提供多个 NTP 缺省地址。随包提供与原版 systemd 共享库匹配的离线 Ubuntu 依赖；其他版本从本机软件源安装匹配版本。支持检查、应用和回退。",
+      "description": "适用于 TB710FU 上仍保留原版 BOOTFIX 校时服务的 Ubuntu ARM64。修复系统只使用单个 HTTP 时间源、长时间未同步或 tb-timesync 服务反复失败的问题。切换到 Ubuntu systemd-timesyncd，提供多个 NTP 缺省地址。随包提供与原版 systemd 共享库匹配的离线 Ubuntu 依赖；其他版本从本机软件源安装匹配版本。支持检查、应用和回退。",
       "device": "TB710FU",
       "status": "manual-install",
       "risk": "需要管理员权限，校时可能调整系统时钟。首次网络同步需允许 UDP 123。已运行其他时间服务的系统保留原配置。回退恢复原先校时服务的启用和运行状态；已下载的软件包由 APT 管理。",
@@ -657,11 +661,11 @@
       "attachments": [
         {
           "path": "contributions/bootfix-clock-sync/attachments/install.py",
-          "sha256": "cf4c7edf728252cb8ad1e86463704d33957fd878ac098fa6762988c14100b003"
+          "sha256": "71f28b16ed5277c700c3a28765ba76d3675c01427b0b81fcde3d39e1c7521fe3"
         },
         {
           "path": "contributions/bootfix-clock-sync/attachments/README.md",
-          "sha256": "58208f340bb0f210bf043ed3afd9efbe5e7397567573eef7b78d14272b5aead6"
+          "sha256": "4dd87e8c76e5bb7175620440a287f6ab00f30be9ef076f25f6bde9ebcb44c39d"
         },
         {
           "path": "contributions/bootfix-clock-sync/attachments/systemd-timesyncd_259.5-0ubuntu3.4_arm64.deb",
@@ -796,7 +800,7 @@
       "title": "Droidloom 升级到最新版（测试版）",
       "device": "TB710FU",
       "status": "manual-install",
-      "description": "查询官方 ARM64 仓库并升级已配置的 Droidloom，可重复运行。修复助手 0.10.19 起会比较本机和上游版本，有新版时显示在「未安装／可更新」。适用于 TB710FU Ubuntu 26.04，起始版本 0.1.0-42。",
+      "description": "查询官方 ARM64 仓库并升级已配置的 Droidloom，可重复运行。修复助手 0.10.19 起会比较本机和上游版本，有新版时显示在「未安装／可更新」。适用于 TB710FU Ubuntu ARM64，起始版本 0.1.0-42。",
       "risk": "单独安装，需要管理员权限。请保存安卓窗口工作，预留 10 GiB。支持软件和主机配置回退。已有 Google 应用扩展需另行核对。Droidloom 49 可单独安装原生笔正式版。其他版本的笔支持范围见附件。",
       "script": {
         "path": "contributions/droidloom-upgrade/script.sh",
@@ -806,7 +810,7 @@
       "attachments": [
         {
           "path": "contributions/droidloom-upgrade/attachments/README.md",
-          "sha256": "3453d35b0f4dd5647e2c112f7bd3f7d05f51475814ebed53a4b05632edc58bcd"
+          "sha256": "8b5f29098ef03b30fcb3fa3b34371ea74838753afefecf4672a6b94c27341b44"
         },
         {
           "path": "contributions/droidloom-upgrade/attachments/droidloom_updates.py",
@@ -814,7 +818,7 @@
         },
         {
           "path": "contributions/droidloom-upgrade/attachments/upgrade.py",
-          "sha256": "2c970504c0c761dce0ef22cc28a3e1e7e17c75d469b47fdcae2af4605cd46c1f"
+          "sha256": "9dd2044b96ae4342177c5c6bbc2ee73a094b35482a09a044370c2e028be0379c"
         }
       ]
     },
@@ -920,7 +924,7 @@
       "title": "Ubuntu 内核升级：1118 → 1124（可选）",
       "device": "TB710FU",
       "status": "manual-install",
-      "description": "适用于公开 1118 及 BOOTFIX / SLOT-FIX 的 arch 单系统。升级为 7.2.6-tb710fu-20261124，保留 kShim，安装匹配的内核模块和现有相机配套。重启确认后可自行选择 U-Boot。已运行匹配的 1124 时仅检查状态。 只读核对本机固件，参考机固件哈希差异仅作提示。仍严格校验源 boot 和目标镜像。",
+      "description": "适用于公开 1118 及 BOOTFIX / SLOT-FIX 的 arch 单系统。升级为 7.2.6-tb710fu-20261124，保留 kShim，安装匹配的内核模块和现有相机配套。重启确认后可自行选择 U-Boot。已运行匹配的 1124 时仅检查状态。 按运行中的内置根分区定位 arch 与 boot_a，可接外接存储。仍严格校验源 boot 和目标镜像。",
       "risk": "单独安装，需要管理员权限。会备份并写入 boot_a，保持供电并准备电脑端恢复方式。完成后备份原镜像到电脑并手动重启。支持只读检查和从本机备份回退。",
       "script": {
         "path": "contributions/kernel-1118-to-1124/script.sh",
@@ -930,7 +934,7 @@
       "attachments": [
         {
           "path": "contributions/kernel-1118-to-1124/attachments/README.md",
-          "sha256": "ae8673e03a8d3adb40a22dd80f81bec920d5a692bd358b7934c3f6e66f360d2a"
+          "sha256": "f5b0e439047d5ed616d0f01c9765213d8e7d94390e832e0537366beff0a83ff0"
         },
         {
           "path": "contributions/kernel-1118-to-1124/attachments/boot.patch",
@@ -954,7 +958,7 @@
         },
         {
           "path": "contributions/kernel-1118-to-1124/attachments/profile.json",
-          "sha256": "b9bbbd89a0a613ca1b50d71b67e93c9b0bad3f6c572696397c4dc4340074770b"
+          "sha256": "e72c1e4d24f1aac5ffbf196950a1fac4dabbad1f11fe52002fa8ff4be87bc7c0"
         },
         {
           "path": "contributions/kernel-1118-to-1124/attachments/tb-camera-focus-permission.py",
@@ -994,7 +998,11 @@
         },
         {
           "path": "contributions/kernel-1118-to-1124/attachments/upgrade.py",
-          "sha256": "4f454860c769680f9dc11fbf5fb790ba295b480506db1acb9580cc5f2b7d3a86"
+          "sha256": "ba3654c5617bb89afeaa442924e86da0aabb343eb0d3d8ef7ca1c2f54b1ace89"
+        },
+        {
+          "path": "contributions/ubuntu-uboot-uefi/attachments/boot_targets.py",
+          "sha256": "876f12b5290f441f3ac7a6d797f843cfa8e37b9a840cfa3849802ed655172cec"
         }
       ]
     },
@@ -1004,7 +1012,7 @@
       "device": "TB710FU",
       "status": "manual-install",
       "description": "适用于 7.2.6-tb710fu-20261124 内核、A 槽 kShim 和 arch 单系统根分区。复用本机 Ubuntu 内核与设备树，切换为 U-Boot / UEFI 启动。已切换的匹配设备只核对现状。 当前为 1118 的用户可先单独运行「Ubuntu 内核升级：1118 → 1124」，重启确认后再选择本项。",
-      "risk": "仅可单独安装。需要管理员权限和网络，写入 boot_a，启动中断可能需要电脑恢复。脚本校验固件和 GPT 并保存原镜像，完成后请将备份另存到电脑，再手动重启。支持只读检查及使用本机备份回退。",
+      "risk": "仅可单独安装。需要管理员权限和网络，写入 boot_a，启动中断可能需要电脑恢复。脚本核对内置 arch、boot_a 与启动镜像并保存原镜像，完成后请将备份另存到电脑，再手动重启。支持只读检查及使用本机备份回退。",
       "script": {
         "path": "contributions/ubuntu-uboot-uefi/script.sh",
         "sha256": "28987cb9807f647a62921b8843621fb871b76219c2630bae14ff66cc73da16b4",
@@ -1013,7 +1021,7 @@
       "attachments": [
         {
           "path": "contributions/ubuntu-uboot-uefi/attachments/README.md",
-          "sha256": "dce2f3ff9125547a0a338289b9ff953d7354f8f05220d7b924b897f2475c75f8"
+          "sha256": "217c0e7ff9caec0a16c83326f26c4cde40467e43ce25cfbb5f492e1f8152cdb1"
         },
         {
           "path": "contributions/ubuntu-uboot-uefi/attachments/board.dtb.patch",
@@ -1029,15 +1037,19 @@
         },
         {
           "path": "contributions/ubuntu-uboot-uefi/attachments/migrate.py",
-          "sha256": "336c3b99f7c4bddf1fa333b89e13ebc5cb9f8968a63c7686a7730042382afd39"
+          "sha256": "0735eb969a57b99e5521e3cdaec5451bcdabbdf37b5cb87f201ca6d95028ac23"
         },
         {
           "path": "contributions/ubuntu-uboot-uefi/attachments/profile.json",
-          "sha256": "755ea3af47e99f3490a9af15d169d3a714d4d569b1cf96c4c10b303723e6040c"
+          "sha256": "01dc291081e9e3f5471b6b1ad30311260d4c2563491b1a10618572ecfcef2548"
         },
         {
           "path": "contributions/ubuntu-uboot-uefi/attachments/ubuntu.conf",
           "sha256": "35714a4791e2f1fb1609a790329677d3361f6aa61f0c168a29e50a5525a58f36"
+        },
+        {
+          "path": "contributions/ubuntu-uboot-uefi/attachments/boot_targets.py",
+          "sha256": "876f12b5290f441f3ac7a6d797f843cfa8e37b9a840cfa3849802ed655172cec"
         }
       ]
     }

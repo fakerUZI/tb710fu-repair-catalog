@@ -10,8 +10,13 @@ from pathlib import Path
 import re
 import struct
 import subprocess
+import sys
 import tempfile
 import zlib
+
+# The assistant stages the verified helper beside this script in isolated mode.
+sys.path.append(str(Path(__file__).resolve().parent))
+import boot_targets
 
 
 BOOT_SHA = "12ba30a883b792d8f89dddd21f759558d26c5c833b2d5cc61b0d35e8233da977"
@@ -34,16 +39,6 @@ def run(*args):
 def require(condition, message):
     if not condition:
         raise ValueError(message)
-
-
-def partition(label):
-    candidates = []
-    for entry in Path("/sys/class/block").iterdir():
-        if (entry / "partition").is_file() and f"PARTNAME={label}" in (entry / "uevent").read_text().splitlines():
-            candidates.append(entry)
-    require(len(candidates) == 1, f"Expected exactly one {label} partition")
-    entry, = candidates
-    return Path("/dev") / entry.name, int((entry / "partition").read_text())
 
 
 def slot_flags(disk, number):
@@ -79,14 +74,9 @@ def inspect():
     cmdline = Path("/proc/cmdline").read_text().split()
     require("androidboot.slot_suffix=_a" in cmdline and "tb710fu.install=single" not in cmdline,
             "Booted Ubuntu slot A is required")
-    root, fs, options = run("findmnt", "-n", "-o", "SOURCE,FSTYPE,OPTIONS", "--target", "/").strip().split()
-    arch, _ = partition("arch")
-    require(Path(root).resolve() == arch and fs == "ext4" and "rw" in options.split(","),
-            "Expected the installed ext4 arch partition mounted read-write as /")
-    boot, number = partition("boot_a")
-    parent = run("lsblk", "-ndo", "PKNAME", str(boot)).strip()
-    require(re.fullmatch(r"sd[a-z]+", parent), "Unexpected boot_a backing disk")
-    disk = Path("/dev") / parent
+    boot, disk, number = boot_targets.locate_targets()
+    options = run("findmnt", "-no", "OPTIONS", "/").strip().split(",")
+    require("rw" in options, "Ubuntu root must be mounted read-write")
     require(int(run("blockdev", "--getss", str(disk))) == 4096, "Unexpected UFS logical sector size")
     require(int(run("blockdev", "--getsize64", str(boot))) == BOOT_BYTES, "Unexpected boot_a size")
     verify_gpt(disk)

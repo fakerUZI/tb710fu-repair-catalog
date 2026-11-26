@@ -154,9 +154,8 @@ def preflight():
     if b'lenovo,tb710fu' not in Path('/proc/device-tree/compatible').read_bytes().split(b'\0'):
         raise ValueError('此修复仅适用于 TB710FU。')
     os_release = Path('/etc/os-release').read_text().splitlines()
-    if not ({'ID=ubuntu', 'ID="ubuntu"'} & set(os_release) and
-            {'VERSION_ID="26.04"', 'VERSION_ID=26.04'} & set(os_release)):
-        raise ValueError('此修复仅适用于 Ubuntu 26.04。')
+    if not {'ID=ubuntu', 'ID="ubuntu"'} & set(os_release):
+        raise ValueError('此修复适用于 Ubuntu。')
     owned_file(UNIT)
     if digest(UNIT.read_bytes()) != UNIT_HASH:
         raise ValueError('未找到已验证版本的 Wi-Fi 兼容服务。')

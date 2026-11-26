@@ -131,8 +131,8 @@ def main(action):
     release = dict(line.split("=", 1) for line in Path("/etc/os-release").read_text().splitlines() if "=" in line)
     model = Path("/sys/firmware/devicetree/base/model")
     if (os.uname().machine != "aarch64" or not model.is_file() or b"TB710FU" not in model.read_bytes()
-            or release.get("ID", "").strip('"') != "ubuntu" or release.get("VERSION_ID", "").strip('"') != "26.04"):
-        raise ValueError("适用于 TB710FU Ubuntu 26.04 ARM64")
+            or release.get("ID", "").strip('"') != "ubuntu"):
+        raise ValueError("适用于 TB710FU Ubuntu ARM64")
     if action == "check":
         name = hostname()
         if needs_repair(read_hosts(), name):

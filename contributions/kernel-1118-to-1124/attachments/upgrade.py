@@ -7,12 +7,16 @@ import json
 import os
 from pathlib import Path
 import platform
-import re
 import shutil
 import stat
 import subprocess
+import sys
 import tarfile
 import tempfile
+
+# The assistant stages the verified helper beside this script in isolated mode.
+sys.path.append(str(Path(__file__).resolve().parent))
+import boot_targets
 
 OLD = "7.2.6-tb710fu-20261118"
 NEW = "7.2.6-tb710fu-20261124"
@@ -37,22 +41,6 @@ def run(*args):
     return subprocess.check_output(args, text=True).strip()
 
 
-def inspect_firmware(devices, reference_hashes):
-    # These partitions are inspected for diagnostics. Neither kShim nor the upgrade
-    # patch is taken from them; the patch input is the separately verified boot_a.
-    differences = []
-    for name, reference in reference_hashes.items():
-        try:
-            actual = digest(devices[name])
-        except OSError as exc:
-            raise ValueError(f"无法读取固件分区 {name}：{exc.strerror}") from exc
-        if actual != reference:
-            differences.append(name)
-    if differences:
-        print("固件参考信息：以下分区与参考机不同，本次升级不会写入这些分区："
-              + "、".join(differences))
-
-
 def inspect(profile):
     require(Path("/etc/os-release").is_file() and platform.machine() == "aarch64"
             and b"lenovo,tb710fu" in Path("/proc/device-tree/compatible").read_bytes().split(b"\0"),
@@ -60,33 +48,7 @@ def inspect(profile):
     require(platform.release() in (OLD, NEW), "仅支持 1118 升级至 1124")
     require(os.geteuid() == 0 and "androidboot.slot_suffix=_a" in Path("/proc/cmdline").read_text().split(),
             "需要管理员权限、Ubuntu 和 A 槽")
-    rows = []
-    disks = [p for p in Path("/sys/class/block").glob("sd*") if not (p / "partition").exists()]
-    require(len(disks) == 6, "UFS 磁盘布局不符")
-    for p in disks:
-        disk = Path("/dev") / p.name
-        require("No problems found." in run("sgdisk", "-v", disk), "GPT 校验失败")
-        table = json.loads(run("sfdisk", "--json", disk))["partitiontable"]
-        require(table["label"] == "gpt", "GPT 类型不符")
-        rows.extend(table["partitions"])
-    devices = {}
-    for name in ("arch", "boot_a", *profile["firmware"]):
-        nodes = [Path(r["node"]) for r in rows if r.get("name") == name]
-        node = (Path("/dev/disk/by-partlabel") / name).resolve(strict=True)
-        require(nodes == [node] and stat.S_ISBLK(node.stat().st_mode), "分区标签不符：" + name)
-        devices[name] = node
-    require(run("findmnt", "-no", "SOURCE,FSTYPE,FSROOT", "/").split() ==
-            [str(devices["arch"]), "ext4", "/"], "根分区应为 arch ext4")
-    boot = devices["boot_a"]
-    require(int(run("blockdev", "--getsize64", boot)) == profile["boot_size"], "boot_a 大小不符")
-    disk = Path("/dev") / run("lsblk", "-ndo", "PKNAME", boot)
-    number = (Path("/sys/class/block") / boot.name / "partition").read_text().strip()
-    match = re.search(r"(?m)^Attribute flags: ([0-9A-Fa-f]{16})$", run("sgdisk", "-i", number, disk))
-    require(match, "无法读取 A 槽状态")
-    flags = int(match[1], 16)
-    require(flags & (1 << 50) and flags & (1 << 54) and not flags & (1 << 55),
-            "A 槽须已确认为成功启动。BOOTFIX 用户可先核对修复助手的 A 槽启动确认条目。")
-    inspect_firmware(devices, profile["firmware"])
+    boot = boot_targets.checked_boot(profile["boot_size"])
     return boot, digest(boot)
 
 
